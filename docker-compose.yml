@@ -1,0 +1,29 @@
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8008:8008"
+    volumes:
+      - sworkr_data:/data
+      - ./backend:/app        # live code: backend restarts itself when you save a file
+    environment:
+      - DATA_DIR=/data
+      - WATCHFILES_FORCE_POLLING=true   # needed for file-change detection on Windows
+    command: uvicorn main:app --host 0.0.0.0 --port 8008 --reload
+    restart: unless-stopped
+
+  web:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules   # keep the container's Linux node_modules, not the Windows one
+    environment:
+      - API_PROXY_TARGET=http://api:8008
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  sworkr_data:
