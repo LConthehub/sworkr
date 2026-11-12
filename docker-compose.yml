@@ -25,5 +25,18 @@ services:
       - api
     restart: unless-stopped
 
+  # Runs the backend tests, then exits:  docker compose run --rm tests
+  # It uses its own throwaway database and never touches the sworkr_data volume.
+  tests:
+    build: ./backend
+    profiles: ["test"]      # keeps it out of a plain "docker compose up"
+    volumes:
+      - ./backend:/app:ro
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+    command: >
+      sh -c "pip install -q --root-user-action=ignore --disable-pip-version-check -r requirements-dev.txt
+      && python -m pytest -p no:cacheprovider"
+
 volumes:
   sworkr_data:

@@ -66,6 +66,15 @@ npm install
 npm run dev
 ```
 
+## Tests
+
+The backend tests run inside Docker, with the same Python and library versions as the app.
+They use a throwaway database, so they never touch real data.
+
+```bash
+docker compose run --rm tests
+```
+
 ## API
 
 The interactive API docs are at <http://localhost:8008/docs> while the

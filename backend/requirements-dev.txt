@@ -1,0 +1,3 @@
+# Only needed to run the tests:  docker compose run --rm tests
+pytest>=8,<9
+httpx<0.28   # newer httpx breaks the test client in the pinned FastAPI version

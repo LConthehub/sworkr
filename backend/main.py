@@ -8,10 +8,10 @@ import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Query, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -111,6 +111,18 @@ def get_db():
     conn.execute("PRAGMA foreign_keys = ON")
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def db_conn():
+    """One connection per request, always closed afterwards, even when the request fails."""
+    db = get_db()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+DbDep = Annotated[sqlite3.Connection, Depends(db_conn)]
 
 
 def init_db():
@@ -222,6 +234,12 @@ def split_tags(value: Optional[str]) -> List[str]:
     return [t.strip() for t in value.split(",")] if value else []
 
 
+def like_term(text: str) -> str:
+    """A 'contains' pattern for LIKE. Pair it with ESCAPE so % and _ in the text are matched literally."""
+    escaped = text.strip().lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
 # ==================== HELPERS ====================
 
 def get_client_by_id(db, client_id: int) -> Optional[dict]:
@@ -269,8 +287,10 @@ async def require_login(request: Request, call_next):
     path = request.url.path.rstrip("/") or "/"
     if path.startswith("/api") and path not in PUBLIC_PATHS:
         db = get_db()
-        user = auth.user_for_token(db, request.cookies.get(auth.SESSION_COOKIE))
-        db.close()
+        try:
+            user = auth.user_for_token(db, request.cookies.get(auth.SESSION_COOKIE))
+        finally:
+            db.close()
         if not user:
             return JSONResponse({"detail": "Not logged in"}, status_code=401)
         request.state.user = user
@@ -297,84 +317,71 @@ def health():
 
 
 @app.get("/api/auth/status")
-def auth_status(request: Request):
-    db = get_db()
+def auth_status(request: Request, db: DbDep):
     setup_required = db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0
     user = auth.user_for_token(db, request.cookies.get(auth.SESSION_COOKIE))
-    db.close()
     return {"setup_required": setup_required, "user": user}
 
 
 @app.post("/api/auth/setup", status_code=201)
-def auth_setup(creds: Credentials, response: Response):
+def auth_setup(creds: Credentials, response: Response, db: DbDep):
     """Create the first (admin) account. Only works while no accounts exist."""
     username = creds.username.strip().lower()
     _validate_new_credentials(username, creds.password)
-    db = get_db()
-    try:
-        db.execute("BEGIN IMMEDIATE")
-        if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] > 0:
-            db.rollback()
-            raise HTTPException(status_code=403, detail="Setup has already been completed")
-        cur = db.execute(
-            "INSERT INTO users (username, password_hash, is_admin, created_at) VALUES (?, ?, 1, ?)",
-            (username, auth.hash_password(creds.password), now_iso()),
-        )
-        db.commit()
-        _set_session_cookie(response, auth.create_session(db, cur.lastrowid))
-        return {"id": cur.lastrowid, "username": username, "is_admin": True}
-    finally:
-        db.close()
+    db.execute("BEGIN IMMEDIATE")
+    if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] > 0:
+        db.rollback()
+        raise HTTPException(status_code=403, detail="Setup has already been completed")
+    cur = db.execute(
+        "INSERT INTO users (username, password_hash, is_admin, created_at) VALUES (?, ?, 1, ?)",
+        (username, auth.hash_password(creds.password), now_iso()),
+    )
+    db.commit()
+    _set_session_cookie(response, auth.create_session(db, cur.lastrowid))
+    return {"id": cur.lastrowid, "username": username, "is_admin": True}
 
 
 @app.post("/api/auth/login")
-def auth_login(creds: Credentials, response: Response):
+def auth_login(creds: Credentials, response: Response, db: DbDep):
     username = creds.username.strip().lower()
     wait = auth.throttle.seconds_locked(username)
     if wait:
         raise HTTPException(status_code=429, detail=f"Too many failed attempts. Try again in {wait} seconds.")
-    db = get_db()
     user = auth.check_login(db, username, creds.password)
     if not user:
         auth.throttle.failure(username)
-        db.close()
         raise HTTPException(status_code=401, detail="Wrong username or password")
     auth.throttle.success(username)
     _set_session_cookie(response, auth.create_session(db, user["id"]))
-    db.close()
     return {"id": user["id"], "username": user["username"], "is_admin": bool(user["is_admin"])}
 
 
 @app.post("/api/auth/logout", status_code=204)
-def auth_logout(request: Request, response: Response):
-    db = get_db()
+def auth_logout(request: Request, response: Response, db: DbDep):
     auth.delete_session(db, request.cookies.get(auth.SESSION_COOKIE))
-    db.close()
     response.delete_cookie(auth.SESSION_COOKIE, path="/")
 
 
 @app.post("/api/auth/change-password", status_code=204)
-def auth_change_password(body: PasswordChange, request: Request):
+def auth_change_password(body: PasswordChange, request: Request, db: DbDep):
     user = request.state.user
     if len(body.new_password) < auth.MIN_PASSWORD_LENGTH:
         raise HTTPException(status_code=400, detail=f"Password must be at least {auth.MIN_PASSWORD_LENGTH} characters")
-    db = get_db()
     if not auth.check_login(db, user["username"], body.current_password):
-        db.close()
         raise HTTPException(status_code=400, detail="Current password is wrong")
     db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (auth.hash_password(body.new_password), user["id"]))
     db.commit()
     # Log out every other device, keep this one.
     auth.delete_user_sessions(db, user["id"], keep_token=request.cookies.get(auth.SESSION_COOKIE))
-    db.close()
 
 
 # ==================== CLIENTS ====================
 
 @app.post("/api/clients", response_model=Client, status_code=201)
-def create_client(client: ClientIn):
+def create_client(client: ClientIn, db: DbDep):
+    if not client.name.strip():
+        raise HTTPException(status_code=400, detail="Name is required")
     now = now_iso()
-    db = get_db()
     try:
         cur = db.execute("""
             INSERT INTO clients (name, contact_phone, email, bio, is_active, created_at, updated_at)
@@ -383,7 +390,6 @@ def create_client(client: ClientIn):
               client.bio, int(client.is_active), now, now))
     except sqlite3.IntegrityError:
         db.rollback()
-        db.close()
         raise HTTPException(status_code=409, detail="A client with that email already exists")
     set_client_tags(db, cur.lastrowid, client.tags)
     db.commit()
@@ -392,21 +398,21 @@ def create_client(client: ClientIn):
 
 @app.get("/api/clients", response_model=List[Client])
 def list_clients(
+    db: DbDep,
     is_active: Optional[int] = Query(None, ge=0, le=1),
     search: Optional[str] = None,
     tag_filter: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=200),
 ):
-    db = get_db()
     conditions, params = [], []
 
     if is_active is not None:
         conditions.append("c.is_active = ?")
         params.append(is_active)
-    if search:
-        conditions.append("(LOWER(c.name) LIKE ? OR LOWER(c.email) LIKE ?)")
-        term = f"%{search.lower()}%"
+    if search and search.strip():
+        conditions.append("(LOWER(c.name) LIKE ? ESCAPE '\\' OR LOWER(c.email) LIKE ? ESCAPE '\\')")
+        term = like_term(search)
         params.extend([term, term])
     if tag_filter:
         conditions.append("EXISTS (SELECT 1 FROM client_tags t2 WHERE t2.client_id = c.id AND t2.tag_name = ?)")
@@ -432,16 +438,17 @@ def list_clients(
 
 
 @app.get("/api/clients/{client_id}", response_model=Client)
-def get_client(client_id: int):
-    client = get_client_by_id(get_db(), client_id)
+def get_client(client_id: int, db: DbDep):
+    client = get_client_by_id(db, client_id)
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     return client
 
 
 @app.put("/api/clients/{client_id}", response_model=Client)
-def update_client(client_id: int, client: ClientIn):
-    db = get_db()
+def update_client(client_id: int, client: ClientIn, db: DbDep):
+    if not client.name.strip():
+        raise HTTPException(status_code=400, detail="Name is required")
     if not get_client_by_id(db, client_id):
         raise HTTPException(status_code=404, detail="Client not found")
     try:
@@ -452,7 +459,6 @@ def update_client(client_id: int, client: ClientIn):
               client.bio, int(client.is_active), now_iso(), client_id))
     except sqlite3.IntegrityError:
         db.rollback()
-        db.close()
         raise HTTPException(status_code=409, detail="A client with that email already exists")
     set_client_tags(db, client_id, client.tags)
     db.commit()
@@ -460,8 +466,7 @@ def update_client(client_id: int, client: ClientIn):
 
 
 @app.delete("/api/clients/{client_id}", status_code=204)
-def delete_client(client_id: int):
-    db = get_db()
+def delete_client(client_id: int, db: DbDep):
     db.execute("DELETE FROM client_tags WHERE client_id = ?", (client_id,))
     db.execute("DELETE FROM appointments WHERE client_id = ?", (client_id,))
     db.execute("UPDATE expenses SET client_id = NULL WHERE client_id = ?", (client_id,))
@@ -481,9 +486,8 @@ def _validate_appointment(db, appointment: AppointmentIn):
 
 
 @app.post("/api/appointments", response_model=Appointment, status_code=201)
-def create_appointment(appointment: AppointmentIn):
+def create_appointment(appointment: AppointmentIn, db: DbDep):
     now = now_iso()
-    db = get_db()
     _validate_appointment(db, appointment)
     cur = db.execute("""
         INSERT INTO appointments (client_id, service_type, duration_minutes, scheduled_date, status, notes, created_at, updated_at)
@@ -496,6 +500,7 @@ def create_appointment(appointment: AppointmentIn):
 
 @app.get("/api/appointments", response_model=List[Appointment])
 def list_appointments(
+    db: DbDep,
     client_id: Optional[int] = None,
     status: Optional[AppointmentStatus] = None,
     service_type: Optional[str] = None,
@@ -504,7 +509,6 @@ def list_appointments(
     page: int = Query(1, ge=1),
     limit: int = Query(100, ge=1, le=1000),
 ):
-    db = get_db()
     conditions, params = [], []
     if client_id is not None:
         conditions.append("a.client_id = ?")
@@ -535,23 +539,21 @@ def list_appointments(
 
 
 @app.get("/api/appointments/service-types", response_model=List[str])
-def list_service_types():
-    db = get_db()
+def list_service_types(db: DbDep):
     return [r[0] for r in db.execute(
         "SELECT service_type FROM appointments GROUP BY service_type ORDER BY COUNT(*) DESC LIMIT 50")]
 
 
 @app.get("/api/appointments/{appointment_id}", response_model=Appointment)
-def get_appointment(appointment_id: int):
-    appt = get_appointment_by_id(get_db(), appointment_id)
+def get_appointment(appointment_id: int, db: DbDep):
+    appt = get_appointment_by_id(db, appointment_id)
     if not appt:
         raise HTTPException(status_code=404, detail="Appointment not found")
     return appt
 
 
 @app.put("/api/appointments/{appointment_id}", response_model=Appointment)
-def update_appointment(appointment_id: int, appointment: AppointmentIn):
-    db = get_db()
+def update_appointment(appointment_id: int, appointment: AppointmentIn, db: DbDep):
     if not get_appointment_by_id(db, appointment_id):
         raise HTTPException(status_code=404, detail="Appointment not found")
     _validate_appointment(db, appointment)
@@ -566,8 +568,7 @@ def update_appointment(appointment_id: int, appointment: AppointmentIn):
 
 
 @app.put("/api/appointments/{appointment_id}/status", response_model=Appointment)
-def update_appointment_status(appointment_id: int, status: AppointmentStatus):
-    db = get_db()
+def update_appointment_status(appointment_id: int, status: AppointmentStatus, db: DbDep):
     if not get_appointment_by_id(db, appointment_id):
         raise HTTPException(status_code=404, detail="Appointment not found")
     db.execute("UPDATE appointments SET status = ?, updated_at = ? WHERE id = ?",
@@ -577,18 +578,27 @@ def update_appointment_status(appointment_id: int, status: AppointmentStatus):
 
 
 @app.delete("/api/appointments/{appointment_id}", status_code=204)
-def delete_appointment(appointment_id: int):
-    db = get_db()
+def delete_appointment(appointment_id: int, db: DbDep):
     db.execute("DELETE FROM appointments WHERE id = ?", (appointment_id,))
     db.commit()
 
 
 # ==================== EXPENSES ====================
 
+def _validate_expense(db, expense: ExpenseIn):
+    if not expense.description.strip():
+        raise HTTPException(status_code=400, detail="Description is required")
+    # Written this way so NaN and infinity are rejected too.
+    if not (0 <= expense.amount < float("inf")):
+        raise HTTPException(status_code=400, detail="Amount must be 0 or more")
+    if expense.client_id is not None and not get_client_by_id(db, expense.client_id):
+        raise HTTPException(status_code=400, detail="Client does not exist")
+
+
 @app.post("/api/expenses", response_model=Expense, status_code=201)
-def create_expense(expense: ExpenseIn):
+def create_expense(expense: ExpenseIn, db: DbDep):
     now = now_iso()
-    db = get_db()
+    _validate_expense(db, expense)
     cur = db.execute("""
         INSERT INTO expenses (client_id, description, amount, category, date, notes, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -600,6 +610,7 @@ def create_expense(expense: ExpenseIn):
 
 @app.get("/api/expenses", response_model=List[Expense])
 def list_expenses(
+    db: DbDep,
     client_id: Optional[int] = None,
     category: Optional[str] = None,
     min_amount: Optional[float] = None,
@@ -607,7 +618,6 @@ def list_expenses(
     page: int = Query(1, ge=1),
     limit: int = Query(100, ge=1, le=500),
 ):
-    db = get_db()
     conditions, params = [], []
     if client_id is not None:
         conditions.append("e.client_id = ?")
@@ -635,8 +645,7 @@ def list_expenses(
 
 
 @app.get("/api/expenses/summary")
-def get_expense_summary():
-    db = get_db()
+def get_expense_summary(db: DbDep):
     category_summary = [
         {"category": r["category"], "total": round(r["total"], 2), "count": r["count"]}
         for r in db.execute("""
@@ -664,11 +673,11 @@ def get_expense_summary():
 
 
 @app.put("/api/expenses/{expense_id}", response_model=Expense)
-def update_expense(expense_id: int, expense: ExpenseIn):
-    db = get_db()
+def update_expense(expense_id: int, expense: ExpenseIn, db: DbDep):
     existing = get_expense_by_id(db, expense_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Expense not found")
+    _validate_expense(db, expense)
     db.execute("""
         UPDATE expenses SET client_id = ?, description = ?, amount = ?, category = ?, date = ?, notes = ?
         WHERE id = ?
@@ -679,8 +688,7 @@ def update_expense(expense_id: int, expense: ExpenseIn):
 
 
 @app.delete("/api/expenses/{expense_id}", status_code=204)
-def delete_expense(expense_id: int):
-    db = get_db()
+def delete_expense(expense_id: int, db: DbDep):
     db.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
     db.commit()
 
@@ -688,12 +696,12 @@ def delete_expense(expense_id: int):
 # ==================== SEARCH ====================
 
 def _search_clients(db, q):
-    term = f"%{q.lower()}%"
+    term = like_term(q)
     rows = db.execute("""
         SELECT c.*, GROUP_CONCAT(ct.tag_name) AS tags
         FROM clients c LEFT JOIN client_tags ct ON c.id = ct.client_id
-        WHERE LOWER(c.name) LIKE ? OR LOWER(IFNULL(c.email, '')) LIKE ?
-           OR EXISTS (SELECT 1 FROM client_tags t2 WHERE t2.client_id = c.id AND t2.tag_name LIKE ?)
+        WHERE LOWER(c.name) LIKE ? ESCAPE '\\' OR LOWER(IFNULL(c.email, '')) LIKE ? ESCAPE '\\'
+           OR EXISTS (SELECT 1 FROM client_tags t2 WHERE t2.client_id = c.id AND t2.tag_name LIKE ? ESCAPE '\\')
         GROUP BY c.id
     """, (term, term, term))
     out = []
@@ -707,42 +715,46 @@ def _search_clients(db, q):
 
 
 def _search_appointments(db, q):
-    term = f"%{q.lower()}%"
+    term = like_term(q)
     rows = db.execute("""
         SELECT a.*, c.name AS client_name
         FROM appointments a LEFT JOIN clients c ON a.client_id = c.id
-        WHERE LOWER(a.service_type) LIKE ? OR LOWER(IFNULL(a.notes, '')) LIKE ? OR LOWER(IFNULL(c.name, '')) LIKE ?
+        WHERE LOWER(a.service_type) LIKE ? ESCAPE '\\' OR LOWER(IFNULL(a.notes, '')) LIKE ? ESCAPE '\\'
+           OR LOWER(IFNULL(c.name, '')) LIKE ? ESCAPE '\\'
     """, (term, term, term))
     return [{**dict(r), "entity_type": "appointment"} for r in rows]
 
 
 def _search_expenses(db, q):
-    term = f"%{q.lower()}%"
+    term = like_term(q)
     rows = db.execute("""
         SELECT e.*, c.name AS client_name
         FROM expenses e LEFT JOIN clients c ON e.client_id = c.id
-        WHERE LOWER(e.description) LIKE ? OR LOWER(e.category) LIKE ? OR LOWER(IFNULL(c.name, '')) LIKE ?
+        WHERE LOWER(e.description) LIKE ? ESCAPE '\\' OR LOWER(e.category) LIKE ? ESCAPE '\\'
+           OR LOWER(IFNULL(c.name, '')) LIKE ? ESCAPE '\\'
     """, (term, term, term))
     return [{**dict(r), "entity_type": "expense"} for r in rows]
 
 
 @app.get("/api/search")
 def search_all(
+    db: DbDep,
     q: str = Query(..., description="Search term"),
     entity_type: str = Query("all", description="all, clients, appointments, or expenses"),
 ):
-    db = get_db()
     searchers = {
         "clients": _search_clients,
         "appointments": _search_appointments,
         "expenses": _search_expenses,
     }
-    if entity_type == "all":
-        results = [r for fn in searchers.values() for r in fn(db, q)]
-    elif entity_type in searchers:
-        results = searchers[entity_type](db, q)
-    else:
+    if entity_type != "all" and entity_type not in searchers:
         raise HTTPException(status_code=400, detail="entity_type must be all, clients, appointments, or expenses")
+    if not q.strip():
+        results = []  # a blank search finds nothing, rather than matching every record
+    elif entity_type == "all":
+        results = [r for fn in searchers.values() for r in fn(db, q)]
+    else:
+        results = searchers[entity_type](db, q)
     return {"entity_type": entity_type, "count": len(results), "results": results}
 
 
