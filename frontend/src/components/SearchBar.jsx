@@ -7,7 +7,10 @@ export default function SearchBar() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') setIsOpen(false);
-      if (e.key === '/' && !isOpen && document.activeElement?.tagName !== 'INPUT') {
+      // "/" opens search, but not while typing in a field (e.g. a date like 11/12 in a Notes box).
+      const el = document.activeElement;
+      const typing = el && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable);
+      if (e.key === '/' && !isOpen && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         setIsOpen(true);
       }

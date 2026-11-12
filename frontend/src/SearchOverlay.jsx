@@ -8,25 +8,32 @@ const TYPES = ['all', 'clients', 'appointments', 'expenses'];
 export default function SearchOverlay({ isOpen, onClose }) {
   const [query, setQuery] = useState('');
   const [entityType, setEntityType] = useState('all');
-  const [results, setResults] = useState([]);
-  const [searching, setSearching] = useState(false);
+  // The results on screen, kept together with the search they belong to. That way
+  // "No results found" can only show for a search that has actually finished.
+  const [found, setFound] = useState({ key: '', results: [] });
+  const searchKey = `${entityType}:${query.trim()}`;
+  const searching = found.key !== searchKey;
+  const results = found.results;
+
+  const changeQuery = (value) => {
+    setQuery(value);
+    if (!value.trim()) setFound({ key: '', results: [] }); // clearing the box clears the old results with it
+  };
 
   useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
+    const q = query.trim();
+    if (!q) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
-      setSearching(true);
+      let next = null;
       try {
-        const { data } = await axios.get('/api/search', { params: { q: query, entity_type: entityType } });
-        if (!cancelled) setResults(data.results);
+        const { data } = await axios.get('/api/search', { params: { q, entity_type: entityType } });
+        next = data.results;
       } catch (err) {
         console.error('Search failed:', err);
-      } finally {
-        if (!cancelled) setSearching(false);
       }
+      // If the search failed, keep showing what was there before.
+      if (!cancelled) setFound((prev) => ({ key: searchKey, results: next ?? prev.results }));
     }, 300);
     return () => {
       cancelled = true;
@@ -46,7 +53,7 @@ export default function SearchOverlay({ isOpen, onClose }) {
             autoFocus
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => changeQuery(e.target.value)}
             placeholder="Search clients, appointments, or expenses..."
             className="flex-1 text-gray-800 placeholder-gray-400 outline-none px-2 py-2"
           />

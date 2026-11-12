@@ -58,7 +58,11 @@ export default function AppointmentCalendar() {
   const closeAndReload = () => { setModal(null); load(); };
 
   const quickStatus = async (appt, status) => {
-    await axios.put(`/api/appointments/${appt.id}/status`, null, { params: { status } });
+    try {
+      await axios.put(`/api/appointments/${appt.id}/status`, null, { params: { status } });
+    } catch (err) {
+      console.error('Error updating appointment:', err);
+    }
     load();
   };
 

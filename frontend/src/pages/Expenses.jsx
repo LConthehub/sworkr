@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { CATEGORY_COLORS, money } from '../colors';
+import { errorMessage } from '../components/Modal';
 
 const CATEGORIES = ['equipment', 'marketing', 'travel', 'cleaning', 'other'];
 const EMPTY_SUMMARY = { category_summary: [], top_clients: [], overall_total: 0, expense_count: 0, average: 0 };
@@ -16,7 +17,7 @@ export default function Expenses() {
   const loadExpenses = async () => {
     setLoading(true);
     try {
-      const params = {};
+      const params = { limit: 500 }; // the most the API returns at once
       if (clientFilter) params.client_id = clientFilter;
       if (categoryFilter !== 'all') params.category = categoryFilter;
       const { data } = await axios.get('/api/expenses', { params });
@@ -49,8 +50,13 @@ export default function Expenses() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientFilter, categoryFilter]);
 
-  const remove = async (id) => {
-    await axios.delete(`/api/expenses/${id}`);
+  const remove = async (exp) => {
+    if (!window.confirm(`Delete "${exp.description}" (${money(exp.amount)})?`)) return;
+    try {
+      await axios.delete(`/api/expenses/${exp.id}`);
+    } catch (err) {
+      console.error('Error deleting expense:', err);
+    }
     refresh();
   };
 
@@ -117,7 +123,7 @@ export default function Expenses() {
                 {exp.category}
               </span>
               <p className="font-bold w-24 text-right">{money(exp.amount)}</p>
-              <button onClick={() => remove(exp.id)} className="text-xs text-red-500 hover:text-red-700">
+              <button onClick={() => remove(exp)} className="text-xs text-red-500 hover:text-red-700">
                 Delete
               </button>
             </li>
@@ -154,8 +160,8 @@ export default function Expenses() {
         <div className="mt-8 bg-gray-50 rounded-xl p-4">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">Expenses by client</h2>
           <ul>
-            {summary.top_clients.map((c) => (
-              <li key={c.name} className="flex justify-between py-2 border-b last:border-none border-gray-100 text-sm">
+            {summary.top_clients.map((c, i) => (
+              <li key={`${i}-${c.name}`} className="flex justify-between py-2 border-b last:border-none border-gray-100 text-sm">
                 <span className="text-gray-700">{c.name}</span>
                 <span>
                   <span className="font-semibold">{money(c.total_spent)}</span>
@@ -181,17 +187,23 @@ function SummaryCard({ label, value, color }) {
 
 function NewExpenseForm({ clients, onCreated }) {
   const [form, setForm] = useState({ description: '', amount: '', category: 'other', client_id: '' });
+  const [error, setError] = useState('');
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const input = 'bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sworkr-300';
 
   const submit = async (e) => {
     e.preventDefault();
-    await axios.post('/api/expenses', {
-      description: form.description,
-      amount: parseFloat(form.amount),
-      category: form.category,
-      client_id: form.client_id ? Number(form.client_id) : null,
-    });
+    setError('');
+    try {
+      await axios.post('/api/expenses', {
+        description: form.description.trim(),
+        amount: parseFloat(form.amount),
+        category: form.category,
+        client_id: form.client_id ? Number(form.client_id) : null,
+      });
+    } catch (err) {
+      return setError(errorMessage(err, 'Could not add expense'));
+    }
     setForm({ description: '', amount: '', category: 'other', client_id: '' });
     onCreated();
   };
@@ -210,6 +222,7 @@ function NewExpenseForm({ clients, onCreated }) {
       <button type="submit" className="px-4 py-2 bg-sworkr-500 text-white rounded-lg hover:bg-sworkr-600 text-sm">
         Add expense
       </button>
+      {error && <p className="w-full text-sm text-red-600">{error}</p>}
     </form>
   );
 }
