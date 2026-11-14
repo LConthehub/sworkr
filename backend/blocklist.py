@@ -97,7 +97,15 @@ def _entry_values(e: EntryIn) -> tuple:
             e.severity.value, _clean(e.list_name) or "Added by me")
 
 
+def _no_demo():
+    import demo
+    if demo.ENABLED:
+        raise HTTPException(status_code=403, detail="The bad-date list is turned off in the demo: everyone shares its "
+                            "login, so never put real people's details here")
+
+
 def _check_entry(e: EntryIn):
+    _no_demo()
     if not (phone_key(e.phone) or email_key(e.email) or handle_key(e.handle)):
         raise HTTPException(status_code=400, detail="Give a phone number, email or handle: a name alone can't be matched")
     for field in ("description", "name", "area", "list_name"):
@@ -285,6 +293,7 @@ def import_list(body: ImportIn, request: Request):
     """Add a list from a CSV file, using `mapping` to say which column is which. With replace, a newer copy of the
     same list (same name) replaces the old one instead of doubling it. Rows with no phone, email or handle are
     skipped (a name alone can't be matched)."""
+    _no_demo()
     list_name = _clean(body.list_name)
     if not list_name or len(list_name) > 80:
         raise HTTPException(status_code=400, detail="Give the list a name, like where it came from")

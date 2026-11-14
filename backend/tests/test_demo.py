@@ -61,3 +61,20 @@ def test_demo_reset_builds_a_complete_sample():
     assert out["goals"] == ["Emergency fund", "New camera", "Retirement goal", "Taxes"]
     assert out["income"] == 23 and out["sources"] == ["Club Velvet", "Fansly", "OnlyFans", "The Velvet Room"]
     assert out["change_password"] == 403
+
+
+def test_the_demo_refuses_passkeys_and_bad_date_lists(monkeypatch):
+    import demo
+    from fastapi.testclient import TestClient
+    import main
+    monkeypatch.setattr(demo, "ENABLED", True)
+    c = TestClient(main.app)
+    name = "dm-" + __import__("uuid").uuid4().hex[:6]
+    owner = TestClient(main.app)
+    if owner.post("/api/auth/setup", json={"username": "owner", "password": "correct-horse-battery"}).status_code != 201:
+        owner.post("/api/auth/login", json={"username": "owner", "password": "correct-horse-battery"})
+    owner.post("/api/users", json={"username": name, "password": "correct-horse-battery"})
+    c.post("/api/auth/login", json={"username": name, "password": "correct-horse-battery"})
+    assert c.post("/api/account/passkeys/begin", headers={"Origin": "http://localhost"}).status_code == 403
+    assert c.post("/api/blocklist", json={"phone": "5551234567"}).status_code == 403
+    assert c.post("/api/blocklist/import", json={"csv": "phone\n5551234567\n", "list_name": "x", "mapping": {"phone": "phone"}}).status_code == 403

@@ -383,6 +383,8 @@ def passkey_register_begin(request: Request):
     from webauthn.helpers import base64url_to_bytes
     from webauthn.helpers.structs import (AuthenticatorSelectionCriteria, PublicKeyCredentialDescriptor,
                                           ResidentKeyRequirement, UserVerificationRequirement)
+    if _demo():
+        raise HTTPException(status_code=403, detail="Passkeys are turned off in the demo: everyone shares its login")
     rp_id, _ = _origin(request)
     user = request.state.user
     db = _get_db()
