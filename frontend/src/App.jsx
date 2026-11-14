@@ -11,6 +11,7 @@ import Account from './pages/Account';
 import Login from './pages/Login';
 import SearchBar from './components/SearchBar';
 import CheckInBanner from './components/CheckInBanner';
+import QuickCash from './components/QuickCash';
 import Reminders from './components/Reminders';
 import { WorkTypesFirstRun } from './components/WorkTypes';
 import { clearCaches } from './api';
@@ -150,6 +151,7 @@ function App() {
         <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
           {auth.demo && <DemoBanner />}
           <CheckInBanner />
+          <QuickCash userId={auth.user.id} />
           <Routes>
             <Route path="/" element={<Dashboard user={auth.user} />} />
             <Route path="/calendar" element={<AppointmentCalendar />} />

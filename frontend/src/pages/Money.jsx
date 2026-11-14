@@ -58,6 +58,11 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
   }, [year]);
 
   useEffect(() => { load(); }, [load]);
+  // Quick cash entries made from anywhere show up here straight away.
+  useEffect(() => {
+    window.addEventListener('sworkr:money-changed', load);
+    return () => window.removeEventListener('sworkr:money-changed', load);
+  }, [load]);
   const loadSources = useCallback(() => {
     axios.get('/api/income-sources').then(({ data }) => setSources(data)).catch(() => {});
     axios.get('/api/place-charges').then(({ data }) => setCharges(data)).catch(() => {});
