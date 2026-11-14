@@ -12,6 +12,7 @@ import Login from './pages/Login';
 import SearchBar from './components/SearchBar';
 import CheckInBanner from './components/CheckInBanner';
 import QuickCash from './components/QuickCash';
+import { DecoyScreen, useDiscreet, usePanicKey } from './components/Discreet';
 import Reminders from './components/Reminders';
 import { WorkTypesFirstRun } from './components/WorkTypes';
 import { clearCaches } from './api';
@@ -96,6 +97,17 @@ function App() {
 
   useIdleLogout(auth.user ? idleMinutes : 0, logout);
 
+  // Discreet mode: a plain tab title, and a panic switch that hides everything and logs out.
+  const discreet = useDiscreet();
+  const [decoy, setDecoy] = useState(false);
+  const panic = useCallback(() => {
+    setDecoy(true);
+    window.history.replaceState(null, '', '/');   // the address bar shouldn't say where you were
+    logout();
+  }, [logout]);
+  usePanicKey(discreet.enabled && !!auth.user, panic);
+  if (decoy) return <DecoyScreen title={discreet.title} />;
+
   if (auth.user === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -140,10 +152,18 @@ function App() {
                 <SearchBar />
               </div>
 
-              <NavLink to="/account" className={({ isActive }) => `${navClass({ isActive })} text-sm whitespace-nowrap`} title="Your account and settings">
-                <span className="hidden md:inline">{auth.user.username}'s settings</span>
-                <span className="md:hidden" aria-label={`${auth.user.username}'s settings`}>⚙</span>
-              </NavLink>
+              <div className="flex items-center gap-2 sm:gap-3">
+                {discreet.enabled && discreet.panicButton && (
+                  <button type="button" onClick={panic} title="Hide sworkr now and log out"
+                    className="px-2.5 py-1 rounded-lg bg-white/25 text-white text-xs font-semibold hover:bg-white/40">
+                    Hide
+                  </button>
+                )}
+                <NavLink to="/account" className={({ isActive }) => `${navClass({ isActive })} text-sm whitespace-nowrap`} title="Your account and settings">
+                  <span className="hidden md:inline">{auth.user.username}'s settings</span>
+                  <span className="md:hidden" aria-label={`${auth.user.username}'s settings`}>⚙</span>
+                </NavLink>
+              </div>
             </div>
           </div>
         </nav>

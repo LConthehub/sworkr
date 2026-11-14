@@ -6,6 +6,7 @@ import { PersonaSettings } from '../components/Personas';
 import { BlocklistSettings } from '../components/Blocklist';
 import MedsSettings from '../components/Meds';
 import DocumentsSettings from '../components/Documents';
+import { DiscreetSettings } from '../components/Discreet';
 import { WorkTypesPicker } from '../components/WorkTypes';
 import { Field, inputClass, errorMessage, buttonClass, quietButtonClass, Section, Notice } from '../components/Modal';
 import CalendarSync from '../components/CalendarSync';
@@ -52,6 +53,14 @@ const GROUPS = [
     id: 'privacy', label: 'Security & privacy', icon: 'lock',
     sections: [
       { id: 'password', title: 'Password', words: 'login', render: () => <Password /> },
+      {
+        id: 'discreet', title: 'Discreet mode', words: 'panic hide tab title privacy disguise decoy',
+        render: () => (
+          <Section title="Discreet mode" hint="For a shared or borrowed device, or a screen others can see.">
+            <DiscreetSettings />
+          </Section>
+        ),
+      },
       { id: 'logout', title: 'Automatic log-out', words: 'idle timeout', render: ({ onIdleChange }) => <AutoLogout onIdleChange={onIdleChange} /> },
       { id: 'safety', title: 'Safety check-in', words: 'trusted contact alert emergency', render: () => <SafetyCheckIn /> },
       {
