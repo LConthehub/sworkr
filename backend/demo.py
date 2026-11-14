@@ -213,7 +213,7 @@ def _fill(api):
     _ok(api.put("/api/safety", json={"contact_name": "Best friend", "contact_email": "friend@example.com", "grace_minutes": 60}))
 
     # ---------- how I work, places you earn, other income ----------
-    _ok(api.put("/api/work-profile", json={"work_types": ["independent", "content", "dancer", "brothel"]}))
+    _ok(api.put("/api/work-profile", json={"work_types": ["independent", "content", "dancer", "brothel", "sugar"]}))
     categories = {c["label"]: c["key"] for c in _ok(api.get("/api/expense-categories"))}
     sources = {s["name"]: s for s in _ok(api.get("/api/income-sources"))}
     _ok(api.put(f"/api/income-sources/{sources['Fansly']['id']}", json={
@@ -368,6 +368,66 @@ def _fill(api):
     goal({"name": "Retirement goal", "target_amount": 25000, "color": "#0284c7", "notes": "Long term, a little at a time"},
          [(-80, 2000, None), (-40, 1000, None)])
 
+
+    # ---------- personas: a working name for in-person work, another for content ----------
+    scarlett = _ok(api.post("/api/personas", json={"name": "Scarlett", "color": "#db2777", "notes": "In person: escort and the Velvet Room"}))
+    kitty = _ok(api.post("/api/personas", json={"name": "Kitty Kam", "color": "#7c3aed", "notes": "Content and cam"}))
+    for c in _ok(api.get("/api/clients", params={"role": "client", "limit": 200})):
+        # A contact is saved whole, so send everything back with the persona added.
+        _ok(api.put(f"/api/clients/{c['id']}", json={**c, "persona_id": scarlett["id"]}))
+    for s in _ok(api.get("/api/income-sources")):
+        persona = kitty if s["kind"] == "platform" else scarlett
+        _ok(api.put(f"/api/income-sources/{s['id']}", json={**{k: s[k] for k in (
+            "name", "kind", "fee_percent", "fee_per_shift", "token_value", "payout_note", "notes", "archived",
+            "work_type")}, "persona_id": persona["id"],
+            "gift_share_percent": 50 if s["kind"] == "brothel" else s["gift_share_percent"]}))
+
+    # ---------- a stay at the brothel: its room & board and doctor are logged by themselves ----------
+    stint = period(-34, -28, kind="tour", name="Velvet Room stint", source_id=house["id"],
+                   notes="A week in residence. The house settles at the end.")
+    for offset, gross in ((-33, 1200), (-31, 950), (-29, 1500)):
+        _ok(api.post("/api/income", json={"source_id": house["id"], "date": at(offset, 7), "kind": "shift",
+                                          "gross": gross, "fees": gross / 2, "description": "Shift", "status": "received"}))
+    _ok(api.post("/api/income", json={"source_id": house["id"], "date": at(-30, 7), "kind": "gift", "gross": 800,
+                                      "fees": 400, "description": "Designer bag (the house takes half its value)", "status": "received"}))
+
+    # ---------- a sugar arrangement ----------
+    robert = _ok(api.post("/api/clients", json={"name": "Robert", "bio": "Sugar arrangement since spring. Dinners and travel.",
+                                                "persona_id": scarlett["id"]}))
+    _ok(api.put(f"/api/clients/{robert['id']}/arrangement", json={
+        "amount": 2000, "cadence": "monthly", "next_due": day(12).isoformat(), "notes": "Paid by bank transfer on the 1st-ish"}))
+    for offset in (-48, -18):
+        _ok(api.post("/api/income", json={"kind": "allowance", "client_id": robert["id"], "date": at(offset, 18),
+                                          "gross": 2000, "description": "Allowance", "status": "received"}))
+
+    # ---------- a no-show ----------
+    noshow = _ok(api.post("/api/clients", json={"name": "Mike", "contact_phone": "+1-555-0177", "persona_id": scarlett["id"]}))
+    missed = _ok(api.post("/api/appointments", json={"client_id": noshow["id"], "service_type": "Dinner date", "duration_minutes": 120,
+                                                     "scheduled_date": at(-12, 2), "rate": 600, "amount_paid": 150}))
+    _ok(api.put(f"/api/appointments/{missed['id']}/status", params={"status": "cancelled", "cancel_reason": "no_show",
+                                                                     "cancellation_fee": 600}))
+    _ok(api.put("/api/booking-policy", json={"deposit_percent": 25, "late_cancel_hours": 24,
+                                             "late_cancel_fee_percent": 50, "no_show_fee_percent": 100}))
+
+    # ---------- documents ----------
+    _ok(api.post("/api/documents", json={"name": "Passport", "kind": "passport", "expires_on": day(500).isoformat()}))
+    _ok(api.post("/api/documents", json={"name": "OnlyFans ID check", "kind": "verification", "persona_id": kitty["id"],
+                                         "expires_on": day(40).isoformat(), "notes": "They ask again every year"}))
+
+    # ---------- taxes: mileage and an estimated payment ----------
+    for offset, miles, why in ((-60, 18.4, "Outcall"), (-41, 7.2, "Photo shoot"), (-25, 22.0, "Outcall"), (-9, 11.5, "Supply run")):
+        _ok(api.post("/api/tax-summary/mileage", json={"date": day(offset).isoformat(), "miles": miles, "purpose": why}))
+    _ok(api.put(f"/api/tax-summary/mileage/rate/{today.year}", json={"rate": 0.70}))
+    past = [q for q in (1, 2, 3) if day(0) > _quarter_due(today.year, q)]
+    for q in past:
+        _ok(api.post("/api/tax-summary/payments", json={"year": today.year, "quarter": q, "amount": 900,
+                                                         "paid_on": (_quarter_due(today.year, q) - timedelta(days=2)).isoformat(),
+                                                         "note": "Paid at irs.gov"}))
+
+
+def _quarter_due(year, quarter):
+    import taxes
+    return taxes.due_date(year, quarter)
 
 def _last_reset(get_db):
     db = get_db()

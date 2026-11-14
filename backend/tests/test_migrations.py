@@ -381,3 +381,10 @@ def test_upgrade_to_v18_keeps_charges_and_allows_quarterly_ones(monkeypatch):
                "VALUES (1, 7, 'Quarterly', 'per_quarter', ?, ?)", (T, T))
     db.commit()
     db.close()
+
+
+def test_upgrade_to_v22_adds_arrangements_and_mileage():
+    path = old_database()
+    migrations.run(path)
+    tables = {r["name"] for r in rows(path, "SELECT name FROM sqlite_master WHERE type = 'table'")}
+    assert {"arrangements", "mileage", "tax_payments", "passkeys", "auth_challenges"} <= tables

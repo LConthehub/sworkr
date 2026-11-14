@@ -166,6 +166,15 @@ export default function AppointmentCalendar() {
   }, [cursorTourId, appointments]);
   const cycle = useCycleDays(toKey(new Date(rangeStart)), toKey(new Date(rangeEnd)));
   const tasksOn = useCallback((day) => tasks.filter((t) => t.due_date === toKey(day)), [tasks]);
+  // Dates that mark a day: a document running out, a renewal, the next shot or refill, an allowance or tax due.
+  const [markers, setMarkers] = useState([]);
+  const markerStart = toKey(new Date(rangeStart));
+  const markerEnd = toKey(new Date(rangeEnd));
+  useEffect(() => {
+    axios.get('/api/calendar/dates', { params: { start: markerStart, end: markerEnd } })
+      .then(({ data }) => setMarkers(data)).catch(() => setMarkers([]));
+  }, [markerStart, markerEnd, taskVersion]);
+  const markersOn = useCallback((day) => markers.filter((m) => m.date === toKey(day)), [markers]);
   const tasksChanged = () => { load(); setTaskVersion((v) => v + 1); };
   const toggleTask = async (task) => {
     await axios.post(`/api/tasks/${task.id}/done`, { done: !task.done }).catch(() => {});
@@ -270,7 +279,7 @@ export default function AppointmentCalendar() {
         {shownView === 'month' && (
           <MonthView
             days={days} cursor={cursor} today={today} narrow={narrow} onDay={onDay} periods={periods}
-            onSelect={setCursor} onNew={openNew} onOpen={actions.open} tasksOn={tasksOn} cycle={cycle}
+            onSelect={setCursor} onNew={openNew} onOpen={actions.open} tasksOn={tasksOn} cycle={cycle} markersOn={markersOn}
           />
         )}
         {(shownView === 'week' || shownView === 'day') && (
@@ -305,6 +314,16 @@ export default function AppointmentCalendar() {
               <button onClick={() => openNew(cursor)} className="text-sm text-sworkr-600 hover:text-sworkr-800">+ Add</button>
             </span>
           </div>
+          {markersOn(cursor).length > 0 && (
+            <ul className="mb-3 space-y-1">
+              {markersOn(cursor).map((m, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
+                  <span className="w-2 h-2 rotate-45 shrink-0" style={{ background: MARKER_COLORS[m.kind] || '#6b7280' }} />
+                  {m.label}
+                </li>
+              ))}
+            </ul>
+          )}
           {periodsOn(periods, cursor).map((p) => (
             <button
               key={p.id}
@@ -384,7 +403,21 @@ export default function AppointmentCalendar() {
 
 // ==================== MONTH ====================
 
-function MonthView({ days, cursor, today, narrow, onDay, periods, onSelect, onNew, onOpen, tasksOn, cycle }) {
+const MARKER_COLORS = { document: '#b45309', health: '#0f9488', money: '#059669' };
+
+/** A small diamond per important date (hover or the day panel shows what it is). */
+function MarkerDots({ markers }) {
+  if (!markers?.length) return null;
+  return (
+    <span className="flex gap-0.5 shrink-0" title={markers.map((m) => m.label).join(' · ')} aria-label={markers.map((m) => m.label).join(', ')}>
+      {markers.slice(0, 3).map((m, i) => (
+        <span key={i} className="w-1.5 h-1.5 rotate-45" style={{ background: MARKER_COLORS[m.kind] || '#6b7280' }} />
+      ))}
+    </span>
+  );
+}
+
+function MonthView({ days, cursor, today, narrow, onDay, periods, onSelect, onNew, onOpen, tasksOn, cycle, markersOn = () => [] }) {
   return (
     <>
       <div className="grid grid-cols-7 text-xs font-medium text-gray-400 mb-1">
@@ -429,6 +462,7 @@ function MonthView({ days, cursor, today, narrow, onDay, periods, onSelect, onNe
                   {day.getDate()}
                 </span>
                 <CycleDot kind={cycle[toKey(day)]} />
+                <MarkerDots markers={markersOn(day)} />
                 {off && !narrow && <span className="text-[10px] text-gray-500 truncate">{periodLabel(off)}</span>}
               </span>
               {narrow ? (

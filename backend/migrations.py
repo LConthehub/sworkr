@@ -957,6 +957,37 @@ def _m21_tax_payments_passkeys_two_step(conn):
     """)
 
 
+def _m22_arrangements_mileage(conn):
+    """Arrangements (a client's regular allowance, with a reminder when it's due) and a mileage log."""
+    conn.execute("""
+        CREATE TABLE arrangements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            client_id INTEGER NOT NULL UNIQUE REFERENCES clients(id) ON DELETE CASCADE,
+            amount REAL CHECK(amount IS NULL OR amount >= 0),
+            cadence TEXT NOT NULL CHECK(cadence IN ('per_meet', 'weekly', 'biweekly', 'monthly')),
+            next_due TEXT,
+            notes TEXT,
+            active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0, 1)),
+            task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE mileage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            date TEXT NOT NULL,
+            miles REAL NOT NULL CHECK(miles > 0),
+            purpose TEXT,
+            tour_id INTEGER REFERENCES tours(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_mileage_owner ON mileage(owner_id, date)")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -979,6 +1010,7 @@ MIGRATIONS = [
     (19, "documents that expire", _m19_documents, False),
     (20, "cancellations, no-shows and their fees", _m20_cancellations, False),
     (21, "estimated tax payments, passkeys, two-step sign-in", _m21_tax_payments_passkeys_two_step, False),
+    (22, "arrangements and mileage", _m22_arrangements_mileage, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

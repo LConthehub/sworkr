@@ -95,3 +95,11 @@ def test_earnings_compared_by_persona(api):
     r = ok(api.get("/api/earnings/by-source", params={"start": "2044-03-01T00:00:00Z", "end": "2044-04-01T00:00:00Z",
                                                       "group": "persona"}))
     assert {row["label"]: row["net"] for row in r["rows"]} == {"Lux": 400, "Kit": 80, "No persona": 50}
+
+
+def test_contacts_can_be_listed_by_persona(api):
+    lux = ok(api.post("/api/personas", json={"name": "Lux"}), 201)
+    ok(api.post("/api/clients", json={"name": "Sam", "persona_id": lux["id"]}), 201)
+    ok(api.post("/api/clients", json={"name": "Ana"}), 201)
+    assert [c["name"] for c in ok(api.get("/api/clients", params={"persona_id": lux["id"]}))] == ["Sam"]
+    assert [c["name"] for c in ok(api.get("/api/clients", params={"persona_id": 0}))] == ["Ana"]

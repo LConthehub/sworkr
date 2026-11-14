@@ -109,6 +109,7 @@ def tax_summary(request: Request, year: int = Query(..., ge=2000, le=2100),
             "year": year, "income": income, "gross_income": gross, "fees": fees, "expenses": expenses,
             "total_expenses": total_expenses, "profit": profit, "pending": round(pending, 2),
         }
+        out["mileage"] = mileage_for_year(db, owner, year)
         out["estimated_payments"] = [dict(r) for r in db.execute(
             "SELECT authority, ROUND(SUM(amount), 2) AS total, COUNT(*) AS payments FROM tax_payments "
             "WHERE owner_id = ? AND year = ? GROUP BY authority ORDER BY authority", (owner, year))]
@@ -286,5 +287,94 @@ def set_reminders(body: RemindersIn, request: Request):
         for task_id in touched + new:
             calendar_sync.queue_item("task", task_id, owner)
         return {"enabled": body.enabled, "tasks": len(new)}
+    finally:
+        db.close()
+
+
+# ==================== MILEAGE ====================
+# Miles driven for work, for the standard mileage deduction. The rate per mile is set by the IRS each year
+# (70 cents for 2025); sworkr doesn't guess it: you enter the year's rate, and the summary multiplies.
+
+class MileIn(BaseModel):
+    date: dt.date
+    miles: float
+    purpose: Optional[str] = None
+    tour_id: Optional[int] = None
+
+
+class RateIn(BaseModel):
+    rate: Optional[float] = None     # dollars per mile; None clears it
+
+
+def _rate(db, owner: int, year: int) -> Optional[float]:
+    r = db.execute("SELECT value FROM user_settings WHERE user_id = ? AND key = ?", (owner, f"mileage_rate_{year}")).fetchone()
+    try:
+        return float(r["value"]) if r and r["value"] else None
+    except ValueError:
+        return None
+
+
+def mileage_for_year(db, owner: int, year: int) -> dict:
+    r = db.execute("SELECT COUNT(*) AS trips, COALESCE(SUM(miles), 0) AS miles FROM mileage WHERE owner_id = ? "
+                   "AND date >= ? AND date < ?", (owner, f"{year}-01-01", f"{year + 1}-01-01")).fetchone()
+    rate = _rate(db, owner, year)
+    return {"trip_count": r["trips"], "miles": round(r["miles"], 1), "rate": rate,
+            "deduction": round(r["miles"] * rate, 2) if rate is not None else None}
+
+
+@router.get("/mileage")
+def list_mileage(request: Request, year: int = Query(..., ge=2000, le=2100)):
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        trips = [dict(r) for r in db.execute("""
+            SELECT m.*, t.name AS tour_name FROM mileage m LEFT JOIN tours t ON t.id = m.tour_id
+            WHERE m.owner_id = ? AND m.date >= ? AND m.date < ? ORDER BY m.date DESC, m.id DESC
+        """, (owner, f"{year}-01-01", f"{year + 1}-01-01"))]
+        return {"trips": trips, **mileage_for_year(db, owner, year)}
+    finally:
+        db.close()
+
+
+@router.post("/mileage", status_code=201)
+def add_mileage(body: MileIn, request: Request):
+    if not 0 < body.miles < 10000:
+        raise HTTPException(status_code=400, detail="Enter the miles driven (more than 0)")
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        if body.tour_id is not None and not db.execute("SELECT 1 FROM tours WHERE id = ? AND owner_id = ?", (body.tour_id, owner)).fetchone():
+            raise HTTPException(status_code=400, detail="That tour doesn't exist")
+        cur = db.execute("INSERT INTO mileage (owner_id, date, miles, purpose, tour_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                         (owner, body.date.isoformat(), round(body.miles, 1), (body.purpose or "").strip()[:200] or None,
+                          body.tour_id, datetime.now(timezone.utc).isoformat(timespec="seconds")))
+        db.commit()
+        return dict(db.execute("SELECT * FROM mileage WHERE id = ?", (cur.lastrowid,)).fetchone())
+    finally:
+        db.close()
+
+
+@router.delete("/mileage/{trip_id}", status_code=204)
+def delete_mileage(trip_id: int, request: Request):
+    db = _get_db()
+    try:
+        db.execute("DELETE FROM mileage WHERE id = ? AND owner_id = ?", (trip_id, request.state.user["id"]))
+        db.commit()
+    finally:
+        db.close()
+
+
+@router.put("/mileage/rate/{year}")
+def set_rate(year: int, body: RateIn, request: Request):
+    if body.rate is not None and not 0 <= body.rate < 10:
+        raise HTTPException(status_code=400, detail="The rate is dollars per mile, like 0.70")
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        db.execute("INSERT INTO user_settings (user_id, key, value) VALUES (?, ?, ?) "
+                   "ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value",
+                   (owner, f"mileage_rate_{year}", str(body.rate) if body.rate is not None else None))
+        db.commit()
+        return mileage_for_year(db, owner, year)
     finally:
         db.close()

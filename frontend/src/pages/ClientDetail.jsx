@@ -7,6 +7,7 @@ import AppointmentForm from '../components/AppointmentForm';
 import { ScreeningBadge } from '../components/ClientCard';
 import { AppointmentItem } from './AppointmentCalendar';
 import { BadDateWarning } from '../components/Blocklist';
+import Arrangement from '../components/Arrangement';
 import { colorFor, dayLabel, money, nextBirthday } from '../colors';
 
 const shortDate = (iso) => (iso ? dayLabel(new Date(iso), { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
@@ -89,6 +90,7 @@ export default function ClientDetail() {
     <div className="space-y-4">
       <Link to="/contacts" className="inline-block text-sm text-white/90 hover:text-white">← All contacts</Link>
       <BadDateWarning key={client.updated_at} clientId={client.id} />
+      {client.role === 'client' && <Arrangement clientId={client.id} onChanged={load} />}
 
       {client.do_not_see && (
         <div className="rounded-2xl bg-red-600 text-white px-5 py-4 shadow-lg" role="alert">

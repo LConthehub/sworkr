@@ -5,6 +5,7 @@ import ClientCard from '../components/ClientCard';
 import Modal from '../components/Modal';
 import ClientForm from '../components/ClientForm';
 import CsvTools from '../components/CsvTools';
+import { usePersonas } from '../components/Personas';
 
 const LIMIT = 21;
 const FILTERS = [
@@ -25,6 +26,8 @@ export default function ClientList() {
   const [loading, setLoading] = useState(true);   // true from the start, so "No contacts yet" never flashes before the first load
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
+  const [persona, setPersona] = useState('');   // '' all, '0' none, or a persona id
+  const personas = usePersonas();
   const [sort, setSort] = useState('recent');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -35,6 +38,7 @@ export default function ClientList() {
     try {
       const params = { page, limit: LIMIT, sort, ...FILTERS.find((f) => f.id === filter).params };
       if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (persona !== '') params.persona_id = Number(persona);
       const { data } = await axios.get('/api/clients', { params });
       setClients(data);
       setError('');
@@ -49,7 +53,7 @@ export default function ClientList() {
     const t = setTimeout(loadClients, 200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, sort, searchQuery, page]);
+  }, [filter, sort, searchQuery, page, persona]);
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
@@ -92,6 +96,18 @@ export default function ClientList() {
           aria-label="Search contacts"
           className="flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-sworkr-300"
         />
+        {personas.length > 0 && (
+          <select
+            value={persona}
+            onChange={(e) => { setPersona(e.target.value); setPage(1); }}
+            aria-label="Show contacts for a persona"
+            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-sworkr-300"
+          >
+            <option value="">Every persona</option>
+            {personas.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            <option value="0">No persona</option>
+          </select>
+        )}
         <select
           value={sort}
           onChange={(e) => { setSort(e.target.value); setPage(1); }}
@@ -117,7 +133,7 @@ export default function ClientList() {
         </div>
       ) : clients.length === 0 ? (
         <p className="text-center py-12 text-gray-400">
-          {searchQuery.trim() || filter !== 'all' ? 'No contacts match' : 'No contacts yet. Add your first one.'}
+          {searchQuery.trim() || filter !== 'all' || persona !== '' ? 'No contacts match' : 'No contacts yet. Add your first one.'}
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

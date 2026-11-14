@@ -27,6 +27,8 @@ import content
 import csv_io
 import currencies
 import finance
+import arrangements
+import calendar_dates
 import blocklist
 import signin
 import taxes
@@ -759,6 +761,7 @@ def list_clients(
     screening: Optional[ScreeningStatus] = None,
     do_not_see: Optional[int] = Query(None, ge=0, le=1),
     role: Optional[str] = Query(None, description="client, partner, crew or other"),
+    persona_id: Optional[int] = Query(None, description="only contacts who know you by this persona (0: by none)"),
     sort: str = Query("recent", description="recent or name"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=200),
@@ -786,6 +789,12 @@ def list_clients(
     if role:
         conditions.append("c.role = ?")
         params.append(role)
+    if persona_id is not None:
+        if persona_id == 0:
+            conditions.append("c.persona_id IS NULL")
+        else:
+            conditions.append("c.persona_id = ?")
+            params.append(persona_id)
 
     order = "c.display_name COLLATE NOCASE, c.id" if sort == "name" else "c.created_at DESC, c.id DESC"
     query = f"""
@@ -2118,6 +2127,8 @@ app.include_router(documents.router)
 app.include_router(noshow.router)
 app.include_router(taxes.router)
 app.include_router(signin.router)
+app.include_router(arrangements.router)
+app.include_router(calendar_dates.router)
 
 init_db()
 if os.environ.get("SEED_DB", "1") == "1":
@@ -2136,6 +2147,8 @@ documents.setup(get_db)
 noshow.setup(get_db)
 taxes.setup(get_db)
 signin.setup(get_db, _set_session_cookie)
+arrangements.setup(get_db)
+calendar_dates.setup(get_db)
 csv_io.setup(get_db, after_client_import=lambda ids: [calendar_sync.queue_client(i) for i in ids])
 # BACKGROUND_JOBS=0 (the tests) keeps the background threads from starting.
 _background = os.environ.get("BACKGROUND_JOBS", os.environ.get("CALENDAR_SYNC", "1")) == "1"

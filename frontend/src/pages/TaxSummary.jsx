@@ -3,6 +3,7 @@ import axios from 'axios';
 import { errorMessage, quietButtonClass } from '../components/Modal';
 import { money } from '../colors';
 import QuarterlyTaxes from '../components/QuarterlyTaxes';
+import Mileage from '../components/Mileage';
 
 const PERCENT_KEY = 'sworkr:set-aside-percent';
 const readPercent = () => { try { return localStorage.getItem(PERCENT_KEY) ?? ''; } catch { return ''; } };
@@ -16,6 +17,7 @@ export default function TaxSummary({ year, setYear }) {
   const [error, setError] = useState('');
   const [percent, setPercent] = useState(readPercent);
   const [open, setOpen] = useState({});
+  const [reload, setReload] = useState(0);
   const thisYear = new Date().getFullYear();
 
   useEffect(() => {
@@ -24,7 +26,7 @@ export default function TaxSummary({ year, setYear }) {
     axios.get('/api/tax-summary', {
       params: { year, tz_offset: new Date().getTimezoneOffset(), ...(percent !== '' && p >= 0 && p <= 100 ? { set_aside_percent: p } : {}) },
     }).then(({ data: d }) => { setData(d); setError(''); }).catch((err) => setError(errorMessage(err, "Couldn't add up the year")));
-  }, [year, percent]);
+  }, [year, percent, reload]);
 
   const changePercent = (e) => {
     setPercent(e.target.value);
@@ -102,6 +104,12 @@ export default function TaxSummary({ year, setYear }) {
               {data.set_aside && <span className="font-semibold">= {money(data.set_aside.amount)}</span>}
             </label>
             {data.set_aside && <p className="hidden print:block text-sm">Set aside ({data.set_aside.percent}% of profit): {money(data.set_aside.amount)}</p>}
+            {data.mileage?.deduction != null && data.mileage.miles > 0 && (
+              <dl className="mt-3">
+                {row(`Mileage (${data.mileage.miles} mi × $${data.mileage.rate})`, money(data.mileage.deduction))}
+                {row('Profit after mileage', money(data.profit - data.mileage.deduction), { strong: true })}
+              </dl>
+            )}
             {data.estimated_payments?.length > 0 && (
               <dl className="mt-3">
                 {data.estimated_payments.map((p) => row(`Estimated tax paid (${p.authority}, ${p.payments} payment${p.payments === 1 ? '' : 's'})`, money(p.total)))}
@@ -110,6 +118,8 @@ export default function TaxSummary({ year, setYear }) {
           </section>
 
           <QuarterlyTaxes year={year} percent={percent} />
+
+          <Mileage year={year} onChanged={() => setReload((n) => n + 1)} />
 
           <p className="text-xs text-gray-500 max-w-xl">
             Your part only: shares you pay partners are left out. Gifts count at what they're worth, with a house's share of

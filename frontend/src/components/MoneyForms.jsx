@@ -416,6 +416,12 @@ export function SourceForm({ source, onSaved }) {
           onRemove={(row) => { if (row.id) setRemoved((r) => [...r, row.id]); }}
         />
       )}
+      {charges && charges.length === 0 && SUGGESTED_CHARGES[form.kind] && (
+        <button type="button" onClick={() => setCharges(SUGGESTED_CHARGES[form.kind].map((c) => ({ ...BLANK_CHARGE, ...c, key: Math.random() })))}
+          className="text-sm text-sworkr-600 hover:text-sworkr-800">
+          + Add the usual {SOURCE_KINDS[form.kind].toLowerCase()} charges ({SUGGESTED_CHARGES[form.kind].map((c) => c.label.toLowerCase()).join(', ')})
+        </button>
+      )}
       <Field label="Payouts">
         <input value={form.payout_note} onChange={set('payout_note')} placeholder="e.g. Weekly on Fridays, $20 minimum" className={inputClass} />
       </Field>
