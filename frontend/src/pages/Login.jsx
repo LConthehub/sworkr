@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { Field, inputClass, errorMessage } from '../components/Modal';
+import { passkeyCancelled, passkeysSupported, signInWithPasskey } from '../passkeys';
+import { readDiscreet } from '../components/Discreet';
 
 /**
  * Shown when not logged in. With `setup`, it creates the first account instead.
@@ -12,6 +14,10 @@ export default function Login({ setup, demoLogin, onLoggedIn }) {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [twoStep, setTwoStep] = useState(null);   // { challenge, sent_to } while waiting for the emailed code
+  const [code, setCode] = useState('');
+  const [info, setInfo] = useState('');
+  const discreet = readDiscreet();
 
   const submit = async (e) => {
     e.preventDefault();
@@ -20,7 +26,12 @@ export default function Login({ setup, demoLogin, onLoggedIn }) {
     setBusy(true);
     try {
       const { data } = await axios.post(setup ? '/api/auth/setup' : '/api/auth/login', { username, password });
-      onLoggedIn(data);
+      if (data.two_step) {
+        setTwoStep(data);
+        setPassword('');
+      } else {
+        onLoggedIn(data);
+      }
     } catch (err) {
       setError(errorMessage(err, 'Could not log in'));
     } finally {
@@ -28,16 +39,81 @@ export default function Login({ setup, demoLogin, onLoggedIn }) {
     }
   };
 
+  const sendCode = async (e) => {
+    e.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      const { data } = await axios.post('/api/auth/login/code', { challenge: twoStep.challenge, code });
+      onLoggedIn(data);
+    } catch (err) {
+      setError(errorMessage(err, "That code didn't work"));
+      if (/run out|Start again/.test(err?.response?.data?.detail || '')) { setTwoStep(null); setCode(''); }
+    } finally {
+      setBusy(false);
+    }
+  };
+  const resend = async () => {
+    setError('');
+    setInfo('');
+    try {
+      const { data } = await axios.post('/api/auth/login/code/resend', { challenge: twoStep.challenge });
+      setInfo(`A new code is on its way to ${data.sent_to}.`);
+    } catch (err) {
+      setError(errorMessage(err, "Couldn't send another code"));
+    }
+  };
+  const passkey = async () => {
+    setError('');
+    setBusy(true);
+    try {
+      onLoggedIn(await signInWithPasskey());
+    } catch (err) {
+      if (!passkeyCancelled(err)) setError(errorMessage(err, "The passkey didn't work"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // In discreet mode the card doesn't say "Sworkr" either.
+  const header = (
+    <div className="flex items-center gap-3 mb-2">
+      {!discreet.enabled && <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sworkr-500 to-sworkr-800 flex items-center justify-center text-white font-bold text-xl">SW</div>}
+      <div>
+        <h1 className="font-bold text-gray-800 text-lg">{discreet.enabled ? (discreet.title || 'Notes') : 'Sworkr'}</h1>
+        <p className="text-xs text-gray-500">{setup ? 'Create your account to get started' : twoStep ? 'Check your email' : 'Log in to continue'}</p>
+      </div>
+    </div>
+  );
+
+  if (twoStep) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-4 py-8">
+        <form onSubmit={sendCode} className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6 space-y-4">
+          {header}
+          <p className="text-sm text-gray-700">We sent a 6-digit code to <strong>{twoStep.sent_to}</strong>. It works for 10 minutes.</p>
+          <Field label="Code">
+            <input required autoFocus inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]*" maxLength={7}
+              value={code} onChange={(e) => setCode(e.target.value)} className={`${inputClass} text-2xl tracking-[0.4em] text-center`} />
+          </Field>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          {info && <p className="text-sm text-emerald-700">{info}</p>}
+          <button type="submit" disabled={busy} className="w-full py-2.5 bg-sworkr-500 text-white rounded-lg hover:bg-sworkr-600 disabled:opacity-50 font-medium">
+            {busy ? 'Checking…' : 'Log in'}
+          </button>
+          <div className="flex justify-between text-sm">
+            <button type="button" onClick={resend} className="text-sworkr-600 hover:text-sworkr-800">Send a new code</button>
+            <button type="button" onClick={() => { setTwoStep(null); setCode(''); setError(''); setInfo(''); }} className="text-gray-500 hover:text-gray-700">Start over</button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-4 py-8">
       <form onSubmit={submit} className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6 space-y-4">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sworkr-500 to-sworkr-800 flex items-center justify-center text-white font-bold text-xl">SW</div>
-          <div>
-            <h1 className="font-bold text-gray-800 text-lg">Sworkr</h1>
-            <p className="text-xs text-gray-500">{setup ? 'Create your account to get started' : 'Log in to continue'}</p>
-          </div>
-        </div>
+        {header}
 
         <Field label="Username">
           <input required autoFocus autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} className={inputClass} />
@@ -67,6 +143,12 @@ export default function Login({ setup, demoLogin, onLoggedIn }) {
         <button type="submit" disabled={busy} className="w-full py-2.5 bg-sworkr-500 text-white rounded-lg hover:bg-sworkr-600 disabled:opacity-50 font-medium">
           {busy ? 'Please wait…' : setup ? 'Create account' : 'Log in'}
         </button>
+        {!setup && !demoLogin && passkeysSupported() && (
+          <button type="button" onClick={passkey} disabled={busy}
+            className="w-full py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 font-medium">
+            Log in with a passkey
+          </button>
+        )}
       </form>
 
       {demoLogin && !setup && (

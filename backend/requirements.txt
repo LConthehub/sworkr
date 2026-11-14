@@ -5,3 +5,4 @@ httpx==0.28.1        # calendar sync to Nextcloud
 cryptography>=42    # encrypted backups (AES-256-GCM)
 tzdata              # time zone names for safety alert emails
 pillow==13.0.0      # content library thumbnails, made in memory
+webauthn==2.8.0     # passkeys

@@ -7,6 +7,7 @@ import { BlocklistSettings } from '../components/Blocklist';
 import MedsSettings from '../components/Meds';
 import DocumentsSettings from '../components/Documents';
 import { DiscreetSettings } from '../components/Discreet';
+import { PasskeySettings, TwoStepSettings } from '../components/SignInSecurity';
 import { WorkTypesPicker } from '../components/WorkTypes';
 import { Field, inputClass, errorMessage, buttonClass, quietButtonClass, Section, Notice } from '../components/Modal';
 import CalendarSync from '../components/CalendarSync';
@@ -53,6 +54,14 @@ const GROUPS = [
     id: 'privacy', label: 'Security & privacy', icon: 'lock',
     sections: [
       { id: 'password', title: 'Password', words: 'login', render: () => <Password /> },
+      {
+        id: 'passkeys', title: 'Passkeys', words: 'passkey webauthn face id fingerprint touch id windows hello biometric login',
+        render: () => <Section title="Passkeys" hint="Log in with this phone or computer's face, fingerprint or PIN instead of a password."><PasskeySettings /></Section>,
+      },
+      {
+        id: 'twostep', title: 'Two-step sign-in', words: '2fa two factor mfa code email verification',
+        render: () => <Section title="Two-step sign-in" hint="A code by email after your password."><TwoStepSettings /></Section>,
+      },
       {
         id: 'discreet', title: 'Discreet mode', words: 'panic hide tab title privacy disguise decoy',
         render: () => (

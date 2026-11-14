@@ -28,6 +28,7 @@ import csv_io
 import currencies
 import finance
 import blocklist
+import signin
 import taxes
 import noshow
 import documents
@@ -447,7 +448,8 @@ def set_user_setting(db, user_id: int, key: str, value: Optional[str]):
 
 # ==================== AUTH ====================
 
-PUBLIC_PATHS = {"/api/health", "/api/auth/status", "/api/auth/setup", "/api/auth/login", "/api/auth/logout"}
+PUBLIC_PATHS = {"/api/health", "/api/auth/status", "/api/auth/setup", "/api/auth/login", "/api/auth/logout",
+                "/api/auth/login/code", "/api/auth/login/code/resend", "/api/auth/passkey/begin", "/api/auth/passkey/finish"}
 
 
 def is_background(request: Request) -> bool:
@@ -579,6 +581,9 @@ def auth_login(creds: Credentials, request: Request, response: Response, db: DbD
         raise HTTPException(status_code=401, detail="Wrong username or password")
     auth.throttle.success(username)
     auth.ip_throttle.success(ip)
+    if signin.two_step_on(db, user["id"]):
+        # The password was right; the session waits for the emailed code (POST /api/auth/login/code).
+        return signin.start_login_code(db, user)
     _set_session_cookie(response, auth.create_session(db, user["id"]), request)
     return {"id": user["id"], "username": user["username"], "is_admin": bool(user["is_admin"])}
 
@@ -2112,6 +2117,7 @@ app.include_router(meds.router)
 app.include_router(documents.router)
 app.include_router(noshow.router)
 app.include_router(taxes.router)
+app.include_router(signin.router)
 
 init_db()
 if os.environ.get("SEED_DB", "1") == "1":
@@ -2129,6 +2135,7 @@ meds.setup(get_db)
 documents.setup(get_db)
 noshow.setup(get_db)
 taxes.setup(get_db)
+signin.setup(get_db, _set_session_cookie)
 csv_io.setup(get_db, after_client_import=lambda ids: [calendar_sync.queue_client(i) for i in ids])
 # BACKGROUND_JOBS=0 (the tests) keeps the background threads from starting.
 _background = os.environ.get("BACKGROUND_JOBS", os.environ.get("CALENDAR_SYNC", "1")) == "1"

@@ -79,6 +79,21 @@ def reset_password(args):
     print(f"Password changed for {username}. Every device has been logged out.")
 
 
+def turn_off_two_step(args):
+    """For someone whose sign-in codes can't reach them (their email broke): password alone works again."""
+    db = connect()
+    username = (args.username or "").strip().lower()
+    user = db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+    if not user:
+        names = [r["username"] for r in db.execute("SELECT username FROM users ORDER BY id")]
+        sys.exit(f"No account called '{username}'. Usernames: " + ", ".join(names))
+    db.execute("INSERT INTO user_settings (user_id, key, value) VALUES (?, 'two_step', '0') "
+               "ON CONFLICT(user_id, key) DO UPDATE SET value = '0'", (user["id"],))
+    db.commit()
+    print(f"Two-step sign-in is off for {username}: their password alone signs them in again. "
+          "They can turn it back on in their settings.")
+
+
 def make_backup(args):
     db = connect()
     passphrase = args.passphrase or ask_new_secret("backup passphrase", backup.MIN_PASSPHRASE_LENGTH)
@@ -133,6 +148,10 @@ def main():
     p.add_argument("username", nargs="?")
     p.add_argument("--password", help=argparse.SUPPRESS)
     p.set_defaults(run=reset_password)
+
+    p = sub.add_parser("turn-off-two-step", help="let an account sign in with just its password again")
+    p.add_argument("username")
+    p.set_defaults(run=turn_off_two_step)
 
     p = sub.add_parser("backup", help="write an encrypted backup into a folder")
     p.add_argument("folder", nargs="?", default=backup.BACKUP_DIR)

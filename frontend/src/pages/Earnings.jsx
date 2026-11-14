@@ -416,7 +416,7 @@ function CompareTable({ items, firstColumn, onPick }) {
  */
 function StayStatement({ statement: s }) {
   const row = (label, value, opts = {}) => (
-    <div className={`flex justify-between gap-3 py-1 ${opts.strong ? 'font-semibold text-gray-900 border-t border-gray-200 mt-1 pt-2' : 'text-gray-700'}`}>
+    <div key={opts.key || label} className={`flex justify-between gap-3 py-1 ${opts.strong ? 'font-semibold text-gray-900 border-t border-gray-200 mt-1 pt-2' : 'text-gray-700'}`}>
       <dt className={opts.indent ? 'pl-4 text-gray-500' : ''}>{label}</dt>
       <dd className="tabular-nums">{value}</dd>
     </div>

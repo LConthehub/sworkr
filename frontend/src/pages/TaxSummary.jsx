@@ -32,7 +32,7 @@ export default function TaxSummary({ year, setYear }) {
   };
 
   const row = (label, value, opts = {}) => (
-    <div className={`flex justify-between gap-4 py-1.5 ${opts.strong ? 'font-semibold text-gray-900 border-t border-gray-200 mt-1 pt-2' : 'text-gray-700'} ${opts.indent ? 'pl-5 text-sm text-gray-500' : ''}`}>
+    <div key={opts.key || label} className={`flex justify-between gap-4 py-1.5 ${opts.strong ? 'font-semibold text-gray-900 border-t border-gray-200 mt-1 pt-2' : 'text-gray-700'} ${opts.indent ? 'pl-5 text-sm text-gray-500' : ''}`}>
       <dt>{label}</dt>
       <dd className="tabular-nums whitespace-nowrap">{value}</dd>
     </div>

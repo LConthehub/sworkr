@@ -28,6 +28,7 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - SMTP_FROM=${SMTP_FROM:-}
       - SMTP_SECURITY=${SMTP_SECURITY:-starttls}
+      - PASSKEY_ORIGINS=${PASSKEY_ORIGINS:-}
     restart: unless-stopped
 
   web:

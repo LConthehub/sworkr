@@ -28,6 +28,7 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - SMTP_FROM=${SMTP_FROM:-}
       - SMTP_SECURITY=${SMTP_SECURITY:-starttls}
+      - PASSKEY_ORIGINS=${PASSKEY_ORIGINS:-}
     command: uvicorn main:app --host 0.0.0.0 --port 8008 --reload
     restart: unless-stopped
 
