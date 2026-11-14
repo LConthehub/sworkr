@@ -1,0 +1,972 @@
+"""
+Database migrations.
+
+The database remembers which version it is at (SQLite's `user_version`). At startup every
+migration with a higher number runs, in order, each in its own transaction: a migration either
+applies completely or not at all. Before upgrading a database that already has data, a copy is
+saved next to it as `sworkr.before-v<N>.db`, so an upgrade can always be undone by hand.
+
+To change the schema: add a function and append it to MIGRATIONS. Never edit a migration that
+has already shipped; add a new one instead.
+"""
+
+import logging
+import os
+import sqlite3
+
+log = logging.getLogger("sworkr.migrations")
+
+
+# ==================== MIGRATIONS ====================
+
+def _m1_baseline(conn):
+    """The original tables. Every statement is 'IF NOT EXISTS', so this is safe on any old database."""
+    for statement in """
+        CREATE TABLE IF NOT EXISTS clients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            contact_phone TEXT,
+            email TEXT UNIQUE,
+            bio TEXT,
+            is_active INTEGER DEFAULT 1 CHECK(is_active IN (0, 1)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS client_tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER,
+            tag_name TEXT NOT NULL,
+            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS appointments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER,
+            service_type TEXT NOT NULL,
+            duration_minutes INTEGER NOT NULL CHECK(duration_minutes > 0),
+            scheduled_date TEXT NOT NULL,
+            status TEXT DEFAULT 'scheduled' CHECK(status IN ('scheduled', 'completed', 'cancelled')),
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER,
+            description TEXT NOT NULL,
+            amount REAL NOT NULL CHECK(amount >= 0),
+            category TEXT NOT NULL DEFAULT 'other' CHECK(category IN ('equipment', 'marketing', 'travel', 'cleaning', 'other')),
+            date TEXT NOT NULL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_clients_active ON clients(is_active);
+        CREATE INDEX IF NOT EXISTS idx_appointments_client ON appointments(client_id);
+        CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(scheduled_date);
+        CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            is_admin INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS sessions (
+            token_hash TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)
+    """.split(";"):
+        conn.execute(statement)
+
+    # Very old versions stored UTC times without a timezone. Mark them as UTC explicitly.
+    for table, cols in {"clients": ["created_at", "updated_at"],
+                        "appointments": ["scheduled_date", "created_at", "updated_at"],
+                        "expenses": ["date", "created_at"]}.items():
+        for col in cols:
+            conn.execute(f"""
+                UPDATE {table} SET {col} = {col} || '+00:00'
+                WHERE {col} IS NOT NULL AND {col} NOT LIKE '%+%' AND {col} NOT LIKE '%Z'
+                  AND substr({col}, 11, 1) = 'T' AND length({col}) >= 19
+            """)
+
+
+def _m2_owners_money_screening_safety(conn):
+    """
+    - Every client, appointment and expense belongs to a user (owner_id).
+    - Clients: screening status, references, and a "do not see" flag. The same email may now be used
+      by different users' clients (it used to be unique across the whole database).
+    - Appointments: rate and amount paid, location, safety check-in, and a series id for repeats.
+    - Dated notes per client, and per-user settings.
+    - Sessions remember when they were last used, for automatic log-out.
+    """
+    # SQLite can't drop the old UNIQUE(email), so the clients table is rebuilt.
+    conn.execute("""
+        CREATE TABLE clients_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER REFERENCES users(id),
+            name TEXT NOT NULL,
+            contact_phone TEXT,
+            email TEXT,
+            bio TEXT,
+            is_active INTEGER DEFAULT 1 CHECK(is_active IN (0, 1)),
+            screening_status TEXT NOT NULL DEFAULT 'unscreened'
+                CHECK(screening_status IN ('unscreened', 'pending', 'verified', 'declined')),
+            screening_notes TEXT,
+            references_text TEXT,
+            do_not_see INTEGER NOT NULL DEFAULT 0 CHECK(do_not_see IN (0, 1)),
+            do_not_see_reason TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("""
+        INSERT INTO clients_new (id, name, contact_phone, email, bio, is_active, created_at, updated_at)
+        SELECT id, name, contact_phone, email, bio, is_active, created_at, updated_at FROM clients
+    """)
+    conn.execute("DROP TABLE clients")
+    conn.execute("ALTER TABLE clients_new RENAME TO clients")
+    conn.execute("CREATE INDEX idx_clients_active ON clients(is_active)")
+    conn.execute("CREATE INDEX idx_clients_owner ON clients(owner_id)")
+    conn.execute("""
+        CREATE UNIQUE INDEX idx_clients_owner_email ON clients(COALESCE(owner_id, 0), email)
+        WHERE email IS NOT NULL
+    """)
+
+    for column in (
+        "owner_id INTEGER REFERENCES users(id)",
+        "rate REAL",
+        "amount_paid REAL NOT NULL DEFAULT 0",
+        "payment_method TEXT",
+        "location_type TEXT",
+        "location TEXT",
+        "safety_checkin INTEGER NOT NULL DEFAULT 0",
+        "checked_in_at TEXT",
+        "alert_sent_at TEXT",
+        "alert_error TEXT",
+        "series_id TEXT",
+    ):
+        conn.execute(f"ALTER TABLE appointments ADD COLUMN {column}")
+    conn.execute("CREATE INDEX idx_appointments_owner ON appointments(owner_id, scheduled_date)")
+
+    conn.execute("ALTER TABLE expenses ADD COLUMN owner_id INTEGER REFERENCES users(id)")
+    conn.execute("CREATE INDEX idx_expenses_owner ON expenses(owner_id, date)")
+
+    conn.execute("""
+        CREATE TABLE client_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+            owner_id INTEGER REFERENCES users(id),
+            body TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_client_notes_client ON client_notes(client_id, created_at)")
+
+    conn.execute("""
+        CREATE TABLE user_settings (
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            key TEXT NOT NULL,
+            value TEXT,
+            PRIMARY KEY (user_id, key)
+        )
+    """)
+
+    conn.execute("ALTER TABLE sessions ADD COLUMN last_seen_at TEXT")
+
+    # Tidy up links to clients that no longer exist, so the rebuilt table has no dangling references.
+    conn.execute("DELETE FROM client_tags WHERE client_id NOT IN (SELECT id FROM clients)")
+    conn.execute("UPDATE appointments SET client_id = NULL "
+                 "WHERE client_id IS NOT NULL AND client_id NOT IN (SELECT id FROM clients)")
+    conn.execute("UPDATE expenses SET client_id = NULL "
+                 "WHERE client_id IS NOT NULL AND client_id NOT IN (SELECT id FROM clients)")
+    conn.execute("DELETE FROM sessions WHERE user_id NOT IN (SELECT id FROM users)")
+
+    # Everything that already exists belongs to the first admin (there has only ever been one account).
+    # If no account exists yet, the rows stay unowned and are handed to the first account at setup.
+    owner = conn.execute("SELECT id FROM users ORDER BY is_admin DESC, id LIMIT 1").fetchone()
+    if owner:
+        for table in ("clients", "appointments", "expenses"):
+            conn.execute(f"UPDATE {table} SET owner_id = ? WHERE owner_id IS NULL", (owner[0],))
+
+    # Sample data is only ever added to a brand-new database. One that already has data is past that.
+    if conn.execute("SELECT 1 FROM clients LIMIT 1").fetchone() or owner:
+        conn.execute("INSERT INTO settings (key, value) VALUES ('seeded', '1') "
+                     "ON CONFLICT(key) DO UPDATE SET value = '1'")
+
+
+def _m3_tours_tests_preferences(conn):
+    """
+    - Tours and time off (days off, vacations): periods on the calendar.
+    - Expenses: new categories 'medical' and 'room_rent', and links to a tour, to the health test that
+      created them, and whether sworkr generated them (room rent per tour day).
+    - Appointments: a kind ('client' or 'test' for a health test), the test type and its cost.
+    - Clients: birthday, drink and food preferences.
+    """
+    conn.execute("""
+        CREATE TABLE tours (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER REFERENCES users(id),
+            kind TEXT NOT NULL DEFAULT 'tour' CHECK(kind IN ('tour', 'time_off')),
+            time_off_type TEXT CHECK(time_off_type IS NULL OR time_off_type IN ('day_off', 'vacation')),
+            name TEXT,
+            location TEXT,
+            start_date TEXT NOT NULL,
+            end_date TEXT NOT NULL,
+            starts_at TEXT NOT NULL,
+            ends_at TEXT NOT NULL,
+            room_rent_per_day REAL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_tours_owner ON tours(owner_id, starts_at)")
+
+    for column in ("kind TEXT NOT NULL DEFAULT 'client'", "test_type TEXT", "cost REAL"):
+        conn.execute(f"ALTER TABLE appointments ADD COLUMN {column}")
+
+    for column in ("birthday TEXT", "drink_preferences TEXT", "food_preferences TEXT"):
+        conn.execute(f"ALTER TABLE clients ADD COLUMN {column}")
+
+    # SQLite can't change a CHECK constraint, so the expenses table is rebuilt with the new categories.
+    conn.execute("""
+        CREATE TABLE expenses_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+            description TEXT NOT NULL,
+            amount REAL NOT NULL CHECK(amount >= 0),
+            category TEXT NOT NULL DEFAULT 'other' CHECK(category IN
+                ('equipment', 'marketing', 'travel', 'cleaning', 'medical', 'room_rent', 'other')),
+            date TEXT NOT NULL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            owner_id INTEGER REFERENCES users(id),
+            tour_id INTEGER REFERENCES tours(id) ON DELETE SET NULL,
+            appointment_id INTEGER REFERENCES appointments(id) ON DELETE CASCADE,
+            source TEXT
+        )
+    """)
+    conn.execute("""
+        INSERT INTO expenses_new (id, client_id, description, amount, category, date, notes, created_at, owner_id)
+        SELECT id, client_id, description, amount, category, date, notes, created_at, owner_id FROM expenses
+    """)
+    conn.execute("DROP TABLE expenses")
+    conn.execute("ALTER TABLE expenses_new RENAME TO expenses")
+    conn.execute("CREATE INDEX idx_expenses_category ON expenses(category)")
+    conn.execute("CREATE INDEX idx_expenses_owner ON expenses(owner_id, date)")
+    conn.execute("CREATE INDEX idx_expenses_tour ON expenses(tour_id)")
+    conn.execute("CREATE INDEX idx_expenses_appointment ON expenses(appointment_id)")
+
+
+def _m4_income_goals_categories(conn):
+    """
+    - Places you earn (venues, platforms, agencies) with their fee rules.
+    - Income that isn't a booking: payouts, tips, sales, shifts. Gross, fees, and whether it's been paid out.
+    - Savings goals and the money put into (or taken out of) them.
+    - Each user's own expense categories. The fixed list is gone from the expenses table (so it's rebuilt),
+      and categories are checked against the user's own list instead.
+    - Every amount gets a currency. Only USD is used for now; the column makes adding others easier later.
+    """
+    conn.execute("""
+        CREATE TABLE expense_categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            key TEXT NOT NULL,
+            label TEXT NOT NULL,
+            color TEXT,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            hidden INTEGER NOT NULL DEFAULT 0 CHECK(hidden IN (0, 1)),
+            created_at TEXT NOT NULL,
+            UNIQUE (owner_id, key)
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE income_sources (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'other' CHECK(kind IN ('venue', 'platform', 'agency', 'phone', 'other')),
+            fee_percent REAL CHECK(fee_percent IS NULL OR (fee_percent >= 0 AND fee_percent <= 100)),
+            fee_per_shift REAL CHECK(fee_per_shift IS NULL OR fee_per_shift >= 0),
+            token_value REAL CHECK(token_value IS NULL OR token_value >= 0),
+            payout_note TEXT,
+            notes TEXT,
+            currency TEXT NOT NULL DEFAULT 'USD',
+            archived INTEGER NOT NULL DEFAULT 0 CHECK(archived IN (0, 1)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_income_sources_owner ON income_sources(owner_id)")
+    conn.execute("""
+        CREATE TABLE income (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            source_id INTEGER REFERENCES income_sources(id) ON DELETE SET NULL,
+            date TEXT NOT NULL,
+            description TEXT,
+            kind TEXT NOT NULL DEFAULT 'other',
+            tokens REAL CHECK(tokens IS NULL OR tokens >= 0),
+            gross REAL NOT NULL CHECK(gross >= 0),
+            fees REAL NOT NULL DEFAULT 0 CHECK(fees >= 0),
+            status TEXT NOT NULL DEFAULT 'received' CHECK(status IN ('received', 'pending')),
+            payout_date TEXT,
+            notes TEXT,
+            currency TEXT NOT NULL DEFAULT 'USD',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_income_owner ON income(owner_id, date)")
+    conn.execute("""
+        CREATE TABLE goals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'savings' CHECK(kind IN ('savings', 'tax')),
+            target_amount REAL CHECK(target_amount IS NULL OR target_amount > 0),
+            target_date TEXT,
+            rule_type TEXT NOT NULL DEFAULT 'none' CHECK(rule_type IN ('none', 'percent', 'weekly', 'per_booking')),
+            rule_amount REAL CHECK(rule_amount IS NULL OR rule_amount >= 0),
+            starts_on TEXT NOT NULL,
+            priority INTEGER NOT NULL DEFAULT 0,
+            color TEXT,
+            notes TEXT,
+            currency TEXT NOT NULL DEFAULT 'USD',
+            archived INTEGER NOT NULL DEFAULT 0 CHECK(archived IN (0, 1)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_goals_owner ON goals(owner_id)")
+    conn.execute("""
+        CREATE TABLE goal_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            goal_id INTEGER NOT NULL REFERENCES goals(id) ON DELETE CASCADE,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            date TEXT NOT NULL,
+            amount REAL NOT NULL,
+            note TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_goal_entries_goal ON goal_entries(goal_id, date)")
+
+    conn.execute("ALTER TABLE appointments ADD COLUMN currency TEXT NOT NULL DEFAULT 'USD'")
+
+    # The expenses table without the fixed category list, and with a currency.
+    conn.execute("""
+        CREATE TABLE expenses_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+            description TEXT NOT NULL,
+            amount REAL NOT NULL CHECK(amount >= 0),
+            category TEXT NOT NULL DEFAULT 'other',
+            date TEXT NOT NULL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            owner_id INTEGER REFERENCES users(id),
+            tour_id INTEGER REFERENCES tours(id) ON DELETE SET NULL,
+            appointment_id INTEGER REFERENCES appointments(id) ON DELETE CASCADE,
+            source TEXT,
+            currency TEXT NOT NULL DEFAULT 'USD'
+        )
+    """)
+    conn.execute("""
+        INSERT INTO expenses_new (id, client_id, description, amount, category, date, notes, created_at, owner_id,
+                                  tour_id, appointment_id, source)
+        SELECT id, client_id, description, amount, category, date, notes, created_at, owner_id,
+               tour_id, appointment_id, source FROM expenses
+    """)
+    conn.execute("DROP TABLE expenses")
+    conn.execute("ALTER TABLE expenses_new RENAME TO expenses")
+    conn.execute("CREATE INDEX idx_expenses_category ON expenses(category)")
+    conn.execute("CREATE INDEX idx_expenses_owner ON expenses(owner_id, date)")
+    conn.execute("CREATE INDEX idx_expenses_tour ON expenses(tour_id)")
+    conn.execute("CREATE INDEX idx_expenses_appointment ON expenses(appointment_id)")
+
+
+def _m5_contacts_tasks_personal_sync(conn):
+    """
+    - Clients become contacts: the name is optional, they can have social media handles, they can be shown
+      by one of those handles, and they have an industry. `display_name` is what they're shown as everywhere.
+      SQLite can't drop NOT NULL from `name`, so the table is rebuilt.
+    - Tasks: a simple to-do list.
+    - Calendar sync is per person now: the shared settings move to the account that set them up.
+    """
+    conn.execute("""
+        CREATE TABLE clients_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER REFERENCES users(id),
+            name TEXT,
+            display_name TEXT NOT NULL,
+            handles TEXT,
+            display_handle INTEGER,
+            industry TEXT,
+            contact_phone TEXT,
+            email TEXT,
+            bio TEXT,
+            is_active INTEGER DEFAULT 1 CHECK(is_active IN (0, 1)),
+            screening_status TEXT NOT NULL DEFAULT 'unscreened'
+                CHECK(screening_status IN ('unscreened', 'pending', 'verified', 'declined')),
+            screening_notes TEXT,
+            references_text TEXT,
+            do_not_see INTEGER NOT NULL DEFAULT 0 CHECK(do_not_see IN (0, 1)),
+            do_not_see_reason TEXT,
+            birthday TEXT,
+            drink_preferences TEXT,
+            food_preferences TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("""
+        INSERT INTO clients_new (id, owner_id, name, display_name, contact_phone, email, bio, is_active, screening_status,
+                                 screening_notes, references_text, do_not_see, do_not_see_reason, birthday,
+                                 drink_preferences, food_preferences, created_at, updated_at)
+        SELECT id, owner_id, name, name, contact_phone, email, bio, is_active, screening_status,
+               screening_notes, references_text, do_not_see, do_not_see_reason, birthday,
+               drink_preferences, food_preferences, created_at, updated_at FROM clients
+    """)
+    conn.execute("DROP TABLE clients")
+    conn.execute("ALTER TABLE clients_new RENAME TO clients")
+    conn.execute("CREATE INDEX idx_clients_active ON clients(is_active)")
+    conn.execute("CREATE INDEX idx_clients_owner ON clients(owner_id)")
+    conn.execute("""
+        CREATE UNIQUE INDEX idx_clients_owner_email ON clients(COALESCE(owner_id, 0), email)
+        WHERE email IS NOT NULL
+    """)
+
+    conn.execute("""
+        CREATE TABLE tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            notes TEXT,
+            due_date TEXT,
+            due_at TEXT,
+            done_at TEXT,
+            client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+            tour_id INTEGER REFERENCES tours(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_tasks_owner ON tasks(owner_id, done_at, due_date)")
+
+    # Calendar sync settings: from one shared set to the person who set it up.
+    shared = {k: v for k, v in conn.execute("SELECT key, value FROM settings WHERE key LIKE 'cal\\_%' ESCAPE '\\'")}
+    owner = shared.get("cal_owner_id")
+    if not (owner and owner.isdigit()):
+        row = conn.execute("SELECT id FROM users ORDER BY is_admin DESC, id LIMIT 1").fetchone()
+        owner = str(row[0]) if row else None
+    if owner and shared.get("cal_url"):
+        for key in ("cal_enabled", "cal_url", "cal_username", "cal_password", "cal_discreet", "cal_last_sync_at"):
+            if shared.get(key) is not None:
+                conn.execute("INSERT OR REPLACE INTO user_settings (user_id, key, value) VALUES (?, ?, ?)",
+                             (int(owner), key, shared[key]))
+    conn.execute("DELETE FROM settings WHERE key LIKE 'cal\\_%' ESCAPE '\\'")
+
+
+def _m6_source_work_types(conn):
+    """Each place you earn can say which kind of work it's for (dancer, cam, content…), so income can be
+    compared between kinds of work. Places added from a starter setup get theirs filled in."""
+    import json
+    conn.execute("ALTER TABLE income_sources ADD COLUMN work_type TEXT")
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "presets.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            presets = json.load(f)["work_types"]
+    except (OSError, ValueError, KeyError):
+        return
+    for key, preset in presets.items():
+        for source in preset.get("sources", []):
+            conn.execute("UPDATE income_sources SET work_type = ? WHERE work_type IS NULL AND LOWER(name) = LOWER(?)",
+                         (key, source["name"]))
+
+
+def _m7_partners_splits_room_board(conn):
+    """
+    - Contacts get a role: client, partner (another worker), crew (photographer, driver…) or other.
+    - Splitting money with partners, kept privately: which partners share a booking, income or cost and how
+      much each gets, who collected or paid the money, reusable split agreements, and settle-up payments.
+    - "Room rent" is now "Room & board" (renamed only where nobody has renamed it themselves).
+    - Brothel and agency workers get a "License & permit fees" expense category.
+    """
+    conn.execute("ALTER TABLE clients ADD COLUMN role TEXT NOT NULL DEFAULT 'client'")
+    conn.execute("""
+        CREATE TABLE split_agreements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            notes TEXT,
+            active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0, 1)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE agreement_parties (
+            agreement_id INTEGER NOT NULL REFERENCES split_agreements(id) ON DELETE CASCADE,
+            partner_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+            booking_pct REAL NOT NULL DEFAULT 0 CHECK(booking_pct >= 0 AND booking_pct <= 100),
+            content_pct REAL NOT NULL DEFAULT 0 CHECK(content_pct >= 0 AND content_pct <= 100),
+            costs_pct REAL NOT NULL DEFAULT 0 CHECK(costs_pct >= 0 AND costs_pct <= 100),
+            PRIMARY KEY (agreement_id, partner_id)
+        )
+    """)
+    # One row per booking, income or expense that's shared: who handled the money (NULL = you).
+    conn.execute("""
+        CREATE TABLE split_records (
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            record_type TEXT NOT NULL CHECK(record_type IN ('appointment', 'income', 'expense')),
+            record_id INTEGER NOT NULL,
+            handled_by INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+            agreement_id INTEGER REFERENCES split_agreements(id) ON DELETE SET NULL,
+            PRIMARY KEY (record_type, record_id)
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE splits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            record_type TEXT NOT NULL CHECK(record_type IN ('appointment', 'income', 'expense')),
+            record_id INTEGER NOT NULL,
+            partner_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+            share_type TEXT NOT NULL CHECK(share_type IN ('percent', 'amount')),
+            share_value REAL NOT NULL CHECK(share_value >= 0)
+        )
+    """)
+    conn.execute("CREATE INDEX idx_splits_record ON splits(record_type, record_id)")
+    conn.execute("CREATE INDEX idx_splits_partner ON splits(partner_id)")
+    conn.execute("""
+        CREATE TABLE settlements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            partner_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+            date TEXT NOT NULL,
+            amount REAL NOT NULL CHECK(amount > 0),
+            direction TEXT NOT NULL CHECK(direction IN ('paid_them', 'they_paid')),
+            note TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_settlements_partner ON settlements(partner_id, date)")
+
+    conn.execute("UPDATE expense_categories SET label = 'Room & board' WHERE key = 'room_rent' AND label = 'Room rent'")
+    conn.execute("UPDATE expenses SET description = 'Room & board' || substr(description, 10) "
+                 "WHERE source = 'tour_room' AND description LIKE 'Room rent%'")
+    for (user_id, value) in conn.execute("SELECT user_id, value FROM user_settings WHERE key = 'work_types'").fetchall():
+        if value and '"brothel"' in value and not conn.execute(
+                "SELECT 1 FROM expense_categories WHERE owner_id = ? AND LOWER(label) = 'license & permit fees'", (user_id,)).fetchone():
+            count = conn.execute("SELECT COUNT(*) FROM expense_categories WHERE owner_id = ?", (user_id,)).fetchone()[0]
+            conn.execute("INSERT INTO expense_categories (owner_id, key, label, color, sort_order, created_at) "
+                         "VALUES (?, ?, 'License & permit fees', '#b45309', ?, datetime('now'))",
+                         (user_id, "c" + os.urandom(4).hex(), count))
+
+
+def _m8_posts(conn):
+    """Planned and posted social media and fan site posts, pointing at files in the person's content library
+    (their Nextcloud, Synology, WebDAV or mounted folder; the files themselves are never stored in sworkr)."""
+    conn.execute("""
+        CREATE TABLE posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            platform TEXT NOT NULL,
+            account TEXT,
+            scheduled_at TEXT,
+            status TEXT NOT NULL DEFAULT 'idea' CHECK(status IN ('idea', 'ready', 'scheduled', 'posted', 'skipped')),
+            caption TEXT,
+            price REAL CHECK(price IS NULL OR price >= 0),
+            set_path TEXT,
+            file_paths TEXT,
+            posted_at TEXT,
+            post_url TEXT,
+            notes TEXT,
+            series_id TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_posts_owner ON posts(owner_id, scheduled_at)")
+
+
+def _m9_couples(conn):
+    """Couples: two client contacts can be linked, and a booking can include both people."""
+    conn.execute("ALTER TABLE clients ADD COLUMN couple_with INTEGER REFERENCES clients(id) ON DELETE SET NULL")
+    conn.execute("ALTER TABLE appointments ADD COLUMN second_client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL")
+
+
+def _m10_cycle(conn):
+    """Cycle tracking (opt-in, private): logged periods. Predictions are worked out from these, not stored."""
+    conn.execute("""
+        CREATE TABLE cycle_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            start_date TEXT NOT NULL,
+            end_date TEXT,
+            flow TEXT CHECK(flow IS NULL OR flow IN ('light', 'medium', 'heavy')),
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_cycle_owner ON cycle_entries(owner_id, start_date)")
+
+
+# The two-level expense categories as v11 left them. (finance.py has the live copy; this one must never change.)
+_V11_TOPS = [
+    ("workspace", "Workspace", "#c2410c"), ("fees", "Fees & licenses", "#b45309"),
+    ("health", "Health & safety", "#0f9488"), ("wardrobe", "Look & wardrobe", "#fc4c9c"),
+    ("gear", "Gear & tech", "#7c3aed"), ("marketing", "Marketing", "#e67eb6"), ("travel", "Travel", "#a73178"),
+    ("fitness", "Fitness & training", "#65a30d"), ("other", "Other", "#4b86a6"),
+]
+_V11_SUBS = [("room_rent", "Room & board", "workspace"), ("cleaning", "Cleaning & laundry", "workspace"),
+             ("medical", "Tests & doctor", "health"), ("equipment", "Equipment & toys", "gear")]
+_V11_OLD_LABELS = {"marketing": "Marketing & ads", "medical": "Medical & tests", "equipment": "Equipment"}
+# What each old starter category becomes: a built-in key to merge into, or (parent, new label).
+_V11_RENAMES = {
+    "license & permit fees": ("fees", "Licenses & permits"),
+    "agency & booking fees": ("fees", "Agency & booking fees"),
+    "agent & booking fees": ("fees", "Agency & booking fees"),
+    "lingerie & outfits": ("wardrobe", "Lingerie & outfits"),
+    "makeup & beauty": ("wardrobe", "Makeup & beauty"),
+    "wardrobe & grooming": ("wardrobe", "Makeup & beauty"),
+    "costumes & heels": ("wardrobe", "Costumes & props"),
+    "costumes & toys": ("wardrobe", "Costumes & props"),
+    "costumes & props": ("wardrobe", "Costumes & props"),
+    "props & outfits": ("wardrobe", "Costumes & props"),
+    "wigs & makeup": ("wardrobe", "Wigs & hair"),
+    "latex & leather": ("wardrobe", "Latex & leather"),
+    "ads & verification": ("marketing", "Ads & verification"),
+    "photographers & shoots": ("marketing", "Photographers & shoots"),
+    "promotion": ("marketing", "Promotion"),
+    "prints & merch": ("marketing", "Prints & merch"),
+    "incall rent": ("workspace", "Incall rent"),
+    "dungeon rental": ("workspace", "Dungeon & studio hire"),
+    "screening & safety": ("health", "Screening & safety"),
+    "cam gear & lighting": ("gear", "Camera & lighting"),
+    "photo & video gear": ("gear", "Camera & lighting"),
+    "internet & tech": ("gear", "Phone & internet"),
+    "phone & internet": ("gear", "Phone & internet"),
+    "editing apps": ("gear", "Apps & software"),
+    "convention fees": ("travel", "Conventions & events"),
+    "fitness & classes": "fitness",
+    "shoot travel": "travel",
+    "equipment & gear": "equipment",
+}
+
+
+def _m11_category_groups(conn):
+    """Expense categories get two levels: a few main ones everyone has (Workspace, Fees & licenses, …) with
+    subcategories under them. The old starter categories, which overlapped a lot, are renamed into
+    subcategories and duplicates are merged (their expenses move with them). Anything else someone made
+    becomes a subcategory of Other. Names people chose themselves are kept."""
+    conn.execute("ALTER TABLE expense_categories ADD COLUMN parent_key TEXT")
+    owners = [r[0] for r in conn.execute("SELECT DISTINCT owner_id FROM expense_categories").fetchall()]
+    builtin = {k for k, _, _ in _V11_TOPS} | {k for k, _, _ in _V11_SUBS}
+
+    for owner in owners:
+        def key_for_label(label, but=None):
+            r = conn.execute("SELECT key FROM expense_categories WHERE owner_id = ? AND LOWER(label) = LOWER(?) AND key IS NOT ?",
+                             (owner, label, but)).fetchone()
+            return r[0] if r else None
+
+        def merge(from_key, into_key):
+            conn.execute("UPDATE expenses SET category = ? WHERE owner_id = ? AND category = ?", (into_key, owner, from_key))
+            conn.execute("UPDATE expense_categories SET parent_key = ? WHERE owner_id = ? AND parent_key = ?", (into_key, owner, from_key))
+            conn.execute("DELETE FROM expense_categories WHERE owner_id = ? AND key = ?", (owner, from_key))
+
+        def put(key, label, color, parent):
+            if conn.execute("SELECT 1 FROM expense_categories WHERE owner_id = ? AND key = ?", (owner, key)).fetchone():
+                conn.execute("UPDATE expense_categories SET parent_key = ? WHERE owner_id = ? AND key = ?", (parent, owner, key))
+                if parent:   # subcategories show their main category's colour
+                    conn.execute("UPDATE expense_categories SET color = NULL WHERE owner_id = ? AND key = ?", (owner, key))
+                if key in _V11_OLD_LABELS:   # only the old default name; a name someone chose stays
+                    conn.execute("UPDATE expense_categories SET label = ? WHERE owner_id = ? AND key = ? AND label = ?",
+                                 (label, owner, key, _V11_OLD_LABELS[key]))
+            else:
+                # Someone may already have made a category with this name: it becomes this one.
+                clash = key_for_label(label)
+                conn.execute("INSERT INTO expense_categories (owner_id, key, label, color, parent_key, created_at) "
+                             "VALUES (?, ?, ?, ?, ?, datetime('now'))", (owner, key, f"{label} ({key})", color, parent))
+                if clash and clash not in builtin:
+                    merge(clash, key)
+                elif clash:   # a built-in already uses the name (renamed by hand): keep both, this one marked
+                    return
+                conn.execute("UPDATE expense_categories SET label = ? WHERE owner_id = ? AND key = ?", (label, owner, key))
+
+        for key, label, color in _V11_TOPS:
+            put(key, label, color, None)
+        for key, label, parent in _V11_SUBS:
+            put(key, label, None, parent)
+
+        for key, label in conn.execute("SELECT key, label FROM expense_categories WHERE owner_id = ? ORDER BY sort_order, id",
+                                       (owner,)).fetchall():
+            if key in builtin:
+                continue
+            target = _V11_RENAMES.get(label.strip().lower())
+            if isinstance(target, str):
+                merge(key, target)
+            elif target:
+                parent, new_label = target
+                existing = key_for_label(new_label, but=key)
+                if existing:
+                    merge(key, existing)
+                else:
+                    conn.execute("UPDATE expense_categories SET label = ?, parent_key = ?, color = NULL WHERE owner_id = ? AND key = ?",
+                                 (new_label, parent, owner, key))
+            else:
+                conn.execute("UPDATE expense_categories SET parent_key = 'other', color = NULL WHERE owner_id = ? AND key = ?",
+                             (owner, key))
+
+        # Main categories in the fixed order, then each one's subcategories in the order they had.
+        for order, (key, _, _) in enumerate(_V11_TOPS):
+            conn.execute("UPDATE expense_categories SET sort_order = ? WHERE owner_id = ? AND key = ?", (order, owner, key))
+        subs = conn.execute("SELECT key FROM expense_categories WHERE owner_id = ? AND parent_key IS NOT NULL ORDER BY sort_order, id",
+                            (owner,)).fetchall()
+        for order, (key,) in enumerate(subs):
+            conn.execute("UPDATE expense_categories SET sort_order = ? WHERE owner_id = ? AND key = ?", (100 + order, owner, key))
+
+
+def _m12_place_kinds_and_charges(conn):
+    """Places get more precise kinds (brothel, club, studio, event instead of one 'venue'), and each place can
+    have charges you pay it: room & board, a doctor, a license, room hire. Charges are logged as expenses (a
+    doctor's visit as a health test), and a license with a renewal date gets a reminder task."""
+    old_sql = conn.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'income_sources'").fetchone()[0]
+    old_check = "CHECK(kind IN ('venue', 'platform', 'agency', 'phone', 'other'))"
+    assert old_check in old_sql
+    new_sql = old_sql.replace(old_check, "CHECK(kind IN ('brothel', 'club', 'agency', 'platform', 'phone', 'studio', 'event', 'other'))")
+    conn.execute(new_sql.replace("CREATE TABLE income_sources", "CREATE TABLE income_sources_new", 1))
+    columns = ", ".join(r[1] for r in conn.execute("PRAGMA table_info(income_sources)"))
+    conn.execute(f"""
+        INSERT INTO income_sources_new ({columns})
+        SELECT {columns.replace("kind", "CASE WHEN kind = 'venue' THEN CASE work_type WHEN 'brothel' THEN 'brothel' "
+                                "WHEN 'fetish' THEN 'studio' WHEN 'cosplay' THEN 'event' ELSE 'club' END "
+                                "WHEN kind = 'agency' AND work_type = 'brothel' AND name = 'My brothel or agency' THEN 'brothel' "
+                                "ELSE kind END", 1)}
+        FROM income_sources
+    """)
+    conn.execute("DROP TABLE income_sources")
+    conn.execute("ALTER TABLE income_sources_new RENAME TO income_sources")
+    conn.execute("CREATE INDEX idx_income_sources_owner ON income_sources(owner_id)")
+
+    conn.execute("""
+        CREATE TABLE place_charges (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            source_id INTEGER NOT NULL REFERENCES income_sources(id) ON DELETE CASCADE,
+            label TEXT NOT NULL,
+            amount REAL CHECK(amount IS NULL OR amount >= 0),
+            cadence TEXT NOT NULL CHECK(cadence IN ('per_booking', 'per_shift', 'per_day', 'per_week', 'per_month',
+                                                    'per_year', 'per_stay', 'once')),
+            category TEXT NOT NULL DEFAULT 'other',
+            test_type TEXT CHECK(test_type IS NULL OR test_type IN ('weekly', 'monthly', 'yearly')),
+            renews_on TEXT,
+            task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_place_charges_source ON place_charges(source_id)")
+
+
+def _m13_stays(conn):
+    """A tour can be a stay at one of your places (a brothel, a club, a convention): the place's daily,
+    weekly, monthly and per-stay charges are then logged for it. Health tests made that way remember their stay."""
+    conn.execute("ALTER TABLE tours ADD COLUMN source_id INTEGER REFERENCES income_sources(id) ON DELETE SET NULL")
+    conn.execute("ALTER TABLE appointments ADD COLUMN from_tour_id INTEGER REFERENCES tours(id) ON DELETE CASCADE")
+
+
+def _m14_personas(conn):
+    """Personas: the names someone works under. Contacts, places you earn and posts can each name one."""
+    conn.execute("""
+        CREATE TABLE personas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            color TEXT,
+            notes TEXT,
+            archived INTEGER NOT NULL DEFAULT 0 CHECK(archived IN (0, 1)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_personas_owner ON personas(owner_id)")
+    for table in ("clients", "income_sources", "posts"):
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN persona_id INTEGER REFERENCES personas(id) ON DELETE SET NULL")
+
+
+def _m15_blocklist(conn):
+    """A bad-date list: people to warn about or refuse, matched by phone, email or handle."""
+    conn.execute("""
+        CREATE TABLE blocklist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            phone TEXT,
+            phone_key TEXT,
+            email TEXT,
+            handle TEXT,
+            name TEXT,
+            description TEXT,
+            area TEXT,
+            reported_on TEXT,
+            severity TEXT NOT NULL DEFAULT 'warn' CHECK(severity IN ('warn', 'block')),
+            list_name TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    for column in ("phone_key", "email", "handle", "list_name"):
+        conn.execute(f"CREATE INDEX idx_blocklist_{column} ON blocklist(owner_id, {column})")
+
+
+def _m16_gifts_and_allowances(conn):
+    """Gifts and allowances: income can name the contact it came from, and a place can take a share of gifts
+    (a brothel usually charges half a gift's value). Brothels start at 50%."""
+    conn.execute("ALTER TABLE income ADD COLUMN client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL")
+    conn.execute("ALTER TABLE income_sources ADD COLUMN gift_share_percent REAL "
+                 "CHECK(gift_share_percent IS NULL OR (gift_share_percent >= 0 AND gift_share_percent <= 100))")
+    conn.execute("UPDATE income_sources SET gift_share_percent = 50 WHERE kind = 'brothel'")
+
+
+def _m17_meds(conn):
+    """Birth control and regular meds (opt-in, private): what you take and on what rhythm, and a short log."""
+    conn.execute("""
+        CREATE TABLE med_schedules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            method TEXT NOT NULL,
+            started_on TEXT,
+            replace_by TEXT,
+            refill_every_days INTEGER,
+            cost REAL CHECK(cost IS NULL OR cost >= 0),
+            discreet INTEGER NOT NULL DEFAULT 1 CHECK(discreet IN (0, 1)),
+            active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0, 1)),
+            notes TEXT,
+            task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE med_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            med_id INTEGER NOT NULL REFERENCES med_schedules(id) ON DELETE CASCADE,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            date TEXT NOT NULL,
+            kind TEXT NOT NULL CHECK(kind IN ('taken', 'missed', 'changed', 'refilled')),
+            note TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_med_logs ON med_logs(med_id, date)")
+
+
+def _m18_quarterly_charges(conn):
+    """Charges can come every quarter (some places license workers quarterly, not yearly)."""
+    old_sql = conn.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'place_charges'").fetchone()[0]
+    old = "'per_month',\n                                                    'per_year'"
+    assert old in old_sql, "place_charges is not as v12 made it"
+    new_sql = old_sql.replace(old, "'per_month',\n                                                    'per_quarter', 'per_year'")
+    conn.execute(new_sql.replace("CREATE TABLE place_charges", "CREATE TABLE place_charges_new", 1))
+    columns = ", ".join(r[1] for r in conn.execute("PRAGMA table_info(place_charges)"))
+    conn.execute(f"INSERT INTO place_charges_new ({columns}) SELECT {columns} FROM place_charges")
+    conn.execute("DROP TABLE place_charges")
+    conn.execute("ALTER TABLE place_charges_new RENAME TO place_charges")
+    conn.execute("CREATE INDEX idx_place_charges_source ON place_charges(source_id)")
+
+
+MIGRATIONS = [
+    (1, "baseline tables", _m1_baseline, False),
+    (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
+    (3, "tours and time off, health tests, room rent, client preferences", _m3_tours_tests_preferences, True),
+    (4, "income, places you earn, savings goals, own expense categories, currencies", _m4_income_goals_categories, True),
+    (5, "contacts with handles and industry, tasks, calendar sync per person", _m5_contacts_tasks_personal_sync, True),
+    (6, "kind of work for each place you earn", _m6_source_work_types, False),
+    (7, "partners and splits, room & board, license fees", _m7_partners_splits_room_board, False),
+    (8, "post planner", _m8_posts, False),
+    (9, "couples", _m9_couples, False),
+    (10, "cycle tracking", _m10_cycle, False),
+    (11, "expense categories in two levels", _m11_category_groups, False),
+    (12, "kinds of place, and charges each place makes", _m12_place_kinds_and_charges, True),
+    (13, "stays: tours at one of your places", _m13_stays, False),
+    (14, "personas", _m14_personas, False),
+    (15, "bad-date list", _m15_blocklist, False),
+    (16, "gifts, allowances and the house's share of gifts", _m16_gifts_and_allowances, False),
+    (17, "birth control and regular meds", _m17_meds, False),
+    (18, "quarterly charges", _m18_quarterly_charges, True),
+]
+LATEST = MIGRATIONS[-1][0]
+
+
+# ==================== RUNNER ====================
+
+def current_version(conn) -> int:
+    return conn.execute("PRAGMA user_version").fetchone()[0]
+
+
+def _has_data(conn) -> bool:
+    tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    return any(t in tables and conn.execute(f"SELECT 1 FROM {t} LIMIT 1").fetchone()
+               for t in ("clients", "appointments", "expenses", "users"))
+
+
+def _save_copy(conn, db_path: str, target: int) -> str:
+    copy_path = os.path.join(os.path.dirname(db_path), f"sworkr.before-v{target}.db")
+    if os.path.exists(copy_path):
+        os.replace(copy_path, copy_path + ".old")
+    dest = sqlite3.connect(copy_path)
+    try:
+        conn.backup(dest)
+    finally:
+        dest.close()
+    return copy_path
+
+
+def run(db_path: str) -> int:
+    """Bring the database at db_path up to date. Returns the version it ends at."""
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    # isolation_level=None: we say BEGIN/COMMIT ourselves, so table changes are part of the transaction too.
+    conn = sqlite3.connect(db_path, timeout=30, isolation_level=None)
+    try:
+        version = current_version(conn)
+        if version > LATEST:
+            raise RuntimeError(
+                f"This database is version {version}, but this copy of sworkr only knows up to {LATEST}. "
+                "Update sworkr, or restore the database copy made before the upgrade.")
+        pending = [m for m in MIGRATIONS if m[0] > version]
+        if not pending:
+            return version
+        if _has_data(conn):
+            copy_path = _save_copy(conn, db_path, LATEST)
+            log.warning("Upgrading the database from v%s to v%s. A copy was saved at %s", version, LATEST, copy_path)
+        for number, name, migrate, rebuilds_tables in pending:
+            # Foreign keys must be off while a table is rebuilt, and can only be switched outside a transaction.
+            conn.execute(f"PRAGMA foreign_keys = {'OFF' if rebuilds_tables else 'ON'}")
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                if current_version(conn) >= number:   # another process got here first
+                    conn.execute("ROLLBACK")
+                    continue
+                migrate(conn)
+                if rebuilds_tables:
+                    broken = conn.execute("PRAGMA foreign_key_check").fetchall()
+                    if broken:
+                        raise RuntimeError(f"Migration {number} would leave {len(broken)} broken links between tables")
+                conn.execute(f"PRAGMA user_version = {number}")
+                conn.execute("COMMIT")
+                log.info("Database migration %s applied: %s", number, name)
+            except Exception:
+                conn.execute("ROLLBACK")
+                raise
+        return current_version(conn)
+    finally:
+        conn.close()

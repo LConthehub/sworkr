@@ -1,0 +1,436 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Link, NavLink, useParams } from 'react-router-dom';
+import axios from 'axios';
+import Modal, { Field, inputClass, errorMessage, buttonClass, quietButtonClass } from '../components/Modal';
+import { PersonaSelect } from '../components/Personas';
+import { dayLabel, formatTime, fromDateTimeInputs, money, repeatDates, toDateInput, toTimeInput } from '../colors';
+
+/** Suggestions only: any platform, ad site or your own website can be typed in. */
+export const PLATFORM_GROUPS = {
+  'Ad sites': ['Tryst', 'Eros', 'Slixa', 'Private Delights', 'AdultWork', 'Scarlet Blue', 'Leolist', 'Skip the Games', 'My website'],
+  Social: ['X', 'Instagram', 'Reddit', 'TikTok', 'Bluesky', 'Threads', 'Telegram', 'Snapchat'],
+  'Fan & clip sites': ['OnlyFans', 'Fansly', 'Fanvue', 'LoyalFans', 'Patreon', 'ManyVids', 'Clips4Sale', 'Pornhub'],
+};
+export const PLATFORMS = Object.values(PLATFORM_GROUPS).flat();
+const PAID_PLATFORMS = new Set(PLATFORM_GROUPS['Fan & clip sites'].map((p) => p.toLowerCase()));
+const STATUS = {
+  idea: { label: 'Idea', badge: 'bg-gray-100 text-gray-600' },
+  ready: { label: 'Ready', badge: 'bg-sky-100 text-sky-700' },
+  scheduled: { label: 'Scheduled', badge: 'bg-sworkr-50 text-sworkr-600' },
+  posted: { label: 'Posted', badge: 'bg-emerald-100 text-emerald-700' },
+  skipped: { label: 'Skipped', badge: 'bg-gray-100 text-gray-400 line-through' },
+};
+const thumbUrl = (path, size = 256) => `/api/content/thumbnail?path=${encodeURIComponent(path)}&size=${size}`;
+const whenText = (iso) => (iso ? `${dayLabel(new Date(iso), { weekday: 'short', month: 'short', day: 'numeric' })}, ${formatTime(new Date(iso))}` : 'No time set');
+
+/** Content: the library (sets in your own folder) and the post planner. */
+export default function Content() {
+  const { tab = 'library' } = useParams();
+  const [modal, setModal] = useState(null); // { post } (post may be a draft with files)
+  const [version, setVersion] = useState(0);
+  const plan = (draft) => setModal({ post: draft });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-white">Content</h1>
+        <nav className="flex gap-1 rounded-full bg-white/20 p-1 backdrop-blur-sm" aria-label="Content">
+          {[['/content', 'Library'], ['/content/planner', 'Post planner']].map(([to, label]) => (
+            <NavLink key={to} to={to} end className={({ isActive }) => `px-4 py-1.5 rounded-full text-sm font-medium ${isActive ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'}`}>
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+      {tab === 'planner' ? <Planner version={version} onEdit={(p) => setModal({ post: p })} onNew={() => plan({})} />
+        : <Library onPlan={plan} version={version} />}
+      {modal && (
+        <Modal title={modal.post.id ? 'Edit post' : 'Plan a post'} onClose={() => setModal(null)} wide>
+          <PostForm post={modal.post} onDone={() => { setModal(null); setVersion((v) => v + 1); }} />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ==================== LIBRARY ====================
+
+function Library({ onPlan, version }) {
+  const [path, setPath] = useState('');
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [notSetUp, setNotSetUp] = useState(false);
+  const [selected, setSelected] = useState([]);
+
+  const load = useCallback(async () => {
+    setData(null);
+    try {
+      const { data: d } = await axios.get('/api/content/browse', { params: { path } });
+      setData(d);
+      setError('');
+    } catch (err) {
+      if (err?.response?.status === 409) setNotSetUp(true);
+      else setError(errorMessage(err, "Couldn't open your library."));
+    }
+  }, [path]);
+  useEffect(() => { load(); setSelected([]); }, [load, version]);
+
+  if (notSetUp) {
+    return (
+      <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6">
+        <h2 className="font-semibold text-gray-800">Connect your content folder</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          Point sworkr at the folder you keep your photos and videos in, for ads, socials and fan sites: Nextcloud, a Synology
+          or other NAS, or a folder mounted into sworkr. Each subfolder becomes a set. sworkr only reads it, and never copies your content.
+          You can plan posts and ad renewals in the Post planner without connecting a folder.
+        </p>
+        <Link to="/account/connections#content" className={`${buttonClass} inline-block mt-3`}>Connect a folder</Link>
+      </div>
+    );
+  }
+
+  const crumbs = path ? path.split('/') : [];
+  const files = data?.entries.filter((e) => !e.folder) || [];
+  const toggle = (p) => setSelected((s) => (s.includes(p) ? s.filter((x) => x !== p) : [...s, p]));
+
+  return (
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+      <div className="flex flex-wrap items-center gap-2 mb-4 text-sm">
+        <button onClick={() => setPath('')} className={`font-semibold ${path ? 'text-sworkr-600 hover:text-sworkr-800' : 'text-gray-800'}`}>Library</button>
+        {crumbs.map((c, i) => (
+          <span key={i} className="flex items-center gap-2">
+            <span className="text-gray-300">/</span>
+            <button onClick={() => setPath(crumbs.slice(0, i + 1).join('/'))} className={i === crumbs.length - 1 ? 'font-semibold text-gray-800' : 'text-sworkr-600 hover:text-sworkr-800'}>{c}</button>
+          </span>
+        ))}
+        <span className="ml-auto flex gap-2">
+          {data?.web_link && <a href={data.web_link} target="_blank" rel="noreferrer noopener" className={quietButtonClass}>Open in Nextcloud ↗</a>}
+          {path && <button onClick={() => onPlan({ set_path: path, file_paths: selected })} className={buttonClass}>
+            Plan a post{selected.length ? ` with ${selected.length} file${selected.length === 1 ? '' : 's'}` : ' with this set'}
+          </button>}
+        </span>
+      </div>
+      {data?.demo && <p className="text-xs text-gray-400 mb-3">Demo: a made-up library with placeholder pictures.</p>}
+      {error && <p className="text-sm rounded-lg px-3 py-2 bg-red-50 text-red-700 mb-3">{error}</p>}
+      {!data ? <p className="text-sm text-gray-400 py-6">{error ? '' : 'Opening…'}</p> : (
+        <>
+          {data.entries.filter((e) => e.folder).length > 0 && (
+            <ul className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 mb-5">
+              {data.entries.filter((e) => e.folder).map((f) => (
+                <li key={f.path}>
+                  <button onClick={() => setPath(f.path)} className="w-full text-left rounded-xl border border-gray-100 p-3 hover:shadow-sm hover:border-sworkr-200">
+                    <span className="text-2xl" aria-hidden="true">📁</span>
+                    <span className="block font-medium text-sm text-gray-800 truncate">{f.name}</span>
+                    <span className="block text-xs text-gray-500">
+                      {f.platforms?.length ? `Posted: ${f.platforms.join(', ')}` : f.file_posts || f.posts.length ? 'Planned' : 'Not posted yet'}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {files.length > 0 ? (
+            <>
+              <p className="text-xs text-gray-500 mb-2">Tick files to plan a post with them. The badges show where each one has gone.</p>
+              <ul className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                {files.map((f) => (
+                  <li key={f.path} className={`rounded-xl border overflow-hidden ${selected.includes(f.path) ? 'border-sworkr-500 ring-2 ring-sworkr-300' : 'border-gray-100'}`}>
+                    <button onClick={() => toggle(f.path)} className="block w-full aspect-square bg-gray-100 relative" aria-pressed={selected.includes(f.path)} aria-label={`Select ${f.name}`}>
+                      {f.kind === 'other' ? <span className="absolute inset-0 flex items-center justify-center text-3xl">📄</span> : (
+                        <img src={thumbUrl(f.path)} alt="" loading="lazy" className="w-full h-full object-cover"
+                          onError={(e) => { e.currentTarget.replaceWith(Object.assign(document.createElement('span'), { className: 'absolute inset-0 flex items-center justify-center text-3xl', textContent: f.kind === 'video' ? '🎬' : '🖼' })); }} />
+                      )}
+                      {f.kind === 'video' && <span className="absolute bottom-1 left-1 text-[10px] px-1.5 rounded bg-black/60 text-white">video</span>}
+                      <span className={`absolute top-1 left-1 w-5 h-5 rounded border-2 ${selected.includes(f.path) ? 'bg-sworkr-500 border-sworkr-500 text-white text-xs leading-4 text-center' : 'bg-white/80 border-white'}`}>{selected.includes(f.path) ? '✓' : ''}</span>
+                    </button>
+                    <div className="px-2 py-1.5">
+                      <p className="text-xs text-gray-700 truncate" title={f.name}>{f.name}</p>
+                      <div className="flex flex-wrap gap-1 mt-0.5 min-h-[18px]">
+                        {f.posts.slice(0, 3).map((p) => (
+                          <span key={p.post_id} title={`${STATUS[p.status].label}${p.when ? ` · ${whenText(p.when)}` : ''}`}
+                            className={`text-[10px] px-1.5 rounded-full ${p.status === 'posted' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                            {p.status === 'posted' ? '✓ ' : ''}{p.platform}
+                          </span>
+                        ))}
+                        {f.posts.length > 3 && <span className="text-[10px] text-gray-400">+{f.posts.length - 3}</span>}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : data.entries.length === 0 && <p className="text-sm text-gray-400 py-6 text-center">This folder is empty.</p>}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ==================== PLANNER ====================
+
+function Planner({ version, onEdit, onNew }) {
+  const [filter, setFilter] = useState('open');
+  const [posts, setPosts] = useState(null);
+  const [notice, setNotice] = useState('');
+  const load = useCallback(() => {
+    axios.get('/api/posts', { params: filter === 'all' ? {} : { status: filter } }).then(({ data }) => setPosts(data)).catch(() => setPosts([]));
+  }, [filter]);
+  useEffect(() => { load(); }, [load, version]);
+
+  const byDay = {};
+  for (const p of posts || []) {
+    const when = p.posted_at || p.scheduled_at;
+    const key = when ? toDateInput(new Date(when)) : 'unscheduled';
+    (byDay[key] ||= []).push(p);
+  }
+  const days = Object.keys(byDay).sort((a, b) => (a === 'unscheduled' ? 1 : b === 'unscheduled' ? -1 : filter === 'posted' ? b.localeCompare(a) : a.localeCompare(b)));
+
+  return (
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm" role="group" aria-label="Show">
+          {[['open', 'To do'], ['posted', 'Posted'], ['all', 'All']].map(([id, label]) => (
+            <button key={id} onClick={() => setFilter(id)} aria-pressed={filter === id} className={`px-3 py-1.5 ${filter === id ? 'bg-sworkr-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{label}</button>
+          ))}
+        </div>
+        <button onClick={onNew} className="px-4 py-2 rounded-full text-sm font-medium bg-sworkr-500 text-white hover:bg-sworkr-600">+ New post</button>
+      </div>
+      <p className="text-xs text-gray-500 mb-3">
+        Plan social posts, fan-site drops, ad renewals and bumps, and tour announcements. sworkr doesn't post for you (sites don't
+        allow apps to): it reminds you when one is due (turn on Reminders in settings), you copy the text and post it, then mark it as posted.
+      </p>
+      {notice && <p className="text-sm text-emerald-700 mb-2">{notice}</p>}
+      {!posts ? null : posts.length === 0 ? (
+        <p className="text-sm text-gray-400 py-8 text-center">{filter === 'open' ? 'Nothing planned. Plan a post or an ad renewal from a set in your library, or start a new one.' : 'Nothing here yet.'}</p>
+      ) : (
+        <div className="space-y-4">
+          {days.map((d) => (
+            <section key={d}>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                {d === 'unscheduled' ? 'No date yet' : dayLabel(new Date(`${d}T12:00:00`), { weekday: 'long', month: 'short', day: 'numeric' })}
+              </h3>
+              <ul className="divide-y divide-gray-100">
+                {byDay[d].map((p) => <PostRow key={p.id} post={p} onEdit={onEdit} onChanged={(msg) => { setNotice(msg || ''); load(); }} />)}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** One post, with Copy caption and Mark as posted. Also used on the dashboard. */
+export function PostRow({ post: p, onEdit, onChanged }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(p.caption || '');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard blocked: the caption is still visible to copy by hand */ }
+  };
+  const posted = async () => {
+    const url = window.prompt('Posted! Paste the link to the post if you like (or leave empty):', '');
+    if (url === null) return;
+    try {
+      await axios.post(`/api/posts/${p.id}/posted`, { post_url: url.trim() || null });
+      onChanged?.('Marked as posted.');
+    } catch (err) {
+      window.alert(errorMessage(err, 'Could not save'));
+    }
+  };
+  const when = p.posted_at || p.scheduled_at;
+  const overdue = p.status !== 'posted' && p.status !== 'skipped' && when && new Date(when) < new Date();
+  return (
+    <li className="py-2.5 flex flex-wrap items-start gap-x-3 gap-y-1">
+      {p.file_paths[0] && <img src={thumbUrl(p.file_paths[0], 128)} alt="" loading="lazy" className="w-12 h-12 rounded-lg object-cover bg-gray-100 shrink-0" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />}
+      <button onClick={() => onEdit?.(p)} className="flex-1 min-w-48 text-left">
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="font-medium text-gray-800">{p.platform}</span>
+          {p.account && <span className="text-xs text-gray-500">{p.account}</span>}
+          <span className={`text-[10px] px-2 py-0.5 rounded-full ${STATUS[p.status].badge}`}>{STATUS[p.status].label}</span>
+          {p.price != null && <span className="text-xs text-gray-600">{money(p.price)}</span>}
+        </span>
+        <span className={`block text-xs ${overdue ? 'text-red-600' : 'text-gray-500'}`}>
+          {when ? `${overdue ? 'Due ' : ''}${formatTime(new Date(when))}` : 'No time set'}
+          {p.set_path && ` · ${p.set_path}`}{p.file_paths.length ? ` · ${p.file_paths.length} file${p.file_paths.length === 1 ? '' : 's'}` : ''}
+        </span>
+        {p.caption && <span className="block text-sm text-gray-600 line-clamp-2 whitespace-pre-wrap">{p.caption}</span>}
+      </button>
+      <span className="flex gap-2 shrink-0">
+        {p.caption && <button onClick={copy} className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">{copied ? 'Copied ✓' : 'Copy caption'}</button>}
+        {p.status !== 'posted' && <button onClick={posted} className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">✓ Posted</button>}
+        {p.post_url && <a href={p.post_url} target="_blank" rel="noreferrer noopener" className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Open ↗</a>}
+      </span>
+    </li>
+  );
+}
+
+// ==================== ONE POST ====================
+
+export function PostForm({ post, onDone }) {
+  const editing = !!post.id;
+  const start = post.scheduled_at ? new Date(post.scheduled_at) : null;
+  const [form, setForm] = useState({
+    platform: post.platform || '', account: post.account || '', status: post.status || (editing ? 'idea' : 'scheduled'),
+    persona_id: post.persona_id ? String(post.persona_id) : '',
+    date: start ? toDateInput(start) : '', time: start ? toTimeInput(start) : '19:00',
+    caption: post.caption || '', price: post.price ?? '', notes: post.notes || '', post_url: post.post_url || '',
+    repeat: '', repeat_count: '4',
+  });
+  const [files, setFiles] = useState(post.file_paths || []);
+  const [setPath] = useState(post.set_path || null);
+  const [error, setError] = useState('');
+  const [warnings, setWarnings] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    const when = form.date ? fromDateTimeInputs(form.date, form.time || '12:00') : null;
+    const body = {
+      platform: form.platform.trim(), account: form.account.trim() || null, status: form.status,
+      persona_id: form.persona_id ? Number(form.persona_id) : null,
+      scheduled_at: when ? when.toISOString() : null, caption: form.caption, price: form.price === '' ? null : Number(form.price),
+      set_path: setPath, file_paths: files, notes: form.notes, post_url: form.post_url.trim() || null,
+      posted_at: post.posted_at || null,
+    };
+    if (!editing && form.repeat && when) {
+      body.repeat_dates = repeatDates(when, form.repeat, Math.min(Math.max(Number(form.repeat_count) || 2, 2), 52)).map((d) => d.toISOString());
+    }
+    setSaving(true);
+    try {
+      const { data } = editing ? await axios.put(`/api/posts/${post.id}`, body) : await axios.post('/api/posts', body);
+      if (data.warnings?.length) setWarnings(data.warnings);
+      else onDone();
+    } catch (err) {
+      setError(errorMessage(err, 'Could not save the post'));
+    } finally {
+      setSaving(false);
+    }
+  };
+  const remove = async (scope) => {
+    if (!window.confirm(scope === 'following' ? 'Delete this post and the later repeats?' : 'Delete this post?')) return;
+    await axios.delete(`/api/posts/${post.id}`, { params: { scope } }).catch(() => {});
+    onDone();
+  };
+
+  if (warnings) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-emerald-700">Saved.</p>
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900" role="alert">
+          <p className="font-semibold">Heads up</p>
+          <ul className="mt-1 list-disc pl-5 space-y-0.5">{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
+        </div>
+        <div className="flex justify-end"><button onClick={onDone} className={buttonClass}>OK</button></div>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Field label="Platform *">
+          <input required list="post-platforms" value={form.platform} onChange={set('platform')} placeholder="Ad site, social or fan site" className={inputClass} />
+          <datalist id="post-platforms">
+            {Object.entries(PLATFORM_GROUPS).flatMap(([group, names]) => names.map((p) => <option key={p} value={p}>{group}</option>))}
+          </datalist>
+        </Field>
+        <Field label="Account (optional)">
+          <input value={form.account} onChange={set('account')} placeholder="@yourhandle" className={inputClass} />
+        </Field>
+        <PersonaSelect value={form.persona_id} onChange={set('persona_id')} label="Persona" />
+        <Field label="Status">
+          <select value={form.status} onChange={set('status')} className={inputClass}>
+            {Object.entries(STATUS).map(([v, s]) => <option key={v} value={v}>{s.label}</option>)}
+          </select>
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Field label="Day"><input type="date" value={form.date} onChange={set('date')} className={inputClass} /></Field>
+        <Field label="Time"><input type="time" value={form.time} onChange={set('time')} disabled={!form.date} className={inputClass} /></Field>
+        {(PAID_PLATFORMS.has(form.platform.trim().toLowerCase()) || form.price !== '') && (
+          <Field label="Price ($, pay-per-view)">
+            <input type="number" min="0" step="0.01" inputMode="decimal" value={form.price} onChange={set('price')} placeholder="Free" className={inputClass} />
+          </Field>
+        )}
+        {!editing && form.date && (
+          <Field label="Repeat">
+            <select value={form.repeat} onChange={set('repeat')} className={inputClass}>
+              <option value="">Once</option><option value="day">Every day</option><option value="3days">Every 3 days</option>
+              <option value="week">Every week</option><option value="2weeks">Every 2 weeks</option><option value="month">Every month</option>
+            </select>
+          </Field>
+        )}
+      </div>
+      {!editing && form.repeat && (
+        <Field label="How many times in total"><input type="number" min="2" max="52" value={form.repeat_count} onChange={set('repeat_count')} className={`${inputClass} !w-24`} /></Field>
+      )}
+      <Field label={`Caption (${form.caption.length} characters)`}>
+        <textarea rows={4} value={form.caption} onChange={set('caption')} placeholder="Caption or ad text" className={inputClass} />
+      </Field>
+      <div>
+        <p className="text-xs font-medium text-gray-500 mb-1">Files{setPath ? ` from ${setPath}` : ''}</p>
+        {files.length === 0 ? (
+          <p className="text-xs text-gray-400">{setPath ? 'The whole set.' : 'None. Plan a post from a set in the Library to attach files.'}</p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {files.map((f) => (
+              <li key={f} className="relative">
+                <img src={thumbUrl(f, 128)} alt={f} title={f} className="w-16 h-16 rounded-lg object-cover bg-gray-100" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                <button type="button" onClick={() => setFiles(files.filter((x) => x !== f))} className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white shadow text-xs text-gray-500 hover:text-red-600" aria-label={`Remove ${f}`}>✕</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {(form.status === 'posted' || form.post_url) && (
+        <Field label="Link to the post"><input value={form.post_url} onChange={set('post_url')} placeholder="https://…" className={inputClass} /></Field>
+      )}
+      <Field label="Notes"><textarea rows={2} value={form.notes} onChange={set('notes')} className={inputClass} /></Field>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {editing ? (
+          <span className="flex gap-3">
+            <button type="button" onClick={() => remove('one')} className="text-sm text-red-500 hover:text-red-700">Delete post</button>
+            {post.series_id && <button type="button" onClick={() => remove('following')} className="text-sm text-red-500 hover:text-red-700">Delete this and later repeats</button>}
+          </span>
+        ) : <span />}
+        <button type="submit" disabled={saving} className={buttonClass}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Save post'}</button>
+      </div>
+    </form>
+  );
+}
+
+/** Posts due today or overdue, for the dashboard. */
+export function PostsDue() {
+  const [posts, setPosts] = useState(null);
+  const [modal, setModal] = useState(null);
+  const load = useCallback(() => {
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    axios.get('/api/posts', { params: { status: 'open', end: end.toISOString() } }).then(({ data }) => setPosts(data)).catch(() => setPosts([]));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  if (!posts || posts.length === 0) return null;
+  return (
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="font-semibold text-gray-800">Posts & ads due</h2>
+        <Link to="/content/planner" className="text-sm text-sworkr-600 hover:text-sworkr-800">Planner →</Link>
+      </div>
+      <ul className="divide-y divide-gray-100">
+        {posts.map((p) => <PostRow key={p.id} post={p} onEdit={(x) => setModal(x)} onChanged={load} />)}
+      </ul>
+      {modal && (
+        <Modal title="Edit post" onClose={() => setModal(null)} wide>
+          <PostForm post={modal} onDone={() => { setModal(null); load(); }} />
+        </Modal>
+      )}
+    </div>
+  );
+}
+

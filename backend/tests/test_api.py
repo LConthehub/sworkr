@@ -10,6 +10,7 @@ import pytest
 # Use a throwaway database so tests never touch real data. Must be set before importing main.
 os.environ["DATA_DIR"] = tempfile.mkdtemp(prefix="sworkr-test-")
 os.environ["SEED_DB"] = "0"
+os.environ["CALENDAR_SYNC"] = "0"  # no background thread talking to Nextcloud
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient  # noqa: E402
@@ -70,8 +71,8 @@ def test_setup_only_works_once(api):
 
 def test_auth_status(api):
     assert api.get("/api/auth/status").json() == {
-        "setup_required": False, "user": {"id": 1, "username": "owner", "is_admin": True}}
-    assert anonymous().get("/api/auth/status").json() == {"setup_required": False, "user": None}
+        "setup_required": False, "user": {"id": 1, "username": "owner", "is_admin": True}, "demo": False}
+    assert anonymous().get("/api/auth/status").json() == {"setup_required": False, "user": None, "demo": False}
 
 
 def test_login_and_logout(api):

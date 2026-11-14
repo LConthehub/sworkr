@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ClientCard from './components/ClientCard';
 import { formatDuration, money } from './colors';
@@ -6,6 +7,8 @@ import { formatDuration, money } from './colors';
 const TYPES = ['all', 'clients', 'appointments', 'expenses'];
 
 export default function SearchOverlay({ isOpen, onClose }) {
+  const navigate = useNavigate();
+  const go = (path) => { onClose(); navigate(path); };
   const [query, setQuery] = useState('');
   const [entityType, setEntityType] = useState('all');
   // The results on screen, kept together with the search they belong to. That way
@@ -44,7 +47,7 @@ export default function SearchOverlay({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-3 sm:px-4">
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -55,6 +58,7 @@ export default function SearchOverlay({ isOpen, onClose }) {
             value={query}
             onChange={(e) => changeQuery(e.target.value)}
             placeholder="Search clients, appointments, or expenses..."
+            aria-label="Search"
             className="flex-1 text-gray-800 placeholder-gray-400 outline-none px-2 py-2"
           />
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700">✕</button>
@@ -84,9 +88,12 @@ export default function SearchOverlay({ isOpen, onClose }) {
             results.map((item) => (
               <div key={`${item.entity_type}-${item.id}`}>
                 {item.entity_type === 'client' ? (
-                  <ClientCard client={item} />
+                  <ClientCard client={item} onClick={() => go(`/contacts/${item.id}`)} />
                 ) : item.entity_type === 'appointment' ? (
-                  <div className="rounded-xl p-3 border border-gray-100">
+                  <div
+                    className={`rounded-xl p-3 border border-gray-100 ${item.client_id ? 'cursor-pointer hover:shadow-sm' : ''}`}
+                    onClick={() => item.client_id && go(`/contacts/${item.client_id}`)}
+                  >
                     <p className="text-xs font-medium text-gray-400 uppercase">Appointment</p>
                     <p className="font-medium">{item.client_name || 'Unknown client'} · {item.service_type}</p>
                     <p className="text-sm text-gray-500">
@@ -94,7 +101,7 @@ export default function SearchOverlay({ isOpen, onClose }) {
                     </p>
                   </div>
                 ) : (
-                  <div className="rounded-xl p-3 border border-gray-100">
+                  <div className="rounded-xl p-3 border border-gray-100 cursor-pointer hover:shadow-sm" onClick={() => go('/money')}>
                     <p className="text-xs font-medium text-gray-400 uppercase">Expense</p>
                     <p className="font-medium">{item.description}</p>
                     <p className="text-sm text-green-600 font-semibold">{money(item.amount)} · {item.category}</p>

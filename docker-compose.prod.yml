@@ -1,0 +1,44 @@
+# Everyday use: the frontend is built once and served by nginx, and the backend runs without the
+# development reloader. Faster to load and lighter on the computer than the development setup.
+#
+#   docker compose -f docker-compose.prod.yml up --build -d      start (or update after code changes)
+#   docker compose -f docker-compose.prod.yml down               stop
+#
+# Then open http://localhost:8080
+# It uses the same database volume as the development setup, so your data is the same in both.
+# Don't run both at once.
+
+name: sworkr
+
+services:
+  api:
+    build: ./backend
+    volumes:
+      - sworkr_data:/data
+      - ./backups:/backups
+      # Content library from a folder on this computer, a NAS share or a drive (read-only; sworkr never changes it).
+      # Uncomment and change the left side, then choose "Mounted folder" under Settings → Content library:
+      # - D:/Content:/content:ro
+    environment:
+      - DATA_DIR=/data
+      - BACKUP_DIR=/backups
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+      - SMTP_SECURITY=${SMTP_SECURITY:-starttls}
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "127.0.0.1:8080:80"   # this computer only
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  sworkr_data:

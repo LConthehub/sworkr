@@ -1,24 +1,62 @@
-import { useCallback, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import ClientList from './pages/ClientList';
+import ClientDetail from './pages/ClientDetail';
 import AppointmentCalendar from './pages/AppointmentCalendar';
-import Expenses from './pages/Expenses';
+import MoneyHub from './pages/MoneyHub';
+import Dashboard from './pages/Dashboard';
+import Content from './pages/Content';
 import Account from './pages/Account';
 import Login from './pages/Login';
 import SearchBar from './components/SearchBar';
+import CheckInBanner from './components/CheckInBanner';
+import Reminders from './components/Reminders';
+import { WorkTypesFirstRun } from './components/WorkTypes';
+import { clearCaches } from './api';
 
 const navClass = ({ isActive }) =>
   `transition-colors ${isActive ? 'text-white font-semibold' : 'text-white/80 hover:text-white'}`;
+const tabClass = ({ isActive }) =>
+  `flex-1 py-2.5 text-center text-xs font-medium ${isActive ? 'text-sworkr-600' : 'text-gray-500'}`;
+
+const PAGES = [
+  { to: '/', label: 'Dashboard', end: true },
+  { to: '/calendar', label: 'Calendar' },
+  { to: '/contacts', label: 'Contacts' },
+  { to: '/content', label: 'Content' },
+  { to: '/money', label: 'Money' },
+];
+
+/** Logs out after the chosen time without any mouse, touch or keyboard use, so an open tab doesn't stay readable. */
+function useIdleLogout(idleMinutes, logout) {
+  const lastActive = useRef(Date.now());
+  useEffect(() => {
+    if (!idleMinutes) return undefined;
+    lastActive.current = Date.now();
+    const touch = () => { lastActive.current = Date.now(); };
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach((e) => window.addEventListener(e, touch, { passive: true }));
+    const id = setInterval(() => {
+      if (Date.now() - lastActive.current > idleMinutes * 60000) logout('idle');
+    }, 15000);
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, touch));
+      clearInterval(id);
+    };
+  }, [idleMinutes, logout]);
+}
 
 function App() {
-  // undefined = still checking, null = logged out
+  // user: undefined = still checking, null = logged out
   const [auth, setAuth] = useState({ user: undefined, setupRequired: false });
+  const [idleMinutes, setIdleMinutes] = useState(0);
+  const [notice, setNotice] = useState('');
 
   const checkAuth = useCallback(async () => {
     try {
       const { data } = await axios.get('/api/auth/status');
-      setAuth({ user: data.user, setupRequired: data.setup_required });
+      setAuth({ user: data.user, setupRequired: data.setup_required, demo: !!data.demo, demoLogin: data.demo_login || null });
     } catch {
       setAuth({ user: null, setupRequired: false, offline: true });
     }
@@ -26,13 +64,14 @@ function App() {
 
   useEffect(() => {
     checkAuth();
-    // If any request comes back "not logged in" (e.g. session expired), show the login screen.
+    // If any request comes back "not logged in" (e.g. the session timed out), show the login screen.
     const id = axios.interceptors.response.use(
       (r) => r,
       (err) => {
         const url = err.config?.url || '';
         if (err.response?.status === 401 && !url.startsWith('/api/auth/')) {
-          setAuth((a) => ({ ...a, user: null }));
+          clearCaches();
+          setAuth((a) => (a.user ? { ...a, user: null } : a));
         }
         return Promise.reject(err);
       }
@@ -40,15 +79,26 @@ function App() {
     return () => axios.interceptors.response.eject(id);
   }, [checkAuth]);
 
-  const logout = async () => {
+  const loggedInAs = auth.user?.id;
+  useEffect(() => {
+    if (!loggedInAs) return;
+    setNotice('');
+    axios.get('/api/account/settings').then(({ data }) => setIdleMinutes(data.idle_minutes)).catch(() => {});
+  }, [loggedInAs]);
+
+  const logout = useCallback(async (reason) => {
     try { await axios.post('/api/auth/logout'); } catch { /* already logged out */ }
-    setAuth({ user: null, setupRequired: false });
-  };
+    clearCaches();
+    setAuth((a) => ({ ...a, user: null, setupRequired: false }));
+    setNotice(reason === 'idle' ? 'You were logged out because sworkr was left unused.' : '');
+  }, []);
+
+  useIdleLogout(auth.user ? idleMinutes : 0, logout);
 
   if (auth.user === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin border-4 rounded-full border-white/30 border-t-white w-12 h-12" />
+        <div className="animate-spin border-4 rounded-full border-white/30 border-t-white w-12 h-12" role="status" aria-label="Loading" />
       </div>
     );
   }
@@ -56,50 +106,97 @@ function App() {
   if (!auth.user) {
     return (
       <>
-        {auth.offline && (
-          <p className="fixed top-4 inset-x-0 text-center text-white text-sm">Can't reach the server. Is the api container running?</p>
+        {(auth.offline || notice) && (
+          <p className="fixed top-4 inset-x-0 px-4 text-center text-white text-sm">
+            {auth.offline ? "Can't reach the server. Is the api container running?" : notice}
+          </p>
         )}
-        <Login setup={auth.setupRequired} onLoggedIn={(user) => setAuth({ user, setupRequired: false })} />
+        <Login setup={auth.setupRequired} demoLogin={auth.demoLogin} onLoggedIn={(user) => setAuth((a) => ({ ...a, user, setupRequired: false }))} />
       </>
     );
   }
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen">
+      <div className="min-h-screen pb-16 sm:pb-0">
         <nav className="bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-40">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16 gap-4">
-              <NavLink to="/" className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sworkr-500 to-sworkr-800 flex items-center justify-center text-white font-bold text-xl">
-                  SW
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            {/* Pages on the left, search in the middle, settings on the right (like Nextcloud). */}
+            <div className="grid grid-cols-[auto_1fr_auto] items-center h-14 sm:h-16 gap-3 sm:gap-6">
+              <div className="flex items-center gap-4 lg:gap-6 text-sm">
+                <NavLink to="/" className="flex items-center gap-3" aria-label="sworkr, dashboard">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-sworkr-500 to-sworkr-800 flex items-center justify-center text-white font-bold text-lg sm:text-xl">
+                    SW
+                  </div>
+                  <span className="hidden xl:inline text-white font-bold text-xl tracking-tight">Sworkr</span>
+                </NavLink>
+                <div className="hidden sm:flex items-center gap-4 lg:gap-6">
+                  {PAGES.map((p) => <NavLink key={p.to} to={p.to} end={p.end} className={navClass}>{p.label}</NavLink>)}
                 </div>
-                <span className="hidden sm:inline text-white font-bold text-xl tracking-tight">Sworkr</span>
-              </NavLink>
-
-              <div className="flex items-center gap-4 sm:gap-6 text-sm">
-                <NavLink to="/" end className={navClass}>Calendar</NavLink>
-                <NavLink to="/clients" className={navClass}>Clients</NavLink>
-                <NavLink to="/expenses" className={navClass}>Expenses</NavLink>
-                <SearchBar />
-                <NavLink to="/account" className={navClass} title="Account">{auth.user.username}</NavLink>
               </div>
+
+              <div className="w-full max-w-md justify-self-center">
+                <SearchBar />
+              </div>
+
+              <NavLink to="/account" className={({ isActive }) => `${navClass({ isActive })} text-sm whitespace-nowrap`} title="Your account and settings">
+                <span className="hidden md:inline">{auth.user.username}'s settings</span>
+                <span className="md:hidden" aria-label={`${auth.user.username}'s settings`}>⚙</span>
+              </NavLink>
             </div>
           </div>
         </nav>
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+          {auth.demo && <DemoBanner />}
+          <CheckInBanner />
           <Routes>
-            <Route path="/" element={<AppointmentCalendar />} />
-            <Route path="/appointments" element={<Navigate to="/" replace />} />
-            <Route path="/clients" element={<ClientList />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/account" element={<Account user={auth.user} onLogout={logout} />} />
+            <Route path="/" element={<Dashboard user={auth.user} />} />
+            <Route path="/calendar" element={<AppointmentCalendar />} />
+            <Route path="/contacts" element={<ClientList />} />
+            <Route path="/contacts/:id" element={<ClientDetail />} />
+            <Route path="/clients" element={<Navigate to="/contacts" replace />} />
+            <Route path="/clients/:id" element={<OldContactLink />} />
+            <Route path="/content" element={<Content />} />
+            <Route path="/content/:tab" element={<Content />} />
+            <Route path="/money" element={<MoneyHub />} />
+            <Route path="/money/:tab" element={<MoneyHub />} />
+            <Route path="/earnings" element={<Navigate to="/money/compare" replace />} />
+            <Route path="/tours" element={<Navigate to="/money/compare" replace />} />
+            <Route path="/goals" element={<Navigate to="/money/goals" replace />} />
+            <Route path="/account" element={<Account user={auth.user} onLogout={() => logout()} onIdleChange={setIdleMinutes} />} />
+            <Route path="/account/:group" element={<Account user={auth.user} onLogout={() => logout()} onIdleChange={setIdleMinutes} />} />
+            <Route path="/expenses" element={<Navigate to="/money" replace />} />
+            <Route path="/appointments" element={<Navigate to="/calendar" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
+
+        {/* On a phone the pages are along the bottom, within thumb reach. */}
+        <nav className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 flex" aria-label="Pages">
+          {PAGES.map((p) => <NavLink key={p.to} to={p.to} end={p.end} className={tabClass}>{p.label}</NavLink>)}
+        </nav>
+
+        <Reminders />
+        {!auth.demo && <WorkTypesFirstRun />}
       </div>
     </BrowserRouter>
+  );
+}
+
+/** Links saved from before "clients" became "contacts" still work. */
+function OldContactLink() {
+  const { id } = useParams();
+  return <Navigate to={`/contacts/${id}`} replace />;
+}
+
+/** Shown on the demo copy, so nobody mistakes the sample data for real records. */
+function DemoBanner() {
+  return (
+    <p className="mb-4 rounded-xl bg-white/90 px-4 py-2.5 text-sm text-gray-700 shadow" role="note">
+      <strong className="text-sworkr-600">Demo.</strong> Every client and number here is made up, and everything is reset to
+      the sample data each night. Try anything, then share your feedback.
+    </p>
   );
 }
 

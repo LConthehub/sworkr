@@ -18,6 +18,7 @@ backend/data/
 # Secrets / local config
 .env
 .env.*
+!.env.example
 
 # Old manual backups (history is in git now)
 _backup_*/
@@ -27,3 +28,6 @@ _backup_*/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Automatic encrypted backups (written by the app; keep copies somewhere else too)
+backups/

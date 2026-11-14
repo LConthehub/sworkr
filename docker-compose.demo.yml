@@ -1,0 +1,36 @@
+# A demo copy of sworkr with made-up data, for showing colleagues. It has its own database (the
+# sworkr_demo_data volume) and never touches your real data. The sample data is reset every night.
+#
+#   docker compose -f docker-compose.demo.yml up --build -d      start (or update after code changes)
+#   docker compose -f docker-compose.demo.yml down               stop
+#
+# Then open http://localhost:8090 (sworkr.com points here through Caddy).
+# The demo login is in .env.demo (DEMO_USERNAME / DEMO_PASSWORD). That file is not committed to git.
+
+name: sworkr-demo
+
+services:
+  api:
+    build: ./backend
+    volumes:
+      - sworkr_demo_data:/data
+    env_file: .env.demo
+    environment:
+      - DATA_DIR=/data
+      - DEMO_MODE=1            # wipes and refills this database: never point it at real data
+      - SEED_DB=0
+      - BACKGROUND_JOBS=0      # no calendar sync, backups or safety emails in the demo
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    ports:
+      - "127.0.0.1:8090:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  sworkr_demo_data:

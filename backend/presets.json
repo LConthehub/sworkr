@@ -1,0 +1,259 @@
+{
+  "_about": "Starter setups for each kind of work. Ticking a kind of work on the Account page adds its expense subcategories (listed under the main category they belong to: workspace, fees, health, wardrobe, gear, marketing, travel, fitness or other) and places you earn (anything with the same name is skipped). Nothing is ever removed, and everything added can be renamed, changed or hidden afterwards. Fee figures are only a starting point: platforms change them, so each one says to check. To add a kind of work, add an entry here. A place can list charges you pay it (label, cadence, and the expense category by key or name); amounts are left for the person to fill in.",
+  "work_types": {
+    "brothel": {
+      "label": "Brothel or agency",
+      "categories": {
+        "fees": [
+          "Licenses & permits",
+          "Agency & booking fees",
+          "House fees & tip-outs"
+        ],
+        "wardrobe": [
+          "Lingerie & outfits",
+          "Makeup & beauty"
+        ]
+      },
+      "sources": [
+        {
+          "name": "My brothel",
+          "kind": "brothel",
+          "payout_note": "Check your house split",
+          "charges": [
+            {
+              "label": "Room & board",
+              "cadence": "per_day",
+              "category": "room_rent"
+            },
+            {
+              "label": "Doctor",
+              "cadence": "per_week",
+              "category": "medical",
+              "test_type": "weekly"
+            },
+            {
+              "label": "License or work card",
+              "cadence": "per_year",
+              "category": "Licenses & permits"
+            }
+          ],
+          "gift_share_percent": 50
+        }
+      ]
+    },
+    "independent": {
+      "label": "Independent (incall, outcall, touring)",
+      "categories": {
+        "marketing": [
+          "Ads & verification"
+        ],
+        "workspace": [
+          "Incall rent",
+          "Hotel rooms"
+        ],
+        "wardrobe": [
+          "Lingerie & outfits",
+          "Makeup & beauty"
+        ],
+        "health": [
+          "Screening & safety"
+        ]
+      },
+      "sources": []
+    },
+    "sugar": {
+      "label": "Sugar dating (arrangements)",
+      "categories": {
+        "fees": [
+          "Sugar-site memberships"
+        ],
+        "wardrobe": [
+          "Lingerie & outfits",
+          "Makeup & beauty"
+        ]
+      },
+      "sources": [
+        {
+          "name": "My sugar site",
+          "kind": "platform",
+          "payout_note": "A membership fee, not a share. Allowances and gifts are logged as income.",
+          "charges": [
+            {
+              "label": "Membership",
+              "cadence": "per_month",
+              "category": "Sugar-site memberships"
+            }
+          ]
+        }
+      ]
+    },
+    "dancer": {
+      "label": "Dancer",
+      "categories": {
+        "fees": [
+          "House fees & tip-outs"
+        ],
+        "wardrobe": [
+          "Costumes & props",
+          "Shoes & heels",
+          "Makeup & beauty"
+        ]
+      },
+      "sources": [
+        {
+          "name": "My club",
+          "kind": "club",
+          "payout_note": "Enter the house fee per shift and any tip-out"
+        }
+      ]
+    },
+    "cam": {
+      "label": "Cam model",
+      "categories": {
+        "gear": [
+          "Camera & lighting",
+          "Phone & internet"
+        ],
+        "wardrobe": [
+          "Costumes & props",
+          "Makeup & beauty"
+        ]
+      },
+      "sources": [
+        {
+          "name": "My cam site",
+          "kind": "platform",
+          "payout_note": "Enter what one token pays you, and the payout schedule"
+        }
+      ]
+    },
+    "phone": {
+      "label": "Phone, text or chat (PSO)",
+      "categories": {
+        "gear": [
+          "Phone & internet"
+        ]
+      },
+      "sources": [
+        {
+          "name": "My phone or chat line",
+          "kind": "platform",
+          "payout_note": "Enter the line's cut and payout schedule"
+        }
+      ]
+    },
+    "content": {
+      "label": "Content creator (OnlyFans, Fansly…)",
+      "categories": {
+        "gear": [
+          "Camera & lighting",
+          "Apps & software"
+        ],
+        "marketing": [
+          "Photographers & shoots",
+          "Promotion"
+        ],
+        "wardrobe": [
+          "Costumes & props"
+        ]
+      },
+      "sources": [
+        {
+          "name": "OnlyFans",
+          "kind": "platform",
+          "fee_percent": 20,
+          "payout_note": "Platform keeps 20% at the time of writing; check"
+        },
+        {
+          "name": "Fansly",
+          "kind": "platform",
+          "fee_percent": 20,
+          "payout_note": "Platform keeps 20% at the time of writing; check"
+        }
+      ]
+    },
+    "porn": {
+      "label": "Porn performer",
+      "categories": {
+        "fees": [
+          "Agency & booking fees"
+        ],
+        "wardrobe": [
+          "Lingerie & outfits",
+          "Makeup & beauty"
+        ]
+      },
+      "sources": [
+        {
+          "name": "Studio shoots",
+          "kind": "other",
+          "payout_note": "Paid per scene; enter your agent's cut as the share"
+        }
+      ]
+    },
+    "cosplay": {
+      "label": "Cosplay",
+      "categories": {
+        "wardrobe": [
+          "Costumes & props",
+          "Wigs & hair"
+        ],
+        "travel": [
+          "Conventions & events"
+        ],
+        "marketing": [
+          "Prints & merch"
+        ]
+      },
+      "sources": [
+        {
+          "name": "Patreon",
+          "kind": "platform",
+          "payout_note": "Check Patreon's current fees for your plan"
+        },
+        {
+          "name": "Conventions & events",
+          "kind": "event",
+          "payout_note": "Table or appearance fees go in as the fee",
+          "charges": [
+            {
+              "label": "Table or booth",
+              "cadence": "per_stay",
+              "category": "Conventions & events"
+            }
+          ]
+        }
+      ]
+    },
+    "fetish": {
+      "label": "Fetish or pro-domme",
+      "categories": {
+        "workspace": [
+          "Dungeon & studio hire"
+        ],
+        "wardrobe": [
+          "Latex & leather"
+        ]
+      },
+      "sources": [
+        {
+          "name": "Dungeon sessions",
+          "kind": "studio",
+          "payout_note": "Enter the dungeon's room fee per session",
+          "charges": [
+            {
+              "label": "Room hire",
+              "cadence": "per_booking",
+              "category": "Dungeon & studio hire"
+            }
+          ]
+        },
+        {
+          "name": "Clip store",
+          "kind": "platform",
+          "payout_note": "For example Clips4Sale; check the platform's cut"
+        }
+      ]
+    }
+  }
+}

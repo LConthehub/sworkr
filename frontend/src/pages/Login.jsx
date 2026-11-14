@@ -2,8 +2,11 @@ import { useState } from 'react';
 import axios from 'axios';
 import { Field, inputClass, errorMessage } from '../components/Modal';
 
-/** Shown when not logged in. With `setup`, it creates the first account instead. */
-export default function Login({ setup, onLoggedIn }) {
+/**
+ * Shown when not logged in. With `setup`, it creates the first account instead.
+ * On the demo copy, `demoLogin` ({ username, password }) is shown under the form with a button to fill it in.
+ */
+export default function Login({ setup, demoLogin, onLoggedIn }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -26,7 +29,7 @@ export default function Login({ setup, onLoggedIn }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-4 py-8">
       <form onSubmit={submit} className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6 space-y-4">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sworkr-500 to-sworkr-800 flex items-center justify-center text-white font-bold text-xl">SW</div>
@@ -65,6 +68,28 @@ export default function Login({ setup, onLoggedIn }) {
           {busy ? 'Please wait…' : setup ? 'Create account' : 'Log in'}
         </button>
       </form>
+
+      {demoLogin && !setup && (
+        <div className="w-full max-w-sm rounded-2xl bg-white/95 shadow-lg p-4 text-sm text-gray-700" role="note">
+          <p>
+            <strong className="text-sworkr-600">Demo.</strong> Every client and number here is made up, and it's all
+            reset to the sample data each night. Try anything, then share your feedback.
+          </p>
+          <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-lg bg-gray-50 px-3 py-2">
+            <dt className="text-gray-500">Username</dt>
+            <dd className="font-mono font-semibold text-gray-800 select-all break-all">{demoLogin.username}</dd>
+            <dt className="text-gray-500">Password</dt>
+            <dd className="font-mono font-semibold text-gray-800 select-all break-all">{demoLogin.password}</dd>
+          </dl>
+          <button
+            type="button"
+            onClick={() => { setUsername(demoLogin.username); setPassword(demoLogin.password); setError(''); }}
+            className="mt-3 w-full py-2 rounded-lg border border-sworkr-300 text-sworkr-600 font-medium hover:bg-sworkr-50"
+          >
+            Fill in the demo login for me
+          </button>
+        </div>
+      )}
     </div>
   );
 }
