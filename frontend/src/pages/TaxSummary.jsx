@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { errorMessage, quietButtonClass } from '../components/Modal';
 import { money } from '../colors';
+import QuarterlyTaxes from '../components/QuarterlyTaxes';
 
 const PERCENT_KEY = 'sworkr:set-aside-percent';
 const readPercent = () => { try { return localStorage.getItem(PERCENT_KEY) ?? ''; } catch { return ''; } };
@@ -101,7 +102,14 @@ export default function TaxSummary({ year, setYear }) {
               {data.set_aside && <span className="font-semibold">= {money(data.set_aside.amount)}</span>}
             </label>
             {data.set_aside && <p className="hidden print:block text-sm">Set aside ({data.set_aside.percent}% of profit): {money(data.set_aside.amount)}</p>}
+            {data.estimated_payments?.length > 0 && (
+              <dl className="mt-3">
+                {data.estimated_payments.map((p) => row(`Estimated tax paid (${p.authority}, ${p.payments} payment${p.payments === 1 ? '' : 's'})`, money(p.total)))}
+              </dl>
+            )}
           </section>
+
+          <QuarterlyTaxes year={year} percent={percent} />
 
           <p className="text-xs text-gray-500 max-w-xl">
             Your part only: shares you pay partners are left out. Gifts count at what they're worth, with a house's share of

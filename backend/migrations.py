@@ -913,6 +913,50 @@ def _m20_cancellations(conn):
     conn.execute("ALTER TABLE appointments ADD COLUMN cancellation_fee REAL CHECK(cancellation_fee IS NULL OR cancellation_fee >= 0)")
 
 
+def _m21_tax_payments_passkeys_two_step(conn):
+    """Estimated tax payments (US quarterly), passkeys, and two-step sign-in with an emailed code."""
+    conn.execute("""
+        CREATE TABLE tax_payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            year INTEGER NOT NULL,
+            quarter INTEGER NOT NULL CHECK(quarter BETWEEN 1 AND 4),
+            authority TEXT NOT NULL DEFAULT 'federal' CHECK(authority IN ('federal', 'state')),
+            amount REAL NOT NULL CHECK(amount >= 0),
+            paid_on TEXT NOT NULL,
+            note TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_tax_payments_owner ON tax_payments(owner_id, year)")
+    conn.execute("""
+        CREATE TABLE passkeys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            credential_id TEXT NOT NULL UNIQUE,
+            public_key TEXT NOT NULL,
+            sign_count INTEGER NOT NULL DEFAULT 0,
+            transports TEXT,
+            rp_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            last_used_at TEXT
+        )
+    """)
+    # Short-lived: a sign-in code waiting to be typed, or a passkey challenge waiting for the browser.
+    conn.execute("""
+        CREATE TABLE auth_challenges (
+            token_hash TEXT PRIMARY KEY,
+            kind TEXT NOT NULL,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            secret TEXT NOT NULL,
+            data TEXT,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            expires_at TEXT NOT NULL
+        )
+    """)
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -934,6 +978,7 @@ MIGRATIONS = [
     (18, "quarterly charges", _m18_quarterly_charges, True),
     (19, "documents that expire", _m19_documents, False),
     (20, "cancellations, no-shows and their fees", _m20_cancellations, False),
+    (21, "estimated tax payments, passkeys, two-step sign-in", _m21_tax_payments_passkeys_two_step, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 
