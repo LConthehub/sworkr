@@ -4,7 +4,7 @@ import { Field, inputClass, errorMessage, buttonClass, quietButtonClass } from '
 import { fetchAll, saveAppointment } from '../api';
 import { SplitEditor, useSplit } from './Splits';
 import {
-  toDateInput, toTimeInput, fromDateTimeInputs, repeatDates, formatTime, dayLabel, LOCATION_LABELS, TEST_TYPES,
+  toDateInput, toTimeInput, fromDateTimeInputs, repeatDates, formatTime, dayLabel, LOCATION_LABELS, money, TEST_TYPES,
 } from '../colors';
 
 const DURATIONS = [30, 45, 60, 90, 120, 180, 240, 480, 720];
@@ -95,6 +95,9 @@ export default function AppointmentForm({
   const client = clients.find((c) => String(c.id) === form.client_id);
   const rate = form.rate === '' ? null : Number(form.rate);
   const paid = form.amount_paid === '' ? 0 : Number(form.amount_paid);
+  // Your deposit percentage (booking policy), for the "deposit paid" shortcut.
+  const [depositPercent, setDepositPercent] = useState(0);
+  useEffect(() => { axios.get('/api/booking-policy').then(({ data }) => setDepositPercent(data.deposit_percent || 0)).catch(() => {}); }, []);
   const [split, setSplit, saveSplit] = useSplit('appointment', appointment?.id);
 
   const submit = async (e, confirmed = false) => {
@@ -314,9 +317,16 @@ export default function AppointmentForm({
         </Field>
       </div>
       {rate !== null && rate > 0 && paid < rate && (
-        <button type="button" onClick={() => setForm({ ...form, amount_paid: String(rate) })} className="text-xs text-sworkr-600 hover:text-sworkr-800">
-          Mark as paid in full
-        </button>
+        <div className="flex flex-wrap gap-3">
+          {depositPercent > 0 && paid < rate * depositPercent / 100 && (
+            <button type="button" onClick={() => setForm({ ...form, amount_paid: String(Math.round(rate * depositPercent) / 100) })} className="text-xs text-sworkr-600 hover:text-sworkr-800">
+              Deposit paid ({depositPercent}%: {money(rate * depositPercent / 100)})
+            </button>
+          )}
+          <button type="button" onClick={() => setForm({ ...form, amount_paid: String(rate) })} className="text-xs text-sworkr-600 hover:text-sworkr-800">
+            Mark as paid in full
+          </button>
+        </div>
       )}
       </>)}
 

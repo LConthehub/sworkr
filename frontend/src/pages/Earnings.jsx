@@ -458,7 +458,7 @@ function TourDetail({ tourId, version, onEdit, onAddTest, onOpenAppointment, onC
   };
   const actions = {
     open: onOpenAppointment,
-    status: (a, status) => act(() => axios.put(`/api/appointments/${a.id}/status`, null, { params: { status } })),
+    status: (a, status, extra = {}) => act(() => axios.put(`/api/appointments/${a.id}/status`, null, { params: { status, ...extra } })),
     paid: (a) => act(() => axios.post(`/api/appointments/${a.id}/mark-paid`)),
     checkIn: (a) => act(() => axios.post(`/api/appointments/${a.id}/check-in`)),
   };

@@ -28,6 +28,8 @@ import csv_io
 import currencies
 import finance
 import blocklist
+import noshow
+import documents
 import meds
 import personas
 import places
@@ -230,6 +232,8 @@ class Appointment(AppointmentIn):
     series_id: Optional[str] = None
     my_amount_paid: Optional[float] = None   # what's yours after partners' shares
     partner_names: Optional[str] = None
+    cancel_reason: Optional[str] = None      # client | late | no_show | me (cancelled ones)
+    cancellation_fee: Optional[float] = None # what the client owes for a late cancellation or no-show
     created_at: datetime
     updated_at: datetime
 
@@ -811,7 +815,9 @@ def get_client_summary(client_id: int, user: UserDep, db: DbDep):
     done = [a for a in appointments if a["status"] == "completed"]
     upcoming = sorted((a for a in appointments if a["status"] == "scheduled" and a["scheduled_date"] >= now),
                       key=lambda a: a["scheduled_date"])
-    owed = sum(max((a["rate"] or 0) - (a["amount_paid"] or 0), 0) for a in done)
+    owed = sum(max((a["rate"] or 0) - (a["amount_paid"] or 0), 0) for a in done) \
+        + sum(max((a.get("cancellation_fee") or 0) - (a["amount_paid"] or 0), 0) for a in appointments if a["status"] == "cancelled")
+    reliability = noshow.record(db, user["id"], client_id)
     notes = [dict(r) for r in db.execute(
         "SELECT id, body, created_at FROM client_notes WHERE client_id = ? AND owner_id = ? ORDER BY created_at DESC, id DESC",
         (client_id, user["id"]))]
@@ -827,6 +833,9 @@ def get_client_summary(client_id: int, user: UserDep, db: DbDep):
             "first_seen": min((a["scheduled_date"] for a in done), default=None),
             "last_seen": max((a["scheduled_date"] for a in done), default=None),
             "next_appointment": upcoming[0]["scheduled_date"] if upcoming else None,
+            "no_shows": reliability["no_shows"],
+            "late_cancellations": reliability["late"],
+            "fees_owed": round(reliability["fees_owed"], 2),
         },
         "appointments": appointments,
         "notes": notes,
@@ -992,6 +1001,9 @@ def _booking_warnings(db, owner_id: int, client: Optional[dict], starts: List[da
         reason = f": {client['do_not_see_reason']}" if client.get("do_not_see_reason") else ""
         warnings.append({"type": "do_not_see", "message": f"{client['display_name']} is marked DO NOT SEE{reason}"})
     if client:
+        unreliable = noshow.warning(client["display_name"], noshow.record(db, owner_id, client["id"]))
+        if unreliable:
+            warnings.append({"type": "unreliable", "message": unreliable})
         found = blocklist.matches_for_client(db, owner_id, client)
         if found:
             warnings.append({"type": "bad_date", "severity": found[0]["severity"],
@@ -1233,7 +1245,11 @@ def update_appointment(appointment_id: int, appointment: AppointmentIn, user: Us
 
 
 @app.put("/api/appointments/{appointment_id}/status", response_model=Appointment)
-def update_appointment_status(appointment_id: int, status: AppointmentStatus, user: UserDep, db: DbDep):
+def update_appointment_status(
+    appointment_id: int, status: AppointmentStatus, user: UserDep, db: DbDep,
+    cancel_reason: Optional[str] = Query(None, description="When cancelling: client, no_show or me ('client' becomes 'late' inside the late window)"),
+    cancellation_fee: Optional[float] = Query(None, description="What the client owes for it; left out: suggested from your policy"),
+):
     existing = get_appointment_by_id(db, appointment_id, user["id"])
     if not existing:
         raise HTTPException(status_code=404, detail="Appointment not found")
@@ -1241,8 +1257,18 @@ def update_appointment_status(appointment_id: int, status: AppointmentStatus, us
     checked_in_at = existing["checked_in_at"]
     if status == AppointmentStatus.COMPLETED and not checked_in_at:
         checked_in_at = now
-    db.execute("UPDATE appointments SET status = ?, checked_in_at = ?, updated_at = ? WHERE id = ? AND owner_id = ?",
-               (status.value, checked_in_at, now, appointment_id, user["id"]))
+    reason, fee = None, None
+    if status == AppointmentStatus.CANCELLED and cancel_reason:
+        if cancel_reason not in noshow.REASONS:
+            raise HTTPException(status_code=400, detail="cancel_reason must be client, late, no_show or me")
+        if cancellation_fee is not None and not _is_amount(cancellation_fee):
+            raise HTTPException(status_code=400, detail="The cancellation fee must be 0 or more")
+        pol = noshow.policy(db, user["id"])
+        reason = noshow.reason_for(noshow.now(), parse_iso(existing["scheduled_date"]), cancel_reason, pol["late_cancel_hours"])
+        fee = cancellation_fee if cancellation_fee is not None else noshow.suggested_fee(pol, reason, existing["rate"])
+    db.execute("UPDATE appointments SET status = ?, checked_in_at = ?, cancel_reason = ?, cancellation_fee = ?, updated_at = ? "
+               "WHERE id = ? AND owner_id = ?",
+               (status.value, checked_in_at, reason, fee, now, appointment_id, user["id"]))
     _sync_test_expense(db, appointment_id, user["id"])
     db.commit()
     calendar_sync.queue_appointment(appointment_id)
@@ -1262,14 +1288,15 @@ def check_in(appointment_id: int, user: UserDep, db: DbDep):
 
 @app.post("/api/appointments/{appointment_id}/mark-paid", response_model=Appointment)
 def mark_paid(appointment_id: int, user: UserDep, db: DbDep):
-    """Record that the full rate has been received."""
+    """Record that the full rate has been received; for a cancelled booking with a fee, the fee."""
     existing = get_appointment_by_id(db, appointment_id, user["id"])
     if not existing:
         raise HTTPException(status_code=404, detail="Appointment not found")
-    if existing["rate"] is None:
+    due = existing["cancellation_fee"] if existing["status"] == "cancelled" and existing.get("cancellation_fee") else existing["rate"]
+    if due is None:
         raise HTTPException(status_code=400, detail="Set a rate on this appointment first")
-    db.execute("UPDATE appointments SET amount_paid = ?, updated_at = ? WHERE id = ? AND owner_id = ?",
-               (existing["rate"], now_iso(), appointment_id, user["id"]))
+    db.execute("UPDATE appointments SET amount_paid = MAX(COALESCE(amount_paid, 0), ?), updated_at = ? WHERE id = ? AND owner_id = ?",
+               (due, now_iso(), appointment_id, user["id"]))
     db.commit()
     return get_appointment_by_id(db, appointment_id, user["id"])
 
@@ -1660,7 +1687,9 @@ def _money_figures(appointments: List[dict], expenses: List[dict], days: int, da
         "other_income": round(other_income, 2),
         "booked": round(sum(a["rate"] or 0 for a in live), 2),
         "owed": round(sum(max((a["rate"] or 0) - (a["amount_paid"] or 0), 0)
-                          for a in booked if a["status"] == "completed"), 2),
+                          for a in booked if a["status"] == "completed")
+                      + sum(max((a.get("cancellation_fee") or 0) - (a["amount_paid"] or 0), 0)
+                            for a in booked if a["status"] == "cancelled"), 2),
         "appointments": len(live),
         "completed": sum(a["status"] == "completed" for a in booked),
         "room_rent": round(room_rent, 2),
@@ -2079,6 +2108,8 @@ app.include_router(places.router)
 app.include_router(personas.router)
 app.include_router(blocklist.router)
 app.include_router(meds.router)
+app.include_router(documents.router)
+app.include_router(noshow.router)
 
 init_db()
 if os.environ.get("SEED_DB", "1") == "1":
@@ -2093,6 +2124,8 @@ places.setup(get_db, log_health_test, sync_stays_at_place)
 personas.setup(get_db)
 blocklist.setup(get_db)
 meds.setup(get_db)
+documents.setup(get_db)
+noshow.setup(get_db)
 csv_io.setup(get_db, after_client_import=lambda ids: [calendar_sync.queue_client(i) for i in ids])
 # BACKGROUND_JOBS=0 (the tests) keeps the background threads from starting.
 _background = os.environ.get("BACKGROUND_JOBS", os.environ.get("CALENDAR_SYNC", "1")) == "1"

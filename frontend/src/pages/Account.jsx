@@ -5,6 +5,7 @@ import { CategoryManager } from '../components/MoneyForms';
 import { PersonaSettings } from '../components/Personas';
 import { BlocklistSettings } from '../components/Blocklist';
 import MedsSettings from '../components/Meds';
+import DocumentsSettings from '../components/Documents';
 import { WorkTypesPicker } from '../components/WorkTypes';
 import { Field, inputClass, errorMessage, buttonClass, quietButtonClass, Section, Notice } from '../components/Modal';
 import CalendarSync from '../components/CalendarSync';
@@ -35,6 +36,15 @@ const GROUPS = [
           </Section>
         ),
       },
+      {
+        id: 'documents', title: 'Licenses & documents', words: 'license work card id passport verification expiry expire renew insurance',
+        render: () => (
+          <Section title="Licenses & documents" hint="What runs out and when, with a reminder before it does.">
+            <DocumentsSettings />
+          </Section>
+        ),
+      },
+      { id: 'policy', title: 'Deposits & cancellations', words: 'deposit no-show no show cancellation fee late policy', render: () => <BookingPolicy /> },
       { id: 'categories', title: 'Expense categories', words: 'rename hide colour color', render: () => <ExpenseCategories /> },
     ],
   },
@@ -270,6 +280,41 @@ export default function Account({ user, onLogout, onIdleChange }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function BookingPolicy() {
+  const [form, setForm] = useState(null);
+  const [message, setMessage] = useState(null);
+  useEffect(() => {
+    axios.get('/api/booking-policy').then(({ data }) => setForm(Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)])))).catch(() => {});
+  }, []);
+  if (!form) return null;
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const save = async (e) => {
+    e.preventDefault();
+    setMessage(null);
+    try {
+      await axios.put('/api/booking-policy', Object.fromEntries(Object.entries(form).map(([k, v]) => [k, Number(v) || 0])));
+      setMessage({ ok: 'Saved.' });
+    } catch (err) {
+      setMessage({ error: errorMessage(err, 'Could not save') });
+    }
+  };
+  const num = (k, props) => <input type="number" min="0" step="1" inputMode="decimal" value={form[k]} onChange={set(k)} className={inputClass} {...props} />;
+  return (
+    <Section title="Deposits & cancellations" hint="Suggests a deposit when you book, and a fee when a client cancels late or doesn't turn up. You can change the fee every time.">
+      <form onSubmit={save} className="space-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Field label="Deposit (% of rate)">{num('deposit_percent', { max: 100 })}</Field>
+          <Field label="Late means within (hours)">{num('late_cancel_hours', { max: 336 })}</Field>
+          <Field label="Late cancellation fee (%)">{num('late_cancel_fee_percent', { max: 100 })}</Field>
+          <Field label="No-show fee (%)">{num('no_show_fee_percent', { max: 100 })}</Field>
+        </div>
+        <Notice message={message} />
+        <button type="submit" className={buttonClass}>Save</button>
+      </form>
+    </Section>
   );
 }
 

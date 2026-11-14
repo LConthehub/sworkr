@@ -190,7 +190,7 @@ export default function AppointmentCalendar() {
   };
   const actions = {
     open: (a) => setModal({ appointment: a }),
-    status: (a, status) => act(() => axios.put(`/api/appointments/${a.id}/status`, null, { params: { status } })),
+    status: (a, status, extra = {}) => act(() => axios.put(`/api/appointments/${a.id}/status`, null, { params: { status, ...extra } })),
     paid: (a) => act(() => axios.post(`/api/appointments/${a.id}/mark-paid`)),
     checkIn: (a) => act(() => axios.post(`/api/appointments/${a.id}/check-in`)),
   };
@@ -671,7 +671,50 @@ function ListView({ days, today, startingOn, periods, cycle, actions, onNew, onO
 
 // ==================== ONE APPOINTMENT ====================
 
+const CANCEL_REASONS = { client: 'Client cancelled', late: 'Cancelled late', no_show: "Didn't turn up", me: 'I cancelled' };
+
+/** Cancelling: who cancelled, and for a late cancellation or no-show, the fee (sworkr suggests one from your policy). */
+function CancelChooser({ appointment: a, onCancel, onClose }) {
+  const [policy, setPolicy] = useState(null);
+  const [reason, setReason] = useState('');
+  const [fee, setFee] = useState('');
+  useEffect(() => { axios.get('/api/booking-policy').then(({ data }) => setPolicy(data)).catch(() => setPolicy({})); }, []);
+  const late = policy && (new Date(a.scheduled_date) - new Date()) < (policy.late_cancel_hours || 0) * 3600000;
+  const pick = (r) => {
+    setReason(r);
+    const effective = r === 'client' && late ? 'late' : r;
+    const pct = effective === 'no_show' ? policy?.no_show_fee_percent : effective === 'late' ? policy?.late_cancel_fee_percent : 0;
+    setFee(a.rate && pct ? String(Math.round(a.rate * pct) / 100) : '');
+  };
+  const charged = reason === 'no_show' || (reason === 'client' && late);
+  return (
+    <div className="w-full rounded-lg border border-red-100 bg-red-50/50 p-2 space-y-2">
+      <div className="flex flex-wrap gap-1">
+        {['client', 'no_show', 'me'].map((r) => (
+          <button key={r} type="button" onClick={() => pick(r)} aria-pressed={reason === r}
+            className={`text-xs px-2.5 py-1.5 rounded-lg border ${reason === r ? 'bg-red-600 text-white border-red-600' : 'bg-white text-gray-700 border-gray-200'}`}>
+            {r === 'client' && late ? 'Client cancelled (late)' : CANCEL_REASONS[r]}
+          </button>
+        ))}
+      </div>
+      {charged && (
+        <label className="flex items-center gap-2 text-xs text-gray-700">
+          Cancellation fee $
+          <input type="number" min="0" step="0.01" value={fee} onChange={(e) => setFee(e.target.value)} className="w-24 border border-gray-200 rounded px-1.5 py-1" />
+          {a.amount_paid > 0 && <span className="text-gray-500">({money(a.amount_paid)} deposit already paid counts towards it)</span>}
+        </label>
+      )}
+      <div className="flex gap-2">
+        <button type="button" disabled={!reason} onClick={() => onCancel({ cancel_reason: reason, ...(charged ? { cancellation_fee: fee === '' ? 0 : Number(fee) } : {}) })}
+          className="text-xs px-2.5 py-1.5 rounded-lg bg-red-600 text-white disabled:opacity-40">Cancel booking</button>
+        <button type="button" onClick={onClose} className="text-xs px-2.5 py-1.5 rounded-lg text-gray-600 hover:bg-white">Keep it</button>
+      </div>
+    </div>
+  );
+}
+
 export function AppointmentItem({ appointment: a, actions, showDate = false, showClient = true }) {
+  const [cancelling, setCancelling] = useState(false);
   const startAt = new Date(a.scheduled_date);
   const endAt = endOf(a);
   const pay = PAYMENT_STYLES[a.payment_status];
@@ -714,6 +757,13 @@ export function AppointmentItem({ appointment: a, actions, showDate = false, sho
             {a.payment_status === 'partial' && <span className="text-gray-500">{money(a.amount_paid)} received</span>}
           </p>
         )}
+        {a.status === 'cancelled' && a.cancel_reason && (
+          <p className="text-xs mt-1 text-red-700">
+            {CANCEL_REASONS[a.cancel_reason]}
+            {a.cancellation_fee > 0 && ` · fee ${money(a.cancellation_fee)}`}
+            {a.cancellation_fee > (a.amount_paid || 0) && `, ${money(a.cancellation_fee - (a.amount_paid || 0))} still owed`}
+          </p>
+        )}
         {a.notes && <p className="text-xs text-gray-400 mt-1 line-clamp-2">{a.notes}</p>}
       </button>
 
@@ -730,8 +780,17 @@ export function AppointmentItem({ appointment: a, actions, showDate = false, sho
         {a.status === 'scheduled' && (
           <>
             <button onClick={() => actions.status(a, 'completed')} className={`${small} bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}>✓ Done</button>
-            <button onClick={() => actions.status(a, 'cancelled')} className={`${small} bg-red-50 text-red-600 hover:bg-red-100`}>✕ Cancel</button>
+            {isTest
+              ? <button onClick={() => actions.status(a, 'cancelled')} className={`${small} bg-red-50 text-red-600 hover:bg-red-100`}>✕ Cancel</button>
+              : !cancelling && <button onClick={() => setCancelling(true)} className={`${small} bg-red-50 text-red-600 hover:bg-red-100`}>✕ Cancel</button>}
           </>
+        )}
+        {cancelling && a.status === 'scheduled' && (
+          <CancelChooser appointment={a} onClose={() => setCancelling(false)}
+            onCancel={(extra) => { setCancelling(false); actions.status(a, 'cancelled', extra); }} />
+        )}
+        {a.status === 'cancelled' && a.cancellation_fee > (a.amount_paid || 0) && (
+          <button onClick={() => actions.paid(a)} className={`${small} bg-amber-50 text-amber-800 hover:bg-amber-100`}>$ Fee paid</button>
         )}
         {a.status !== 'cancelled' && (a.payment_status === 'unpaid' || a.payment_status === 'partial') && (
           <button onClick={() => actions.paid(a)} className={`${small} bg-amber-50 text-amber-800 hover:bg-amber-100`}>$ Mark paid</button>

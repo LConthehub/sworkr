@@ -884,6 +884,35 @@ def _m18_quarterly_charges(conn):
     conn.execute("CREATE INDEX idx_place_charges_source ON place_charges(source_id)")
 
 
+def _m19_documents(conn):
+    """Documents that expire (licenses, work cards, ID, platform verification), with a reminder before."""
+    conn.execute("""
+        CREATE TABLE documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'other',
+            issued_on TEXT,
+            expires_on TEXT,
+            remind_days_before INTEGER NOT NULL DEFAULT 30,
+            source_id INTEGER REFERENCES income_sources(id) ON DELETE SET NULL,
+            persona_id INTEGER REFERENCES personas(id) ON DELETE SET NULL,
+            notes TEXT,
+            task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_documents_owner ON documents(owner_id, expires_on)")
+
+
+def _m20_cancellations(conn):
+    """A cancelled booking says who cancelled it (client in time, late, a no-show, or you) and any fee owed."""
+    conn.execute("ALTER TABLE appointments ADD COLUMN cancel_reason TEXT "
+                 "CHECK(cancel_reason IS NULL OR cancel_reason IN ('client', 'late', 'no_show', 'me'))")
+    conn.execute("ALTER TABLE appointments ADD COLUMN cancellation_fee REAL CHECK(cancellation_fee IS NULL OR cancellation_fee >= 0)")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -903,6 +932,8 @@ MIGRATIONS = [
     (16, "gifts, allowances and the house's share of gifts", _m16_gifts_and_allowances, False),
     (17, "birth control and regular meds", _m17_meds, False),
     (18, "quarterly charges", _m18_quarterly_charges, True),
+    (19, "documents that expire", _m19_documents, False),
+    (20, "cancellations, no-shows and their fees", _m20_cancellations, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

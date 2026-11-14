@@ -41,7 +41,7 @@ export default function ClientDetail() {
   };
   const actions = {
     open: (a) => setModal({ appointment: a }),
-    status: (a, status) => act(() => axios.put(`/api/appointments/${a.id}/status`, null, { params: { status } })),
+    status: (a, status, extra = {}) => act(() => axios.put(`/api/appointments/${a.id}/status`, null, { params: { status, ...extra } })),
     paid: (a) => act(() => axios.post(`/api/appointments/${a.id}/mark-paid`)),
     checkIn: (a) => act(() => axios.post(`/api/appointments/${a.id}/check-in`)),
   };
@@ -143,7 +143,10 @@ export default function ClientDetail() {
         </div>
 
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
-          <Stat label="Visits" value={stats.completed} sub={stats.cancelled ? `${stats.cancelled} cancelled` : null} />
+          <Stat label="Visits" value={stats.completed}
+            sub={[stats.cancelled && `${stats.cancelled} cancelled`, stats.no_shows && `${stats.no_shows} no-show${stats.no_shows === 1 ? '' : 's'}`,
+              stats.late_cancellations && `${stats.late_cancellations} late`].filter(Boolean).join(' · ') || null}
+            warn={stats.no_shows > 0} />
           <Stat label="Total paid" value={money(stats.total_paid)} />
           <Stat label="Still owed" value={money(stats.outstanding)} warn={stats.outstanding > 0} />
           <Stat label="Last seen" value={shortDate(stats.last_seen)} sub={stats.next_appointment ? `Next: ${shortDate(stats.next_appointment)}` : 'Nothing booked'} />
