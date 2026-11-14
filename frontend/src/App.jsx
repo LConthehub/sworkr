@@ -132,7 +132,7 @@ function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen pb-16 sm:pb-0">
-        <nav className="bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-40">
+        <nav className="print:hidden bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
             {/* Pages on the left, search in the middle, settings on the right (like Nextcloud). */}
             <div className="grid grid-cols-[auto_1fr_auto] items-center h-14 sm:h-16 gap-3 sm:gap-6">

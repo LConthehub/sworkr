@@ -28,6 +28,7 @@ import csv_io
 import currencies
 import finance
 import blocklist
+import taxes
 import noshow
 import documents
 import meds
@@ -2110,6 +2111,7 @@ app.include_router(blocklist.router)
 app.include_router(meds.router)
 app.include_router(documents.router)
 app.include_router(noshow.router)
+app.include_router(taxes.router)
 
 init_db()
 if os.environ.get("SEED_DB", "1") == "1":
@@ -2126,6 +2128,7 @@ blocklist.setup(get_db)
 meds.setup(get_db)
 documents.setup(get_db)
 noshow.setup(get_db)
+taxes.setup(get_db)
 csv_io.setup(get_db, after_client_import=lambda ids: [calendar_sync.queue_client(i) for i in ids])
 # BACKGROUND_JOBS=0 (the tests) keeps the background threads from starting.
 _background = os.environ.get("BACKGROUND_JOBS", os.environ.get("CALENDAR_SYNC", "1")) == "1"

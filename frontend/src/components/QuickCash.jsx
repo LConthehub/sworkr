@@ -101,7 +101,7 @@ export default function QuickCash({ userId }) {
       <button
         type="button"
         onClick={() => { setOpen(true); setTimeout(() => amountRef.current?.focus(), 50); }}
-        className="fixed z-40 right-4 bottom-20 sm:bottom-6 h-14 px-5 rounded-full bg-sworkr-600 text-white text-lg font-bold shadow-xl hover:bg-sworkr-700"
+        className="print:hidden fixed z-40 right-4 bottom-20 sm:bottom-6 h-14 px-5 rounded-full bg-sworkr-600 text-white text-lg font-bold shadow-xl hover:bg-sworkr-700"
         aria-label="Log cash quickly"
         title="Log cash in or out"
       >
