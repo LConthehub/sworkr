@@ -12,6 +12,7 @@ email account. Each person connects their account on their settings page.
 """
 
 import email
+import vault
 import email.errors
 import email.header
 import email.policy
@@ -74,12 +75,12 @@ PROVIDERS = {
 
 def _get(db, user_id: int, key: str) -> Optional[str]:
     row = db.execute("SELECT value FROM user_settings WHERE user_id = ? AND key = ?", (user_id, key)).fetchone()
-    return row["value"] if row else None
+    return vault.unseal(key, row["value"]) if row else None
 
 
 def _set(db, user_id: int, key: str, value: Optional[str]):
     db.execute("INSERT INTO user_settings (user_id, key, value) VALUES (?, ?, ?) "
-               "ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value", (user_id, key, value))
+               "ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value", (user_id, key, vault.seal(key, value)))
 
 
 def load_settings(db, user_id: int) -> dict:

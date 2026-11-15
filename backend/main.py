@@ -6,6 +6,7 @@ Run with: docker compose up --build
 """
 
 import os
+import vault
 import sqlite3
 import uuid
 from datetime import date, datetime, timedelta, timezone
@@ -305,6 +306,13 @@ AdminDep = Annotated[dict, Depends(require_admin)]
 def init_db():
     """Create or upgrade the database. See migrations.py."""
     migrations.run(DB_PATH)
+    # Saved passwords written by an older version are sealed here; see vault.py.
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        vault.seal_existing(conn)
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def to_utc_iso(dt: datetime) -> str:

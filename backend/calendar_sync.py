@@ -18,6 +18,7 @@ app password. The calendar and task list are found the standard way (RFC 6764 / 
 """
 
 import logging
+import vault
 import queue
 import re
 import threading
@@ -58,12 +59,12 @@ SETTING_KEYS = ("cal_enabled", "cal_url", "cal_username", "cal_password", "cal_d
 
 def get_setting(db, user_id: int, key: str) -> Optional[str]:
     row = db.execute("SELECT value FROM user_settings WHERE user_id = ? AND key = ?", (user_id, key)).fetchone()
-    return row["value"] if row else None
+    return vault.unseal(key, row["value"]) if row else None
 
 
 def set_setting(db, user_id: int, key: str, value: Optional[str]):
     db.execute("INSERT INTO user_settings (user_id, key, value) VALUES (?, ?, ?) "
-               "ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value", (user_id, key, value))
+               "ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value", (user_id, key, vault.seal(key, value)))
     db.commit()
 
 

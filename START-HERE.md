@@ -56,5 +56,8 @@ A new copy contains a few made-up clients and bookings so you can look around. R
   `docker compose -f docker-compose.prod.yml exec api python manage.py turn-off-two-step <username>`
 - **Never run** `docker compose down -v` or delete the `sworkr_sworkr_data` volume in Docker Desktop: that is
   your data.
+- **After restoring a backup on a different computer**, sworkr asks again for the app passwords you had
+  saved (calendar, mail, content library, backup passphrase) and for a fresh authenticator-app setup.
+  That is on purpose: they are locked with a key that never leaves the computer they were saved on.
 
 `README.md` has the full details: every feature, CSV import and export, restoring a backup, and settings.

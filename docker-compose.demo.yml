@@ -14,9 +14,12 @@ services:
     build: ./backend
     volumes:
       - sworkr_demo_data:/data
+      # The key that seals saved passwords, kept apart from the database (see backend/vault.py).
+      - sworkr_demo_keys:/keys
     env_file: .env.demo
     environment:
       - DATA_DIR=/data
+      - KEY_DIR=/keys
       - DEMO_MODE=1            # wipes and refills this database: never point it at real data
       - SEED_DB=0
       - BACKGROUND_JOBS=0      # no calendar sync, backups or safety emails in the demo
@@ -34,3 +37,4 @@ services:
 
 volumes:
   sworkr_demo_data:
+  sworkr_demo_keys:

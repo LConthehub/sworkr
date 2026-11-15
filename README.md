@@ -111,8 +111,8 @@ startup, on *Sync now*, and every hour, and it also removes events whose appoint
 deleted. Sync goes one way: edits made to these events in Nextcloud are replaced at the
 next sync. *Discreet calendar entries* shows just "Appointment", with no client name or notes.
 
-The app password is stored in sworkr's database. To revoke it, delete it in Nextcloud
-under *Devices & sessions*.
+The app password is stored in sworkr's database, sealed (see *Saved passwords* below). To revoke it,
+delete it in Nextcloud under *Devices & sessions*.
 
 Only the appointments of the admin who set sync up are copied; other users' never are.
 
@@ -145,6 +145,14 @@ The SQLite database is at `$DATA_DIR/sworkr.db`. Under Docker that is the named 
 `sworkr_data`, which survives restarts and rebuilds.
 
 > Running `docker compose down -v` **deletes** that volume and all your data.
+
+**Saved passwords.** The few secrets sworkr must be able to read back (app passwords for the calendar,
+mailbox and content library, the automatic-backup passphrase, the authenticator-app secret) are encrypted
+with a key kept in its own file, `$KEY_DIR/settings.key` (under Docker, the volume `sworkr_keys`), not in
+the database. A copy of the database on its own, or a backup file, does not give them away. If that key
+is lost, or you restore a backup on another computer, nothing else is affected: sworkr shows those
+passwords as not saved and you enter them again. This does not protect against someone who has the whole
+computer; turn on disk encryption (BitLocker, FileVault) for that.
 
 **Back it up.** Under **Account → Backups** (admin):
 

@@ -24,6 +24,7 @@ If all of that fails, sign in with a passkey, or the admin runs:
 """
 
 import base64
+import vault
 import hashlib
 import hmac
 import json
@@ -73,12 +74,12 @@ def _hash(text: str) -> str:
 
 def _setting(db, user_id: int, key: str) -> Optional[str]:
     r = db.execute("SELECT value FROM user_settings WHERE user_id = ? AND key = ?", (user_id, key)).fetchone()
-    return r["value"] if r else None
+    return vault.unseal(key, r["value"]) if r else None
 
 
 def _set(db, user_id: int, key: str, value: Optional[str]):
     db.execute("INSERT INTO user_settings (user_id, key, value) VALUES (?, ?, ?) "
-               "ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value", (user_id, key, value))
+               "ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value", (user_id, key, vault.seal(key, value)))
 
 
 def _demo() -> bool:

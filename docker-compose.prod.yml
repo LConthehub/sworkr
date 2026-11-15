@@ -15,12 +15,15 @@ services:
     build: ./backend
     volumes:
       - sworkr_data:/data
+      # The key that seals saved passwords, kept apart from the database (see backend/vault.py).
+      - sworkr_keys:/keys
       - ./backups:/backups
       # Content library from a folder on this computer, a NAS share or a drive (read-only; sworkr never changes it).
       # Uncomment and change the left side, then choose "Mounted folder" under Settings → Content library:
       # - D:/Content:/content:ro
     environment:
       - DATA_DIR=/data
+      - KEY_DIR=/keys
       - BACKUP_DIR=/backups
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-587}
@@ -43,3 +46,4 @@ services:
 
 volumes:
   sworkr_data:
+  sworkr_keys:

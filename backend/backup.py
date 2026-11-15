@@ -14,6 +14,7 @@ File layout:  b"SWBAK1\\n" | 16-byte salt | 12-byte nonce | ciphertext (gzip of 
 """
 
 import gzip
+import vault
 import hashlib
 import logging
 import os
@@ -123,12 +124,12 @@ def backup_filename(now: Optional[datetime] = None) -> str:
 
 def _setting(db, key: str) -> Optional[str]:
     row = db.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
-    return row[0] if row else None
+    return vault.unseal(key, row[0]) if row else None
 
 
 def _set(db, key: str, value: Optional[str]):
     db.execute("INSERT INTO settings (key, value) VALUES (?, ?) "
-               "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (key, value))
+               "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (key, vault.seal(key, value)))
     db.commit()
 
 
