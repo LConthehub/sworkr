@@ -7,7 +7,7 @@ import { BlocklistSettings } from '../components/Blocklist';
 import MedsSettings from '../components/Meds';
 import DocumentsSettings from '../components/Documents';
 import { DiscreetSettings } from '../components/Discreet';
-import { PasskeySettings, TwoStepSettings } from '../components/SignInSecurity';
+import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from '../components/SignInSecurity';
 import { WorkTypesPicker } from '../components/WorkTypes';
 import { Field, inputClass, errorMessage, buttonClass, quietButtonClass, Section, Notice } from '../components/Modal';
 import CalendarSync from '../components/CalendarSync';
@@ -59,8 +59,16 @@ const GROUPS = [
         render: () => <Section title="Passkeys" hint="Log in with this phone or computer's face, fingerprint or PIN instead of a password."><PasskeySettings /></Section>,
       },
       {
-        id: 'twostep', title: 'Two-step sign-in', words: '2fa two factor mfa code email verification',
-        render: () => <Section title="Two-step sign-in" hint="A code by email after your password."><TwoStepSettings /></Section>,
+        id: 'twostep', title: 'Two-step sign-in', words: '2fa two factor mfa code email verification authenticator app totp recovery codes',
+        render: () => <Section title="Two-step sign-in" hint="A code from an app or by email after your password."><TwoStepSettings /></Section>,
+      },
+      {
+        id: 'away', title: 'Away from home', words: 'internet public remote passkey only password off new sign-in alert email notify',
+        render: () => <Section title="Away from home" hint="For when sworkr can be reached from the internet."><AwayFromHome /></Section>,
+      },
+      {
+        id: 'devices', title: 'Signed-in devices', words: 'sessions devices log out everywhere history sign-ins activity recent',
+        render: () => <Section title="Signed-in devices" hint="Where your account is open right now, and recent sign-ins."><SignedInDevices /></Section>,
       },
       {
         id: 'discreet', title: 'Discreet mode', words: 'panic hide tab title privacy disguise decoy',
@@ -413,7 +421,7 @@ function Password() {
         </Field>
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label="New password">
-            <input required type="password" minLength={8} autoComplete="new-password" value={form.next} onChange={set('next')} className={inputClass} />
+            <input required type="password" minLength={12} autoComplete="new-password" value={form.next} onChange={set('next')} className={inputClass} />
           </Field>
           <Field label="Confirm new password">
             <input required type="password" autoComplete="new-password" value={form.confirm} onChange={set('confirm')} className={inputClass} />
@@ -808,7 +816,7 @@ function Users({ me }) {
   };
 
   const setPassword = async (u) => {
-    const password = window.prompt(`New password for ${u.username} (at least 8 characters):`);
+    const password = window.prompt(`New password for ${u.username} (at least 12 characters):`);
     if (!password) return;
     try {
       await axios.post(`/api/users/${u.id}/password`, { password });
@@ -852,7 +860,7 @@ function Users({ me }) {
             <input required minLength={2} autoComplete="off" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className={inputClass} />
           </Field>
           <Field label="Their first password">
-            <input required minLength={8} type="text" autoComplete="off" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={inputClass} />
+            <input required minLength={12} type="text" autoComplete="off" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={inputClass} />
           </Field>
           <button type="submit" className={buttonClass}>Add user</button>
         </form>

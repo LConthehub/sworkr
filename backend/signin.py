@@ -1,5 +1,5 @@
 """
-Signing in more safely: passkeys, and two-step sign-in with an emailed code.
+Signing in more safely: passkeys, and two-step sign-in with a code from an authenticator app or by email.
 
 Two-step sign-in: after the right password, sworkr emails a 6-digit code and only signs you in once it's typed.
 The code goes out through the email account you connected in Settings > Email (from your own address to
@@ -12,38 +12,51 @@ passkey is tied to the web address it was made on (localhost and your public add
 and browsers only offer them on https or localhost. Signing in with a passkey skips the emailed code: a passkey
 is already two things at once (the device, and your face, finger or PIN).
 
-If email stops working, sign in with a passkey, or the admin runs:
+Authenticator app: instead of an email, the code comes from an app on the phone (any app that does standard
+6-digit codes: Aegis, 2FAS, Google Authenticator, a password manager...). It needs no email account and works
+offline. One method is on at a time.
+
+Recovery codes: ten single-use codes, made when two-step is first turned on, to keep on paper. Any of them works
+in place of a code, for the day the phone or the mailbox is gone. Only their hashes are stored.
+
+If all of that fails, sign in with a passkey, or the admin runs:
     docker compose exec api python manage.py turn-off-two-step <username>
 """
 
+import base64
 import hashlib
+import hmac
 import json
 import os
 import secrets
+import struct
+import time
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from typing import Callable, Optional
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 
+import access
 import auth
 
 router = APIRouter()
 _get_db: Optional[Callable] = None
-_set_cookie: Optional[Callable] = None
 CODE_MINUTES = 10
 CODE_TRIES = 5
 RESEND_SECONDS = 60
 PASSKEY_MINUTES = 5
+TOTP_STEP = 30               # seconds each app code lasts
+RECOVERY_CODES = 10
+RECOVERY_LENGTH = 10
+RECOVERY_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"   # no 0/o or 1/i/l: these get copied off paper
 
 
-def setup(get_db: Callable, set_cookie: Callable):
-    """set_cookie(response, token, request): main.py's session cookie."""
-    global _get_db, _set_cookie
+def setup(get_db: Callable):
+    global _get_db
     _get_db = get_db
-    _set_cookie = set_cookie
 
 
 def _now() -> datetime:
@@ -108,7 +121,7 @@ def _drop(db, token: str):
 
 # ==================== SENDING A CODE ====================
 
-def _own_mail(db, user_id: int) -> Optional[dict]:
+def own_mail(db, user_id: int) -> Optional[dict]:
     """The person's connected email account, if it can send."""
     import mail
     s = mail.load_settings(db, user_id)
@@ -121,7 +134,7 @@ def delivery(db, user_id: int) -> dict:
     """How a code would reach this person: {"via": "own" | "server" | None, "address": ...}."""
     if _demo():
         return {"via": None, "address": None}
-    own = _own_mail(db, user_id)
+    own = own_mail(db, user_id)
     if own:
         return {"via": "own", "address": own["from_address"]}
     import safety
@@ -142,7 +155,7 @@ def send_code(db, user_id: int, address: str, code: str):
     subject = "Sign-in code"
     body = (f"Your sign-in code is {code}\n\nIt works for {CODE_MINUTES} minutes. If you didn't just try to sign in, "
             f"someone may know your password: change it.\n")
-    own = _own_mail(db, user_id)
+    own = own_mail(db, user_id)
     if own and address == own["from_address"]:
         import mail
         msg = EmailMessage()
@@ -168,8 +181,89 @@ def two_step_on(db, user_id: int) -> bool:
     return _setting(db, user_id, "two_step") == "1"
 
 
+def two_step_method(db, user_id: int) -> str:
+    """ "app" (authenticator app) or "email"."""
+    return "app" if _setting(db, user_id, "two_step_method") == "app" and _setting(db, user_id, "totp_secret") else "email"
+
+
+# ==================== AUTHENTICATOR APP (TOTP, RFC 6238) ====================
+
+def totp_code(secret: str, step: int) -> str:
+    """The 6-digit code for a 30-second step, as every authenticator app works it out."""
+    key = base64.b32decode(secret.upper() + "=" * (-len(secret) % 8))
+    digest = hmac.new(key, struct.pack(">Q", step), hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    return f"{(struct.unpack('>I', digest[offset:offset + 4])[0] & 0x7FFFFFFF) % 1_000_000:06d}"
+
+
+def _totp_step_for(secret: str, code: str, now: Optional[float] = None) -> Optional[int]:
+    """The step this code belongs to: the current one, or the one before or after (clocks drift)."""
+    if len(code) != 6:
+        return None
+    current = int((now if now is not None else time.time()) // TOTP_STEP)
+    for step in (current, current - 1, current + 1):
+        if secrets.compare_digest(totp_code(secret, step), code):
+            return step
+    return None
+
+
+def _totp_ok(db, user_id: int, code: str) -> bool:
+    """Check an app code for this account. A code works once: the same or an older one is refused afterwards."""
+    secret = _setting(db, user_id, "totp_secret")
+    if not secret:
+        return False
+    step = _totp_step_for(secret, code)
+    if step is None or step <= int(_setting(db, user_id, "totp_last_step") or 0):
+        return False
+    _set(db, user_id, "totp_last_step", str(step))
+    return True
+
+
+def _qr(text: str) -> Optional[str]:
+    """A QR code as an image the page can show directly. None if the QR library isn't installed: the page then
+    shows only the key to type in."""
+    try:
+        import segno
+        return segno.make(text, error="m").svg_data_uri(scale=5, border=2)
+    except Exception:   # noqa: BLE001
+        return None
+
+
+# ==================== RECOVERY CODES ====================
+
+def _recovery_key(code: str) -> str:
+    return "".join(ch for ch in (code or "").lower() if ch.isalnum())
+
+
+def recovery_codes_left(db, user_id: int) -> int:
+    return db.execute("SELECT COUNT(*) FROM recovery_codes WHERE user_id = ? AND used_at IS NULL", (user_id,)).fetchone()[0]
+
+
+def new_recovery_codes(db, user_id: int) -> list:
+    """Replace this account's recovery codes. Returns them, the only time they're ever shown. The caller commits."""
+    db.execute("DELETE FROM recovery_codes WHERE user_id = ?", (user_id,))
+    codes = []
+    for _ in range(RECOVERY_CODES):
+        code = "".join(secrets.choice(RECOVERY_ALPHABET) for _ in range(RECOVERY_LENGTH))
+        db.execute("INSERT INTO recovery_codes (user_id, code_hash, created_at) VALUES (?, ?, ?)",
+                   (user_id, _hash(f"recovery:{user_id}:{code}"), _iso(_now())))
+        codes.append(f"{code[:5]}-{code[5:]}")
+    return codes
+
+
+def _use_recovery_code(db, user_id: int, code: str) -> bool:
+    cur = db.execute("UPDATE recovery_codes SET used_at = ? WHERE user_id = ? AND code_hash = ? AND used_at IS NULL",
+                     (_iso(_now()), user_id, _hash(f"recovery:{user_id}:{_recovery_key(code)}")))
+    return cur.rowcount == 1
+
+
 def start_login_code(db, user) -> dict:
-    """After a correct password, for someone with two-step on: send a code, and return what the page needs."""
+    """After a correct password, for someone with two-step on: send a code (or wait for the app's), and return
+    what the page needs."""
+    if two_step_method(db, user["id"]) == "app":
+        token = _new_challenge(db, "login_code", user["id"], "", {"app": True}, CODE_MINUTES)
+        db.commit()
+        return {"two_step": True, "challenge": token, "method": "app"}
     d = delivery(db, user["id"])
     address = d["address"] if d["via"] == "own" else _setting(db, user["id"], "two_step_address")
     if not d["via"] or not address:
@@ -186,15 +280,25 @@ def start_login_code(db, user) -> dict:
         raise HTTPException(status_code=503, detail=f"Your sign-in code couldn't be sent ({e}). Sign in with a passkey, "
                             "or ask whoever runs sworkr to turn two-step sign-in off for you.")
     db.commit()
-    return {"two_step": True, "challenge": token, "sent_to": mask(address)}
+    return {"two_step": True, "challenge": token, "method": "email", "sent_to": mask(address)}
 
 
 def _check_code(db, token: str, kind: str, code: str) -> dict:
     c = _challenge(db, token, kind)
     if not c:
         raise HTTPException(status_code=400, detail="That code has run out. Start again.")
+    typed = _recovery_key(code)
     code = "".join(ch for ch in (code or "") if ch.isdigit())
-    if not secrets.compare_digest(c["secret"], _hash(token + code)):
+    if kind == "login_code" and len(typed) == RECOVERY_LENGTH:
+        right = _use_recovery_code(db, c["user_id"], typed)
+        c["method"] = "recovery"
+    elif c["data"].get("app"):
+        right = _totp_ok(db, c["user_id"], code)
+        c["method"] = "app"
+    else:
+        right = bool(c["secret"]) and secrets.compare_digest(c["secret"], _hash(token + code))
+        c["method"] = "code"
+    if not right:
         tries = c["attempts"] + 1
         if tries >= CODE_TRIES:
             _drop(db, token)
@@ -220,12 +324,23 @@ class ChallengeIn(BaseModel):
 def finish_login_code(body: CodeIn, request: Request, response: Response):
     db = _get_db()
     try:
-        c = _check_code(db, body.challenge, "login_code", body.code)
+        pending = db.execute("SELECT user_id FROM auth_challenges WHERE token_hash = ?", (_hash(body.challenge),)).fetchone()
+        try:
+            c = _check_code(db, body.challenge, "login_code", body.code)
+        except HTTPException:
+            if pending and pending["user_id"]:
+                access.record(db, pending["user_id"], "wrong_code", None, request)
+                db.commit()
+            raise
         user = db.execute("SELECT id, username, is_admin FROM users WHERE id = ?", (c["user_id"],)).fetchone()
         if not user:
             raise HTTPException(status_code=400, detail="That account no longer exists")
-        _set_cookie(response, auth.create_session(db, user["id"]), request)
-        db.commit()
+        access.sign_in(db, user["id"], request, response, c["method"])
+        if c["method"] == "recovery":
+            left = recovery_codes_left(db, user["id"])
+            access.notify(user["id"], "A recovery code was used",
+                          f"A recovery code was just used to sign in to your account. {left} left.\n\n"
+                          "If that wasn't you, change your password and make new recovery codes.\n")
         return _user_out(user)
     finally:
         db.close()
@@ -239,6 +354,8 @@ def resend_login_code(body: ChallengeIn):
         c = _challenge(db, body.challenge, "login_code")
         if not c:
             raise HTTPException(status_code=400, detail="That sign-in has run out. Start again.")
+        if c["data"].get("app"):
+            raise HTTPException(status_code=400, detail="The code comes from your authenticator app, not by email")
         sent = datetime.fromisoformat(c["data"]["sent"])
         wait = RESEND_SECONDS - int((_now() - sent).total_seconds())
         if wait > 0:
@@ -274,7 +391,9 @@ def two_step_status(request: Request):
     try:
         d = delivery(db, user_id)
         address = d["address"] if d["via"] == "own" else _setting(db, user_id, "two_step_address")
-        return {"enabled": two_step_on(db, user_id), "via": d["via"], "address": mask(address) if two_step_on(db, user_id) else address,
+        on = two_step_on(db, user_id)
+        return {"enabled": on, "method": two_step_method(db, user_id) if on else None, "via": d["via"],
+                "address": mask(address) if on else address, "recovery_codes": recovery_codes_left(db, user_id),
                 "passkeys": db.execute("SELECT COUNT(*) FROM passkeys WHERE user_id = ?", (user_id,)).fetchone()[0]}
     finally:
         db.close()
@@ -314,9 +433,12 @@ def two_step_confirm(body: CodeIn, request: Request):
         if c["user_id"] != user_id:
             raise HTTPException(status_code=400, detail="That code is for someone else")
         _set(db, user_id, "two_step", "1")
+        _set(db, user_id, "two_step_method", "email")
+        _set(db, user_id, "totp_secret", None)
         _set(db, user_id, "two_step_address", c["data"]["address"])
+        codes = new_recovery_codes(db, user_id) if not recovery_codes_left(db, user_id) else None
         db.commit()
-        return {"enabled": True}
+        return {"enabled": True, "recovery_codes": codes}
     finally:
         db.close()
 
@@ -329,8 +451,75 @@ def two_step_off(body: PasswordIn, request: Request):
         if not auth.check_login(db, user["username"], body.password):
             raise HTTPException(status_code=400, detail="That password isn't right")
         _set(db, user["id"], "two_step", "0")
+        _set(db, user["id"], "totp_secret", None)
+        db.execute("DELETE FROM recovery_codes WHERE user_id = ?", (user["id"],))
         db.commit()
         return {"enabled": False}
+    finally:
+        db.close()
+
+
+class AppStart(BaseModel):
+    label: Optional[str] = None       # what the entry is called in the app; nothing that says "sworkr" by default
+
+
+@router.post("/api/account/two-step/app/start")
+def app_start(body: AppStart, request: Request):
+    """A new key for an authenticator app. Nothing changes until a code from the app is confirmed."""
+    user = request.state.user
+    if _demo():
+        raise HTTPException(status_code=403, detail="Two-step sign-in is turned off in the demo: everyone shares its login")
+    label = "".join(ch for ch in (body.label or "").strip() if ch.isalnum() or ch in " -_")[:30] or "Sign-in"
+    secret = base64.b32encode(secrets.token_bytes(20)).decode().rstrip("=")
+    uri = f"otpauth://totp/{quote(label)}:{quote(user['username'])}?secret={secret}&issuer={quote(label)}"
+    db = _get_db()
+    try:
+        token = _new_challenge(db, "app_setup", user["id"], "", {"totp": secret}, CODE_MINUTES)
+        db.commit()
+        return {"challenge": token, "secret": " ".join(secret[i:i + 4] for i in range(0, len(secret), 4)),
+                "uri": uri, "qr": _qr(uri)}
+    finally:
+        db.close()
+
+
+@router.post("/api/account/two-step/app/confirm")
+def app_confirm(body: CodeIn, request: Request):
+    user_id = request.state.user["id"]
+    db = _get_db()
+    try:
+        c = _challenge(db, body.challenge, "app_setup")
+        if not c or c["user_id"] != user_id:
+            raise HTTPException(status_code=400, detail="That took too long. Start again.")
+        code = "".join(ch for ch in (body.code or "") if ch.isdigit())
+        step = _totp_step_for(c["data"]["totp"], code)
+        if step is None:
+            raise HTTPException(status_code=400, detail="That code isn't right. Check the phone's clock is set automatically, "
+                                "and type the newest code.")
+        _drop(db, body.challenge)
+        _set(db, user_id, "totp_secret", c["data"]["totp"])
+        _set(db, user_id, "totp_last_step", str(step))
+        _set(db, user_id, "two_step_method", "app")
+        _set(db, user_id, "two_step", "1")
+        codes = new_recovery_codes(db, user_id) if not recovery_codes_left(db, user_id) else None
+        db.commit()
+        return {"enabled": True, "recovery_codes": codes}
+    finally:
+        db.close()
+
+
+@router.post("/api/account/recovery-codes")
+def make_recovery_codes(body: PasswordIn, request: Request):
+    """Ten new recovery codes; the old ones stop working. Needs the password, since these codes open the account."""
+    user = request.state.user
+    db = _get_db()
+    try:
+        if not auth.check_login(db, user["username"], body.password):
+            raise HTTPException(status_code=400, detail="That password isn't right")
+        if not two_step_on(db, user["id"]):
+            raise HTTPException(status_code=400, detail="Recovery codes go with two-step sign-in. Turn that on first.")
+        codes = new_recovery_codes(db, user["id"])
+        db.commit()
+        return {"recovery_codes": codes}
     finally:
         db.close()
 
@@ -437,7 +626,13 @@ def passkey_register_finish(body: PasskeyFinish, request: Request):
 def delete_passkey(passkey_id: int, request: Request):
     db = _get_db()
     try:
-        db.execute("DELETE FROM passkeys WHERE id = ? AND user_id = ?", (passkey_id, request.state.user["id"]))
+        user_id = request.state.user["id"]
+        key = db.execute("SELECT rp_id FROM passkeys WHERE id = ? AND user_id = ?", (passkey_id, user_id)).fetchone()
+        if (key and key["rp_id"] not in access.LOCAL_HOSTS and access.remote_passkeys(db, user_id) == 1
+                and _setting(db, user_id, "passkey_only_remote") == "1"):
+            raise HTTPException(status_code=400, detail="This is your only passkey for signing in away from home, and passwords "
+                                "are turned off there. Add another passkey, or turn \u201cPasskeys only away from home\u201d off first.")
+        db.execute("DELETE FROM passkeys WHERE id = ? AND user_id = ?", (passkey_id, user_id))
         db.commit()
     finally:
         db.close()
@@ -485,8 +680,7 @@ def passkey_login_finish(body: PasskeyFinish, request: Request, response: Respon
             raise HTTPException(status_code=400, detail=f"The passkey couldn't be checked: {e}")
         user = db.execute("SELECT id, username, is_admin FROM users WHERE id = ?", (key["user_id"],)).fetchone()
         db.execute("UPDATE passkeys SET sign_count = ?, last_used_at = ? WHERE id = ?", (v.new_sign_count, _iso(_now()), key["id"]))
-        _set_cookie(response, auth.create_session(db, user["id"]), request)
-        db.commit()
+        access.sign_in(db, user["id"], request, response, "passkey")
         return _user_out(user)
     finally:
         db.close()

@@ -4,7 +4,8 @@ Authentication helpers: password hashing, sessions, and login throttling.
 - Passwords are hashed with scrypt (Python standard library, no extra dependency).
 - Session tokens are random; only their SHA-256 hash is stored in the database,
   so a copy of the database can't be used to log in.
-- Repeated failed logins for a username are slowed down with an increasing lockout.
+- Repeated failed logins are slowed down with an increasing lockout, kept in the database so a restart
+  doesn't forget it.
 - Sessions that sit unused are logged out automatically.
 """
 
@@ -12,14 +13,13 @@ import hashlib
 import hmac
 import os
 import secrets
-import threading
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Callable, Optional
 
 SESSION_COOKIE = "sworkr_session"
 SESSION_DAYS = 30
-MIN_PASSWORD_LENGTH = 8
+MIN_PASSWORD_LENGTH = 12
 # Log out a session that hasn't been used for this long. Each user can change theirs on the Account page.
 DEFAULT_IDLE_MINUTES = int(os.environ.get("SESSION_IDLE_MINUTES", "120"))
 IDLE_CHOICES = (15, 30, 60, 120, 480, 0)   # minutes; 0 = stay logged in (up to 30 days)
@@ -66,13 +66,17 @@ def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def create_session(db, user_id: int) -> str:
+def create_session(db, user_id: int, method: Optional[str] = None, ip: Optional[str] = None,
+                   user_agent: Optional[str] = None, device_hash: Optional[str] = None) -> str:
+    """A new session. How and from where it was opened is kept, so the person can see their signed-in devices."""
     token = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
     db.execute(
-        "INSERT INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO sessions (token_hash, user_id, created_at, expires_at, last_seen_at, method, ip, user_agent, device_hash) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (_token_hash(token), user_id, now.isoformat(timespec="seconds"),
-         (now + timedelta(days=SESSION_DAYS)).isoformat(timespec="seconds"), now.isoformat(timespec="seconds")),
+         (now + timedelta(days=SESSION_DAYS)).isoformat(timespec="seconds"), now.isoformat(timespec="seconds"),
+         method, ip, (user_agent or "")[:300] or None, device_hash),
     )
     db.execute("DELETE FROM sessions WHERE expires_at < ?", (now.isoformat(timespec="seconds"),))
     db.commit()
@@ -134,43 +138,72 @@ def delete_user_sessions(db, user_id: int, keep_token: Optional[str] = None):
 
 # ---------- login throttling ----------
 
+_get_db: Optional[Callable] = None
+
+
+def setup(get_db: Callable):
+    global _get_db
+    _get_db = get_db
+
+
 class LoginThrottle:
-    """After `free_attempts` failures for a key (a username, or a visitor's address), lock it for
-    2, 4, 8 … seconds (max 15 min)."""
+    """After `free_attempts` failures for a key, lock it for 2, 4, 8 … seconds (max 15 min). Kept in the
+    database (table login_throttle), so restarting sworkr doesn't give a guesser a fresh start. A key that
+    has had no failure for a day is forgotten."""
 
     MAX_LOCK_SECONDS = 15 * 60
-    MAX_TRACKED = 10000   # so a flood of made-up usernames can't use up memory
+    MAX_TRACKED = 10000   # so a flood of made-up usernames can't fill the database
+    FORGET_AFTER = 24 * 3600
 
-    def __init__(self, free_attempts: int = 5):
+    def __init__(self, prefix: str, free_attempts: int = 5):
+        self.prefix = prefix
         self.FREE_ATTEMPTS = free_attempts
-        self._lock = threading.Lock()
-        self._state = {}  # key -> (failures, locked_until)
 
-    def seconds_locked(self, username: str) -> int:
-        with self._lock:
-            _, until = self._state.get(username, (0, 0.0))
-            return max(0, int(until - time.time() + 0.999))
+    def _key(self, key: str) -> str:
+        return f"{self.prefix}:{key}"[:200]
 
-    def failure(self, username: str):
-        with self._lock:
-            if username not in self._state and len(self._state) >= self.MAX_TRACKED:
-                now = time.time()
-                for key in [k for k, (_, until) in self._state.items() if until < now][: self.MAX_TRACKED // 2]:
-                    del self._state[key]
-                if len(self._state) >= self.MAX_TRACKED:   # still full: forget the oldest entries
-                    for key in list(self._state)[: self.MAX_TRACKED // 2]:
-                        del self._state[key]
-            failures, _ = self._state.get(username, (0, 0.0))
-            failures += 1
+    def seconds_locked(self, key: str) -> int:
+        db = _get_db()
+        try:
+            row = db.execute("SELECT locked_until FROM login_throttle WHERE key = ?", (self._key(key),)).fetchone()
+        finally:
+            db.close()
+        return max(0, int(row["locked_until"] - time.time() + 0.999)) if row else 0
+
+    def failure(self, key: str):
+        now = time.time()
+        db = _get_db()
+        try:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("DELETE FROM login_throttle WHERE updated_at < ?", (now - self.FORGET_AFTER,))
+            if db.execute("SELECT COUNT(*) FROM login_throttle").fetchone()[0] >= self.MAX_TRACKED:
+                # Still full: forget the entries that failed longest ago.
+                db.execute("DELETE FROM login_throttle WHERE key IN (SELECT key FROM login_throttle "
+                           "ORDER BY updated_at LIMIT ?)", (self.MAX_TRACKED // 2,))
+            row = db.execute("SELECT failures FROM login_throttle WHERE key = ?", (self._key(key),)).fetchone()
+            failures = (row["failures"] if row else 0) + 1
             until = 0.0
             if failures >= self.FREE_ATTEMPTS:
-                until = time.time() + min(2 ** (failures - self.FREE_ATTEMPTS + 1), self.MAX_LOCK_SECONDS)
-            self._state[username] = (failures, until)
+                until = now + min(2 ** min(failures - self.FREE_ATTEMPTS + 1, 20), self.MAX_LOCK_SECONDS)
+            db.execute("INSERT INTO login_throttle (key, failures, locked_until, updated_at) VALUES (?, ?, ?, ?) "
+                       "ON CONFLICT(key) DO UPDATE SET failures = excluded.failures, locked_until = excluded.locked_until, "
+                       "updated_at = excluded.updated_at", (self._key(key), failures, until, now))
+            db.commit()
+        finally:
+            db.close()
 
-    def success(self, username: str):
-        with self._lock:
-            self._state.pop(username, None)
+    def success(self, key: str):
+        db = _get_db()
+        try:
+            db.execute("DELETE FROM login_throttle WHERE key = ?", (self._key(key),))
+            db.commit()
+        finally:
+            db.close()
 
 
-throttle = LoginThrottle()               # per username
-ip_throttle = LoginThrottle(free_attempts=20)   # per visitor address: allows a household behind one address some typos
+# Failures are counted three ways. A username from one address gets 5 tries. One address gets 20 across all
+# usernames (a household behind one address is allowed some typos). And a username gets 30 across all addresses:
+# high enough that a stranger who knows your username can't easily lock you out, low enough to stop a botnet.
+pair_throttle = LoginThrottle("pair")
+ip_throttle = LoginThrottle("ip", free_attempts=20)
+throttle = LoginThrottle("user", free_attempts=30)

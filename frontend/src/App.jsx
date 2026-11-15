@@ -58,7 +58,7 @@ function App() {
   const checkAuth = useCallback(async () => {
     try {
       const { data } = await axios.get('/api/auth/status');
-      setAuth({ user: data.user, setupRequired: data.setup_required, demo: !!data.demo, demoLogin: data.demo_login || null });
+      setAuth({ user: data.user, setupRequired: data.setup_required, demo: !!data.demo, demoLogin: data.demo_login || null, passkeyHint: !!data.passkey_hint });
     } catch {
       setAuth({ user: null, setupRequired: false, offline: true });
     }
@@ -124,7 +124,7 @@ function App() {
             {auth.offline ? "Can't reach the server. Is the api container running?" : notice}
           </p>
         )}
-        <Login setup={auth.setupRequired} demoLogin={auth.demoLogin} onLoggedIn={(user) => setAuth((a) => ({ ...a, user, setupRequired: false }))} />
+        <Login setup={auth.setupRequired} demoLogin={auth.demoLogin} passkeyHint={auth.passkeyHint} onLoggedIn={(user) => setAuth((a) => ({ ...a, user, setupRequired: false }))} />
       </>
     );
   }

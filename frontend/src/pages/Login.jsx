@@ -6,16 +6,18 @@ import { readDiscreet } from '../components/Discreet';
 
 /**
  * Shown when not logged in. With `setup`, it creates the first account instead.
+ * `passkeyHint`: passwords may be turned off from this address, so the page points at the passkey button.
  * On the demo copy, `demoLogin` ({ username, password }) is shown under the form with a button to fill it in.
  */
-export default function Login({ setup, demoLogin, onLoggedIn }) {
+export default function Login({ setup, demoLogin, passkeyHint, onLoggedIn }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [twoStep, setTwoStep] = useState(null);   // { challenge, sent_to } while waiting for the emailed code
+  const [twoStep, setTwoStep] = useState(null);   // { challenge, method, sent_to } while waiting for the code
   const [code, setCode] = useState('');
+  const [recovery, setRecovery] = useState(false);   // typing a recovery code instead
   const [info, setInfo] = useState('');
   const discreet = readDiscreet();
 
@@ -48,7 +50,7 @@ export default function Login({ setup, demoLogin, onLoggedIn }) {
       onLoggedIn(data);
     } catch (err) {
       setError(errorMessage(err, "That code didn't work"));
-      if (/run out|Start again/.test(err?.response?.data?.detail || '')) { setTwoStep(null); setCode(''); }
+      if (/run out|Start again/.test(err?.response?.data?.detail || '')) { setTwoStep(null); setRecovery(false); setCode(''); }
     } finally {
       setBusy(false);
     }
@@ -81,7 +83,7 @@ export default function Login({ setup, demoLogin, onLoggedIn }) {
       {!discreet.enabled && <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sworkr-500 to-sworkr-800 flex items-center justify-center text-white font-bold text-xl">SW</div>}
       <div>
         <h1 className="font-bold text-gray-800 text-lg">{discreet.enabled ? (discreet.title || 'Notes') : 'Sworkr'}</h1>
-        <p className="text-xs text-gray-500">{setup ? 'Create your account to get started' : twoStep ? 'Check your email' : 'Log in to continue'}</p>
+        <p className="text-xs text-gray-500">{setup ? 'Create your account to get started' : twoStep ? (recovery ? 'Use a recovery code' : twoStep.method === 'app' ? 'Open your authenticator app' : 'Check your email') : 'Log in to continue'}</p>
       </div>
     </div>
   );
@@ -91,19 +93,38 @@ export default function Login({ setup, demoLogin, onLoggedIn }) {
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-4 py-8">
         <form onSubmit={sendCode} className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6 space-y-4">
           {header}
-          <p className="text-sm text-gray-700">We sent a 6-digit code to <strong>{twoStep.sent_to}</strong>. It works for 10 minutes.</p>
-          <Field label="Code">
-            <input required autoFocus inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]*" maxLength={7}
-              value={code} onChange={(e) => setCode(e.target.value)} className={`${inputClass} text-2xl tracking-[0.4em] text-center`} />
-          </Field>
+          {recovery ? (
+            <>
+              <p className="text-sm text-gray-700">Type one of the recovery codes you saved. Each works once.</p>
+              <Field label="Recovery code">
+                <input key="recovery" required autoFocus autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={14}
+                  value={code} onChange={(e) => setCode(e.target.value)} className={`${inputClass} text-xl tracking-widest text-center font-mono`} />
+              </Field>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-gray-700">
+                {twoStep.method === 'app'
+                  ? 'Type the 6-digit code your authenticator app shows.'
+                  : <>We sent a 6-digit code to <strong>{twoStep.sent_to}</strong>. It works for 10 minutes.</>}
+              </p>
+              <Field label="Code">
+                <input key="code" required autoFocus inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]*" maxLength={7}
+                  value={code} onChange={(e) => setCode(e.target.value)} className={`${inputClass} text-2xl tracking-[0.4em] text-center`} />
+              </Field>
+            </>
+          )}
           {error && <p className="text-sm text-red-600">{error}</p>}
           {info && <p className="text-sm text-emerald-700">{info}</p>}
           <button type="submit" disabled={busy} className="w-full py-2.5 bg-sworkr-500 text-white rounded-lg hover:bg-sworkr-600 disabled:opacity-50 font-medium">
             {busy ? 'Checking…' : 'Log in'}
           </button>
           <div className="flex justify-between text-sm">
-            <button type="button" onClick={resend} className="text-sworkr-600 hover:text-sworkr-800">Send a new code</button>
-            <button type="button" onClick={() => { setTwoStep(null); setCode(''); setError(''); setInfo(''); }} className="text-gray-500 hover:text-gray-700">Start over</button>
+            {!recovery && twoStep.method !== 'app' && <button type="button" onClick={resend} className="text-sworkr-600 hover:text-sworkr-800">Send a new code</button>}
+            <button type="button" onClick={() => { setRecovery(!recovery); setCode(''); setError(''); setInfo(''); }} className="text-sworkr-600 hover:text-sworkr-800">
+              {recovery ? 'Use a code instead' : 'Use a recovery code'}
+            </button>
+            <button type="button" onClick={() => { setTwoStep(null); setRecovery(false); setCode(''); setError(''); setInfo(''); }} className="text-gray-500 hover:text-gray-700">Start over</button>
           </div>
         </form>
       </div>
@@ -123,7 +144,7 @@ export default function Login({ setup, demoLogin, onLoggedIn }) {
             required
             type="password"
             autoComplete={setup ? 'new-password' : 'current-password'}
-            minLength={setup ? 8 : undefined}
+            minLength={setup ? 12 : undefined}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={inputClass}
@@ -134,11 +155,14 @@ export default function Login({ setup, demoLogin, onLoggedIn }) {
             <Field label="Confirm password">
               <input required type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputClass} />
             </Field>
-            <p className="text-xs text-gray-400">At least 8 characters. There's no password reset yet, so keep it somewhere safe.</p>
+            <p className="text-xs text-gray-400">At least 12 characters: a few words strung together works well. Keep it somewhere safe.</p>
           </>
         )}
 
         {error && <p className="text-sm text-red-600">{error}</p>}
+        {passkeyHint && !setup && (
+          <p className="text-xs text-gray-500">Away from home? Passwords may be turned off here. Use your passkey.</p>
+        )}
 
         <button type="submit" disabled={busy} className="w-full py-2.5 bg-sworkr-500 text-white rounded-lg hover:bg-sworkr-600 disabled:opacity-50 font-medium">
           {busy ? 'Please wait…' : setup ? 'Create account' : 'Log in'}

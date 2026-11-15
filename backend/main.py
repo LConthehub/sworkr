@@ -17,6 +17,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, PrivateAttr
 
+import access
 import auth
 import backup
 import calendar_sync
@@ -49,10 +50,6 @@ _API_DOCS = os.environ.get("ENABLE_API_DOCS", "0") == "1"
 app = FastAPI(title="Sworkr Management Service", version="2.0.0",
               docs_url="/docs" if _API_DOCS else None, redoc_url="/redoc" if _API_DOCS else None,
               openapi_url="/openapi.json" if _API_DOCS else None)
-
-# Send cookies only over HTTPS. COOKIE_SECURE=1 forces it; otherwise it's on whenever the request came
-# in over HTTPS through a reverse proxy (Caddy, nginx) that says so in X-Forwarded-Proto.
-COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "0") == "1"
 
 COLOR_PALETTE = ["#fc4c9c", "#e67eb6", "#a73178", "#542b5c", "#4b86a6"]
 MAX_REPEATS = 52
@@ -284,6 +281,8 @@ def db_conn():
 
 
 DbDep = Annotated[sqlite3.Connection, Depends(db_conn)]
+auth.setup(get_db)
+access.setup(get_db)
 
 
 def current_user(request: Request) -> dict:
@@ -476,17 +475,6 @@ async def require_login(request: Request, call_next):
     return await call_next(request)
 
 
-def _is_https(request: Request) -> bool:
-    forwarded = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
-    return COOKIE_SECURE or request.url.scheme == "https" or forwarded == "https"
-
-
-def _client_ip(request: Request) -> str:
-    """The visitor's address. Behind a reverse proxy it's the first X-Forwarded-For entry (the proxy sets it)."""
-    forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-    return forwarded or (request.client.host if request.client else "unknown")
-
-
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -503,7 +491,8 @@ async def security_guard(request: Request, call_next):
     - Refuses changes (POST, PUT, DELETE) to /api that another website started. Browsers say where a request
       came from in Sec-Fetch-Site; only sworkr's own pages ("same-origin") or a typed-in request ("none") may
       change anything. "same-site" is refused too: other apps on the same domain shouldn't be able to act here.
-    - Adds headers that stop the API's answers being cached, sniffed or framed.
+    - Adds headers that stop the API's answers being cached, sniffed or framed, and, over https, one that
+      tells the browser to never use plain http for this address again.
     """
     if request.url.path.startswith("/api") and request.method not in SAFE_METHODS:
         site = request.headers.get("sec-fetch-site")
@@ -513,14 +502,9 @@ async def security_guard(request: Request, call_next):
     if request.url.path.startswith("/api"):
         for name, value in SECURITY_HEADERS.items():
             response.headers.setdefault(name, value)
+        if access.is_https(request):
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
     return response
-
-
-def _set_session_cookie(response: Response, token: str, request: Request):
-    response.set_cookie(
-        auth.SESSION_COOKIE, token,
-        max_age=auth.SESSION_DAYS * 86400, httponly=True, samesite="lax", secure=_is_https(request), path="/",
-    )
 
 
 def _validate_new_credentials(username: str, password: str):
@@ -540,6 +524,8 @@ def auth_status(request: Request, db: DbDep):
     setup_required = db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0
     user = auth.user_for_token(db, request.cookies.get(auth.SESSION_COOKIE), touch=not is_background(request))
     status = {"setup_required": setup_required, "user": user, "demo": demo.ENABLED}
+    if not user and access.passkey_hint(db, request):
+        status["passkey_hint"] = True   # passwords may be turned off from here: the login page points at passkeys
     if demo.ENABLED:
         # The demo's shared login is shown on the login page on purpose: the demo holds only made-up data.
         status["demo_login"] = {"username": demo.USERNAME, "password": demo.PASSWORD}
@@ -564,29 +550,40 @@ def auth_setup(creds: Credentials, request: Request, response: Response, db: DbD
     for table in ("clients", "appointments", "expenses", "client_notes", "tours"):
         db.execute(f"UPDATE {table} SET owner_id = ? WHERE owner_id IS NULL", (user_id,))
     db.commit()
-    _set_session_cookie(response, auth.create_session(db, user_id), request)
+    access.sign_in(db, user_id, request, response, "password")
     return {"id": user_id, "username": username, "is_admin": True}
 
 
 @app.post("/api/auth/login")
 def auth_login(creds: Credentials, request: Request, response: Response, db: DbDep):
     username = creds.username.strip().lower()
-    ip = _client_ip(request)
-    # Failures are counted per username and per visitor, so guessing many usernames from one place slows down too.
-    wait = max(auth.throttle.seconds_locked(username), auth.ip_throttle.seconds_locked(ip))
+    ip = access.client_ip(request)
+    pair = f"{username}|{ip}"
+    # Failures are counted per username from one visitor, per visitor, and per username overall (see auth.py).
+    wait = max(auth.pair_throttle.seconds_locked(pair), auth.ip_throttle.seconds_locked(ip),
+               auth.throttle.seconds_locked(username))
     if wait:
         raise HTTPException(status_code=429, detail=f"Too many failed attempts. Try again in {wait} seconds.")
     user = auth.check_login(db, username, creds.password)
-    if not user:
-        auth.throttle.failure(username)
+    # "Passkeys only away from home": from the internet, even the right password is answered exactly like a wrong
+    # one, so a guesser learns nothing, not even that they guessed it.
+    blocked = bool(user) and access.password_blocked(db, user["id"], request)
+    if not user or blocked:
+        known = user or db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+        if known:
+            access.record(db, known["id"], "password_off" if blocked else "wrong_password", "password", request)
+            db.commit()
+        auth.pair_throttle.failure(pair)
         auth.ip_throttle.failure(ip)
+        auth.throttle.failure(username)
         raise HTTPException(status_code=401, detail="Wrong username or password")
-    auth.throttle.success(username)
+    auth.pair_throttle.success(pair)
     auth.ip_throttle.success(ip)
+    auth.throttle.success(username)
     if signin.two_step_on(db, user["id"]):
-        # The password was right; the session waits for the emailed code (POST /api/auth/login/code).
+        # The password was right; the session waits for the code (POST /api/auth/login/code).
         return signin.start_login_code(db, user)
-    _set_session_cookie(response, auth.create_session(db, user["id"]), request)
+    access.sign_in(db, user["id"], request, response, "password")
     return {"id": user["id"], "username": user["username"], "is_admin": bool(user["is_admin"])}
 
 
@@ -2127,6 +2124,7 @@ app.include_router(documents.router)
 app.include_router(noshow.router)
 app.include_router(taxes.router)
 app.include_router(signin.router)
+app.include_router(access.router)
 app.include_router(arrangements.router)
 app.include_router(calendar_dates.router)
 
@@ -2146,7 +2144,7 @@ meds.setup(get_db)
 documents.setup(get_db)
 noshow.setup(get_db)
 taxes.setup(get_db)
-signin.setup(get_db, _set_session_cookie)
+signin.setup(get_db)
 arrangements.setup(get_db)
 calendar_dates.setup(get_db)
 csv_io.setup(get_db, after_client_import=lambda ids: [calendar_sync.queue_client(i) for i in ids])

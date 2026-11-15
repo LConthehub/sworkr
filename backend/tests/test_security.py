@@ -106,14 +106,6 @@ def test_guessing_many_usernames_from_one_address_is_slowed_down():
     assert c.post("/api/auth/login", json={"username": "owner", "password": PASSWORD}, headers=other).status_code == 200
 
 
-def test_the_throttle_cannot_grow_without_limit():
-    t = auth.LoginThrottle()
-    t.MAX_TRACKED = 100
-    for i in range(1000):
-        t.failure(f"user{i}")
-    assert len(t._state) <= 100
-
-
 def test_unknown_usernames_and_wrong_passwords_look_the_same(admin):
     c = TestClient(main.app)
     a = c.post("/api/auth/login", json={"username": "owner", "password": "wrong-password"}, headers={"X-Forwarded-For": "192.0.2.1"})

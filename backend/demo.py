@@ -18,7 +18,9 @@ import threading
 import time
 from datetime import date, datetime, timedelta, timezone
 
-log = logging.getLogger("sworkr.demo")
+import auth
+
+log =logging.getLogger("sworkr.demo")
 
 ENABLED = os.environ.get("DEMO_MODE", "0") == "1"
 USERNAME = os.environ.get("DEMO_USERNAME", "demo").strip().lower()
@@ -45,8 +47,8 @@ def _wipe(get_db):
 
 def reset(app, get_db):
     """Delete everything and fill the database with fresh sample data, through the app's own API."""
-    if not PASSWORD or len(PASSWORD) < 8:
-        raise RuntimeError("DEMO_PASSWORD must be set (at least 8 characters) when DEMO_MODE=1")
+    if not PASSWORD or len(PASSWORD) < auth.MIN_PASSWORD_LENGTH:
+        raise RuntimeError(f"DEMO_PASSWORD must be set (at least {auth.MIN_PASSWORD_LENGTH} characters) when DEMO_MODE=1")
     from fastapi.testclient import TestClient   # only needed here
 
     _wipe(get_db)

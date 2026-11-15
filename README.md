@@ -32,7 +32,7 @@ purpose; don't just open the port.
 ### First login
 
 On first launch there are no accounts, so the app asks you to create one. That account is the
-admin. Passwords must be at least 8 characters.
+admin. Passwords must be at least 12 characters.
 
 A new database starts with a few example clients, appointments and expenses. Remove them under
 **Account → Example data**.
@@ -82,10 +82,19 @@ Treat it as a backup, not your only safety plan.
 ### Accounts and privacy
 
 - **Auto log-out.** Unused for two hours (changeable under Account) and you're logged out.
+- **Passkeys and two-step sign-in.** Under **Account → Security & privacy**: sign in with a passkey, and add a
+  second step after the password: a code from an authenticator app (or by email). Turning two-step on gives you
+  ten recovery codes to keep on paper.
+- **Away from home.** If sworkr can be reached from the internet, turn on *Passkeys only away from home*: the
+  password then only works on this computer and your home network. sworkr also emails you when a browser new to
+  your account signs in.
+- **Signed-in devices.** See where your account is open, log any device out, and look over recent sign-ins and
+  failed tries (kept 90 days).
 - **More users.** The admin can add logins under **Account → Users**. Every user has their own
   completely separate clients, appointments, expenses and settings.
 - **Forgot the password?** On the computer sworkr runs on:
   `docker compose exec api python manage.py reset-password`
+- **Lost your phone and your recovery codes?** `docker compose exec api python manage.py turn-off-two-step <username>`
 
 ### Nextcloud calendar sync
 

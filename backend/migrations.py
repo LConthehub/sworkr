@@ -988,6 +988,43 @@ def _m22_arrangements_mileage(conn):
     conn.execute("CREATE INDEX idx_mileage_owner ON mileage(owner_id, date)")
 
 
+def _m23_sign_in_hardening(conn):
+    """Where each session was opened, a sign-in history, sign-in throttling that survives a restart, and
+    recovery codes for two-step sign-in."""
+    for column in ("ip", "user_agent", "method", "device_hash"):
+        conn.execute(f"ALTER TABLE sessions ADD COLUMN {column} TEXT")
+    conn.execute("""
+        CREATE TABLE signin_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            outcome TEXT NOT NULL,
+            method TEXT,
+            ip TEXT,
+            user_agent TEXT,
+            device_hash TEXT,
+            at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_signin_events_user ON signin_events(user_id, at)")
+    conn.execute("""
+        CREATE TABLE login_throttle (
+            key TEXT PRIMARY KEY,
+            failures INTEGER NOT NULL,
+            locked_until REAL NOT NULL DEFAULT 0,
+            updated_at REAL NOT NULL
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE recovery_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            code_hash TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL,
+            used_at TEXT
+        )
+    """)
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1011,6 +1048,7 @@ MIGRATIONS = [
     (20, "cancellations, no-shows and their fees", _m20_cancellations, False),
     (21, "estimated tax payments, passkeys, two-step sign-in", _m21_tax_payments_passkeys_two_step, False),
     (22, "arrangements and mileage", _m22_arrangements_mileage, False),
+    (23, "session details, sign-in history, lasting throttle, recovery codes", _m23_sign_in_hardening, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 
