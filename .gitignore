@@ -31,3 +31,6 @@ Thumbs.db
 
 # Automatic encrypted backups (written by the app; keep copies somewhere else too)
 backups/
+
+# Zip files made for sharing (git archive)
+release/
