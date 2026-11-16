@@ -143,7 +143,9 @@ function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen">
-        <nav className="print:hidden bg-sworkr-700 border-b border-sworkr-800 shadow-sm">
+        {/* Stays at the top. The brand plum, slightly see-through with the page blurred behind it: readable
+            on any background, without the hard edge of a solid bar. */}
+        <nav className="print:hidden sticky top-0 z-40 bg-sworkr-700/85 backdrop-blur-md backdrop-saturate-150 border-b border-white/15 shadow-sm">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
             {/* Pages on the left, search in the middle, settings on the right (like Nextcloud). */}
             <div className="grid grid-cols-[auto_1fr_auto] items-center h-14 sm:h-16 gap-3 sm:gap-6">

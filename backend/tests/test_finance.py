@@ -339,7 +339,7 @@ def test_choosing_a_kind_of_work_again_doesnt_add_a_renamed_place_twice(api):
     mine = [s for s in api.get("/api/income-sources").json() if s["kind"] == "brothel"]
     assert len(mine) == 1
     body = {k: mine[0][k] for k in ("kind", "fee_percent", "fee_per_shift", "token_value", "payout_note", "notes", "archived", "work_type")}
-    assert api.put(f"/api/income-sources/{mine[0]['id']}", json={**body, "name": "The Velvet Room"}).status_code == 200
+    assert api.put(f"/api/income-sources/{mine[0]['id']}", json={**body, "name": "Cheryl's Ranch"}).status_code == 200
     assert api.put("/api/work-profile", json={"work_types": ["brothel", "dancer"]}).status_code == 200
     names = [s["name"] for s in api.get("/api/income-sources").json() if s["kind"] == "brothel"]
-    assert names == ["The Velvet Room"]
+    assert names == ["Cheryl's Ranch"]

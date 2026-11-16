@@ -77,7 +77,7 @@ export default function ContentSettings() {
           {Object.entries(SOURCES).map(([key, label]) => (
             <button key={key} type="button" role="radio" aria-checked={k === key} disabled={s.demo} onClick={() => setForm({ ...form, kind: key })}
               className={`px-3 py-1.5 rounded-full text-sm border ${k === key ? 'bg-sworkr-500 text-white border-sworkr-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-              {label}{key === 'nextcloud' && ' (recommended)'}
+              {label}
             </button>
           ))}
         </div>

@@ -918,7 +918,7 @@ def apply_presets(db, owner_id: int, work_types: List[str]) -> dict:
                     added["categories"].append(label)
         for source in preset.get("sources", []):
             # Skipped when it's already there: by name, or because it was added before and since renamed
-            # (a "My brothel" someone called "The Velvet Room" isn't added a second time).
+            # (a "My brothel" someone called "Cheryl's Ranch" isn't added a second time).
             if not db.execute("SELECT 1 FROM income_sources WHERE owner_id = ? AND (LOWER(name) = LOWER(?) OR LOWER(preset_name) = LOWER(?))",
                               (owner_id, source["name"], source["name"])).fetchone():
                 now = _now()

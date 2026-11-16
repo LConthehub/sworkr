@@ -257,7 +257,7 @@ def _fill(api):
 
     # A few shifts at a brothel (the house keeps half). Its license is a document, paid to the county.
     house = _ok(api.put(f"/api/income-sources/{sources['My brothel']['id']}", json={
-        "name": "The Velvet Room", "kind": "brothel", "fee_percent": 50, "work_type": "brothel",
+        "name": "Cheryl's Ranch", "kind": "brothel", "fee_percent": 50, "work_type": "brothel",
         "payout_note": "House keeps 50%, paid out at the end of each shift"}))
     for offset, gross in [(-68, 1400), (-40, 1100), (-26, 1650), (-9, 1300)]:
         _ok(api.post("/api/income", json={"source_id": house["id"], "date": at(offset, 7), "kind": "shift",
@@ -284,12 +284,12 @@ def _fill(api):
         "name": "Jade", "role": "partner", "industry": "Escort & content creator",
         "handles": [{"platform": "Instagram", "handle": "jade.after.dark"}, {"platform": "OnlyFans", "handle": "jadeafterdark"}],
         "bio": "Duo collaborator for bookings and collab content. Splits 50/50 on bookings, 60/40 to whoever posts."}))
-    ruby = _ok(api.post("/api/clients", json={"name": "Ruby", "role": "partner", "bio": "Joins for parties at the Velvet Room"}))
+    ruby = _ok(api.post("/api/clients", json={"name": "Ruby", "role": "partner", "bio": "Joins for parties at Cheryl's Ranch"}))
     _ok(api.post("/api/clients", json={"name": "Alex", "role": "partner", "industry": "Photographer", "email": "alex.photo@example.com",
                                        "bio": "Shoots our content sets. $250 a half day."}))
     duo = _ok(api.post("/api/agreements", json={"name": "Jade & me", "notes": "Agreed over coffee, Oct 2026", "parties": [
         {"partner_id": jade["id"], "booking_pct": 50, "content_pct": 40, "costs_pct": 50}]}))
-    _ok(api.post("/api/agreements", json={"name": "Velvet Room party (three of us)", "parties": [
+    _ok(api.post("/api/agreements", json={"name": "Cheryl's Ranch party (three of us)", "parties": [
         {"partner_id": jade["id"], "booking_pct": 33.3}, {"partner_id": ruby["id"], "booking_pct": 33.3}]}))
 
     def split(kind, record_id, handled_by=None, parties=(), agreement=None):
@@ -378,7 +378,7 @@ def _fill(api):
 
 
     # ---------- personas: a working name for in-person work, another for content ----------
-    scarlett = _ok(api.post("/api/personas", json={"name": "Scarlett", "color": "#db2777", "notes": "In person: escort and the Velvet Room"}))
+    scarlett = _ok(api.post("/api/personas", json={"name": "Scarlett", "color": "#db2777", "notes": "In person: escort and Cheryl's Ranch"}))
     kitty = _ok(api.post("/api/personas", json={"name": "Kitty Kam", "color": "#7c3aed", "notes": "Content and cam"}))
     for c in _ok(api.get("/api/clients", params={"role": "client", "limit": 200})):
         # A contact is saved whole, so send everything back with the persona added.
@@ -391,7 +391,7 @@ def _fill(api):
             "gift_share_percent": 50 if s["kind"] == "brothel" else s["gift_share_percent"]}))
 
     # ---------- a stay at the brothel: its room & board and doctor are logged by themselves ----------
-    stint = period(-34, -28, kind="tour", name="Velvet Room stint", source_id=house["id"],
+    stint = period(-34, -28, kind="tour", name="Cheryl's Ranch stint", source_id=house["id"],
                    notes="A week in residence. The house settles at the end.")
     for offset, gross in ((-33, 1200), (-31, 950), (-29, 1500)):
         _ok(api.post("/api/income", json={"source_id": house["id"], "date": at(offset, 7), "kind": "shift",

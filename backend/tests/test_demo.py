@@ -38,7 +38,7 @@ out["personas"] = sorted(p["name"] for p in c.get("/api/personas").json())
 clients = c.get("/api/clients", params={"limit": 200}).json()
 out["clients_have_personas"] = all(x["persona_id"] for x in clients if x["role"] == "client")
 out["clients_kept_phones"] = sum(1 for x in clients if x.get("contact_phone"))
-stay = next(t for t in c.get("/api/tours/summary").json() if t["name"] == "Velvet Room stint")
+stay = next(t for t in c.get("/api/tours/summary").json() if t["name"] == "Cheryl's Ranch stint")
 st = c.get(f"/api/tours/{stay['id']}/summary").json()["statement"]
 out["stay"] = [st["gross"] > 0, st["charges_total"] > 0, st["place"]["name"]]
 out["arrangements"] = [a["client_name"] for a in c.get("/api/arrangements").json()]
@@ -66,7 +66,7 @@ def test_demo_reset_builds_a_complete_sample():
     assert out["admin_login"] == 401          # nobody knows the admin password
     assert out["login"] == 200
     assert out["clients"] == 14          # with Robert (an arrangement) and Mike (a no-show)
-    assert {name for name, _, _ in out["tours"]} == {"Chicago", "Denver", "Miami", "Velvet Room stint"}
+    assert {name for name, _, _ in out["tours"]} == {"Chicago", "Denver", "Miami", "Cheryl's Ranch stint"}
     assert all(has_rent for _, has_rent, _ in out["tours"])
     assert any(income > 0 for _, _, income in out["tours"])
     assert out["time_off"] == 3
@@ -75,11 +75,11 @@ def test_demo_reset_builds_a_complete_sample():
     assert out["users_page"] == 403           # the demo login isn't an admin
     assert set(out["partners"]) == {"Alex", "Jade", "Ruby"} and all(isinstance(v, (int, float)) for v in out["partners"].values())   # someone with nothing owed is a plain 0
     assert out["goals"] == ["Emergency fund", "New camera", "Retirement goal", "Taxes"]
-    assert out["income"] == 29 and out["sources"] == ["Club Velvet", "Fansly", "My sugar site", "OnlyFans", "The Velvet Room"]
+    assert out["income"] == 29 and out["sources"] == ["Cheryl's Ranch", "Club Velvet", "Fansly", "My sugar site", "OnlyFans"]
     assert out["change_password"] == 403
     assert out["personas"] == ["Kitty Kam", "Scarlett"] and out["clients_have_personas"]
     assert out["clients_kept_phones"] >= 5            # adding personas kept the contacts' details
-    assert out["stay"] == [True, True, "The Velvet Room"]
+    assert out["stay"] == [True, True, "Cheryl's Ranch"]
     assert out["arrangements"] == ["Robert"] and out["documents"] == 3 and out["miles"] > 0
     assert out["marketing"] == [2, 7, 3, 4, 2, 5]      # campaigns (one made from the shoot), inquiries, ads, customs, shoots, menu
     assert "Tryst" in out["found_via"] and "Referral" in out["found_via"]
