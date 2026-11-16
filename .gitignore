@@ -37,3 +37,6 @@ release/
 
 # Desktop app builds
 dist/
+
+# Downloads served by the website (built, not committed)
+site/downloads/
