@@ -147,3 +147,30 @@ def test_found_via_goes_out_and_comes_back_in_the_contacts_csv(api):
     assert upload.status_code == 200, upload.text
     _, by = report(api)
     assert set(by) == {"eros", "x"}
+
+
+def test_busy_times_and_what_an_hour_brings_in(api):
+    a = client(api, "Avery")
+    jade = client(api, "Jade", role="partner")
+
+    def booked(when, minutes, paid, service):
+        return ok(api.post("/api/appointments", params={"warn": "false"}, json={
+            "client_id": a["id"], "service_type": service, "duration_minutes": minutes, "scheduled_date": when, "rate": paid, "amount_paid": paid}), 201)
+
+    booked("2026-03-06T20:00:00Z", 120, 600, "Dinner date")          # a Friday, 8pm UTC
+    booked("2026-03-13T20:30:00Z", 60, 400, "dinner date")           # the Friday after, same hour
+    duo = booked("2026-03-08T02:00:00Z", 60, 1000, "Duo")            # Sunday 2am UTC: Saturday evening in New York
+    ok(api.put(f"/api/splits/appointment/{duo['id']}", json={"parties": [{"partner_id": jade["id"], "share_type": "percent", "share_value": 50}]}))
+    booked("2026-03-09T20:00:00Z", 60, 0, "Unpaid")                  # nothing paid: not counted
+    booked("2025-03-07T20:00:00Z", 60, 999, "Last year")
+
+    data = ok(api.get("/api/marketing/busy", params=YEAR))
+    assert (data["bookings"], data["hours"], data["income"], data["per_hour"]) == (3, 4, 1500, 375)
+    assert {(c["weekday"], c["hour"]): (c["bookings"], c["income"]) for c in data["grid"]} == {(5, 20): (2, 1000), (0, 2): (1, 500)}
+    assert [d["bookings"] for d in data["weekdays"]] == [1, 0, 0, 0, 0, 2, 0]
+    assert [(s["service"], s["bookings"], s["hours"], s["income"], s["per_hour"]) for s in data["services"]] == [
+        ("Duo", 1, 1, 500, 500), ("Dinner date", 2, 3, 1000, 333.33)]                     # best paid hour first; your half of the duo
+
+    local = ok(api.get("/api/marketing/busy", params={**YEAR, "tz_offset": 300}))          # five hours behind UTC
+    assert {(c["weekday"], c["hour"]) for c in local["grid"]} == {(5, 15), (6, 21)}
+    assert ok(api.get("/api/marketing/busy", params={"start": "2020-01-01T00:00:00Z", "end": "2020-02-01T00:00:00Z"}))["per_hour"] is None

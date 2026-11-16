@@ -10,7 +10,7 @@ Nothing here is sent anywhere. It is only arithmetic over records the person alr
 """
 
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Callable, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -149,6 +149,60 @@ def found_via(request: Request, start: datetime = Query(...), end: datetime = Qu
         return {"rows": out, "total": round(total, 2), "spent": round(spent, 2), "unmatched_spend": round(unmatched, 2)}
     finally:
         db.close()
+
+
+@router.get("/api/marketing/busy")
+def busy_times(request: Request, start: datetime = Query(...), end: datetime = Query(...),
+               tz_offset: int = Query(0, ge=-840, le=840, description="The browser's getTimezoneOffset()")):
+    """
+    When paid bookings happen and what an hour of each kind of booking brings in, between start and end.
+    - grid: for each weekday (0 = Sunday) and hour of the day, how many bookings started then and what they paid.
+    - weekdays: the same, per weekday.
+    - services: for each kind of booking, the bookings, the hours, what you kept, and what that is per hour.
+    Times are the person's local time. Money is their share, after co-workers' splits.
+    """
+    if end <= start:
+        raise HTTPException(status_code=400, detail="The end must be after the start")
+    owner = request.state.user["id"]
+    shift = timedelta(minutes=tz_offset)
+    db = _get_db()
+    try:
+        rows = db.execute("""
+            SELECT a.scheduled_date, a.duration_minutes, a.service_type,
+                   a.amount_paid - """ + collab.partner_share_sql("appointment", "a.amount_paid", "a.id") + """ AS mine
+            FROM appointments a
+            WHERE a.owner_id = ? AND a.kind = 'client' AND a.status != 'cancelled' AND a.amount_paid > 0
+              AND a.scheduled_date >= ? AND a.scheduled_date < ?
+        """, (owner, _utc_iso(start), _utc_iso(end))).fetchall()
+    finally:
+        db.close()
+    grid, weekdays, services = {}, [{"weekday": d, "bookings": 0, "income": 0.0} for d in range(7)], {}
+    for r in rows:
+        local = datetime.fromisoformat(r["scheduled_date"]) - shift
+        weekday = (local.weekday() + 1) % 7                  # Sunday first, as the calendar shows it
+        cell = grid.setdefault((weekday, local.hour), {"weekday": weekday, "hour": local.hour, "bookings": 0, "income": 0.0})
+        for bucket in (cell, weekdays[weekday]):
+            bucket["bookings"] += 1
+            bucket["income"] += r["mine"]
+        name = (r["service_type"] or "").strip() or "Other"
+        s = services.setdefault(name.casefold(), {"service": name, "bookings": 0, "hours": 0.0, "income": 0.0})
+        s["bookings"] += 1
+        s["hours"] += r["duration_minutes"] / 60
+        s["income"] += r["mine"]
+    for bucket in [*grid.values(), *weekdays]:
+        bucket["income"] = round(bucket["income"], 2)
+    out = []
+    for s in services.values():
+        s["hours"], s["income"] = round(s["hours"], 2), round(s["income"], 2)
+        s["per_hour"] = round(s["income"] / s["hours"], 2) if s["hours"] else None
+        s["per_booking"] = round(s["income"] / s["bookings"], 2)
+        out.append(s)
+    out.sort(key=lambda s: (-(s["per_hour"] or 0), s["service"].lower()))
+    hours = sum(s["hours"] for s in out)
+    income = sum(s["income"] for s in out)
+    return {"bookings": len(rows), "hours": round(hours, 2), "income": round(income, 2),
+            "per_hour": round(income / hours, 2) if hours else None,
+            "grid": sorted(grid.values(), key=lambda c: (c["weekday"], c["hour"])), "weekdays": weekdays, "services": out}
 
 
 @router.get("/api/marketing/lapsed")

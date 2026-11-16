@@ -8,6 +8,7 @@ import { useCategories } from '../api';
 import { usePersonas } from '../components/Personas';
 import { useTestKinds } from '../components/TestKinds';
 import FoundViaCompare from '../components/FoundVia';
+import BusyTimes from '../components/BusyTimes';
 import {
   CHART, dayLabel, fromDateInput, INCOME_KINDS, money, moneyShort, toDateInput, TOUR_COLOR,
 } from '../colors';
@@ -20,6 +21,7 @@ const VIEWS = [
   { id: 'place', label: 'By place' },
   { id: 'persona', label: 'By persona', needsPersonas: true },
   { id: 'found', label: 'By how they found you' },
+  { id: 'busy', label: 'Busy times' },
 ];
 const BY_SOURCE = { work: 'work_type', place: 'source', persona: 'persona' };
 const METRICS = [
@@ -61,7 +63,7 @@ export default function Earnings() {
 
   const load = useCallback(async () => {
     if (!view) return;
-    if (view === 'found') { setLoading(false); return; }   // that view loads its own figures
+    if (view === 'found' || view === 'busy') { setLoading(false); return; }   // that view loads its own figures
     setLoading(true);
     try {
       if (view === 'tour') {
@@ -143,6 +145,8 @@ export default function Earnings() {
 
         {view === 'found' ? (
           <FoundViaCompare year={year} />
+        ) : view === 'busy' ? (
+          <BusyTimes year={year} />
         ) : BY_SOURCE[view] ? (
           <SourceCompare data={sourceData} byWork={view === 'work'} year={year} />
         ) : view && !loading && items.length === 0 ? (
