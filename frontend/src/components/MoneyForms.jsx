@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useTestKinds } from './TestKinds';
 import { Field, inputClass, errorMessage, buttonClass } from './Modal';
-import { fetchAll, reloadCategories, useCategories } from '../api';
+import { fetchAll, isDemo, reloadCategories, useCategories } from '../api';
 import { SplitEditor, useSplit } from './Splits';
 import { PersonaSelect } from './Personas';
 import { CADENCES, INCOME_KINDS, money, SOURCE_KINDS, toDateInput } from '../colors';
@@ -419,16 +419,18 @@ export function SourceForm({ source, onSaved }) {
       </Field>
       <fieldset className="rounded-lg border border-gray-200 px-3 pt-2 pb-3 space-y-2">
         <legend className="px-1 text-xs font-medium text-gray-500">House rules</legend>
+        {isDemo() ? (
+          <p className="text-xs text-gray-500">Some features are only available in the full version.</p>
+        ) : (<>
         <p className="text-xs text-gray-500">
-          Anything else this place takes, however it works there: a Kelly cut when a driver brings the client (add one for each rate,
-          such as cab and limo), a runner's fee, a card fee. Each is a percentage or an amount, taken off the top (before their share)
-          or out of your share.
+          Anything else this place takes, however it's named there: Kelly called (one for each rate), a runner, a card fee.
+          Each is a percentage or an amount, taken off the top (before their share) or out of your share.
         </p>
         {form.cuts.map((c, i) => {
           const change = (patch) => setForm({ ...form, cuts: form.cuts.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
           return (
             <div key={i} className="grid grid-cols-12 gap-2 items-center">
-              <input value={c.label} onChange={(e) => change({ label: e.target.value })} placeholder="e.g. Kelly cut (cab)" aria-label="What it's called" className={`${inputClass} col-span-12 sm:col-span-4`} />
+              <input value={c.label} onChange={(e) => change({ label: e.target.value })} placeholder="e.g. Kelly called (cab)" aria-label="What it's called" className={`${inputClass} col-span-12 sm:col-span-4`} />
               <input type="number" min="0" step="0.01" inputMode="decimal" value={c.value} onChange={(e) => change({ value: e.target.value })} aria-label="How much" className={`${inputClass} col-span-4 sm:col-span-2`} />
               <select value={c.kind} onChange={(e) => change({ kind: e.target.value })} aria-label="Percent or dollars" className={`${inputClass} col-span-4 sm:col-span-1 !px-1`}>
                 <option value="percent">%</option><option value="amount">$</option>
@@ -453,6 +455,7 @@ export function SourceForm({ source, onSaved }) {
             <input type="number" min="0" step="1" inputMode="decimal" value={form.cash_limit} onChange={set('cash_limit')} placeholder="e.g. 20" className={`${inputClass} max-w-[8rem]`} />
           </Field>
         )}
+        </>)}
       </fieldset>
       <h3 className="text-sm font-semibold text-gray-700 pt-1">Charges you pay them</h3>
       <p className="text-xs text-gray-500 -mt-2">

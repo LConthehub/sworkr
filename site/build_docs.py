@@ -3,7 +3,8 @@ Builds site/docs/*.html from the pages below, so the header, menu and footer liv
 
     python site/build_docs.py
 
-The docs are plain HTML with no scripts, like the rest of the site. Edit the text here, run this, commit both.
+The docs are plain HTML. The one exception is the setup builder on install.html (site/setup.js), which runs
+only in the visitor's browser and sends nothing anywhere. Edit the text here, run this, commit both.
 """
 
 import html
@@ -19,7 +20,9 @@ PAGES = [
 <div class="cards">
   <a href="/docs/getting-started.html"><b>Get started</b><span>Install it, make your account, and do the three things worth doing on day one.</span></a>
   <a href="/docs/privacy-and-backups.html"><b>Privacy &amp; backups</b><span>What's stored, how it's locked, and how to get everything back.</span></a>
+  <a href="/docs/install.html"><b>Install with Docker</b><span>Pick your options and get a ready setup file to copy.</span></a>
   <a href="/docs/phone.html"><b>On your phone</b><span>Use it from your phone without opening anything to the internet.</span></a>
+  <a href="/docs/web-address.html"><b>Your own web address</b><span>A free address with HTTPS, as an alternative to Tailscale.</span></a>
   <a href="/docs/people.html"><b>Clients &amp; inquiries</b><span>Screening, inquiries, regulars who've gone quiet, prices by tag.</span></a>
   <a href="/docs/money.html"><b>Money &amp; houses</b><span>Workplaces, house rules, cuts, cash the office holds, tips, rates, taxes.</span></a>
   <a href="/docs/content.html"><b>Content &amp; planning</b><span>The calendar, shoots, posts, campaigns, ads and custom orders.</span></a>
@@ -94,6 +97,71 @@ PAGES = [
 <p><em>Account → Data &amp; users</em> can download everything Sworkr holds about you, or erase everything, from the page.</p>
 """),
 
+("install", "Install with Docker", "Install with Docker", """
+<p class="lead">Pick your options, copy one file, start it. This page writes the setup file for you.</p>
+<p>Sworkr's Docker setup is one file, <code>docker-compose.prod.yml</code>: where your records live, which folders it can see, and who can open it. Fill in what you want below; the file updates as you type. <strong>Nothing you type here leaves your browser.</strong></p>
+<p id="no-script">This builder needs JavaScript. Without it, use <code>docker-compose.prod.yml</code> from the download as it is: it works without changes.</p>
+
+<div id="builder" hidden>
+<form id="setup" class="builder" onsubmit="return false">
+  <fieldset>
+    <legend>Where your records live</legend>
+    <label>Data folder <input name="data_folder" placeholder="Leave empty: Docker keeps it (recommended)"></label>
+    <label>Key folder <input name="keys_folder" placeholder="Leave empty: Docker keeps it (recommended)"></label>
+    <p class="hint">Your records are encrypted with a key. Keep the key apart from your backups: someone with both could read everything.</p>
+    <label>Backups folder <input name="backups" value="./backups" placeholder="./backups"></label>
+    <label>Backups to keep <input name="keep" type="number" min="1" max="365" value="14"></label>
+  </fieldset>
+  <fieldset>
+    <legend>Content library (optional)</legend>
+    <label>A folder or drive with your photos and videos <input name="content" placeholder="e.g. E:/Content or /Volumes/Content"></label>
+    <p class="hint">Sworkr only reads it, never changes it. Then choose <em>Mounted folder</em> in Settings → Content library.</p>
+  </fieldset>
+  <fieldset>
+    <legend>Who can open it</legend>
+    <label>Port <input name="port" type="number" min="1" max="65535" value="8080"></label>
+    <label class="radio"><input type="radio" name="network" value="computer" checked> Only this computer (safest; use <a href="/docs/phone.html">Tailscale</a> for your phone)</label>
+    <label class="radio"><input type="radio" name="network" value="network"> Other devices on my home network too</label>
+    <label>Web address for passkeys (optional) <input name="passkey_address" placeholder="e.g. https://you.duckdns.org"></label>
+    <label>Log me out after (minutes, 0 = never) <input name="idle" type="number" min="0" max="1440" value="120"></label>
+  </fieldset>
+  <fieldset>
+    <legend>Email (optional)</legend>
+    <label class="radio"><input type="checkbox" name="email"> Send safety check-in alerts and sign-in codes from an email account</label>
+    <div id="email-fields">
+      <label>Outgoing mail server <input name="smtp_host" placeholder="e.g. smtp.gmail.com"></label>
+      <label>Port <input name="smtp_port" value="587"></label>
+      <label>Security <select name="smtp_security"><option>starttls</option><option>ssl</option><option>none</option></select></label>
+      <label>Username <input name="smtp_user" placeholder="you@example.com"></label>
+      <label>Send as (optional) <input name="smtp_from" placeholder="Same as the username"></label>
+      <p class="hint">The password isn't typed here: you add it to the <code>.env</code> file yourself.</p>
+    </div>
+  </fieldset>
+</form>
+
+<h2>Your setup file</h2>
+<div class="code-box">
+  <textarea id="compose" readonly rows="24" spellcheck="false" aria-label="docker-compose.prod.yml"></textarea>
+  <p><button type="button" id="copy-compose">Copy</button> <button type="button" id="download-compose">Download docker-compose.prod.yml</button></p>
+</div>
+<div id="env-wrap" class="code-box" hidden>
+  <h3>And a <code>.env</code> file for email</h3>
+  <textarea id="env" readonly rows="9" spellcheck="false" aria-label=".env"></textarea>
+  <p><button type="button" id="copy-env">Copy</button> <button type="button" id="download-env">Download .env</button></p>
+</div>
+
+<h2>Install it</h2>
+<ol id="steps"></ol>
+</div>
+
+<h2>Good to know</h2>
+<ul>
+  <li>You need <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a> (Windows or Mac) or Docker on Linux. Don't want Docker? The <a href="/docs/getting-started.html">Windows app</a> needs nothing else.</li>
+  <li>Already using Sworkr? Keep the name <code>sworkr</code> at the top of the file and your records stay where they are. Changing the data folder later starts an empty one: move your records with a backup first (<a href="/docs/privacy-and-backups.html">how</a>).</li>
+  <li><strong>Never</strong> run <code>docker compose down -v</code>: the <code>-v</code> deletes your records.</li>
+</ul>
+<script src="/setup.js" defer></script>
+"""),
 ("phone", "On your phone", "On your phone", """
 <p>Sworkr only answers on the computer it runs on, on purpose. To use it from your phone <strong>without opening anything to the internet</strong>, link your phone and your computer with <strong>Tailscale</strong>, a free app that makes a private network between your own devices. Only devices signed in to your Tailscale account can reach Sworkr, and the connection is encrypted end to end. The same steps are in Sworkr under <em>Account → Connections → On your phone</em>.</p>
 
@@ -117,6 +185,53 @@ PAGES = [
   <li>To stop it, run <code>tailscale serve reset</code>.</li>
   <li>Don't forward a port on your router or point a public web address at Sworkr unless you know how to secure it: it holds your most sensitive records.</li>
   <li>For a message on your phone without opening Sworkr, see <a href="/docs/notifications.html">Notifications</a>.</li>
+</ul>
+"""),
+("web-address", "Your own web address", "Your own web address", """
+<p class="lead">The other way to use Sworkr away from home: a free web address of your own, with HTTPS. Tailscale is simpler and more private; this works on any phone or computer without an app.</p>
+
+<h2>Before you start</h2>
+<ul>
+  <li><strong>This puts your login page on the internet.</strong> Anyone can find it, and bots will try passwords. Before you do it, add a <strong>passkey</strong> on each device and turn on <em>Away from home → passkeys only</em> in Settings → Security &amp; privacy, so a password alone can't get in.</li>
+  <li>If you only need your phone, <a href="/docs/phone.html">Tailscale</a> keeps Sworkr off the internet entirely.</li>
+  <li>Some internet providers don't allow it (they share one public address between many homes, called CGNAT). If step 3 never works, that's usually why: use Tailscale.</li>
+</ul>
+
+<h2>1. Get a free address with DuckDNS</h2>
+<ol>
+  <li>Go to <a href="https://www.duckdns.org">duckdns.org</a> and sign in. Use an account you keep private.</li>
+  <li>Pick a name: you get <code>yourname.duckdns.org</code>. Pick something that doesn't say what it's for.</li>
+  <li>Keep it pointing at your home: your home's address can change. Many routers have a <em>Dynamic DNS</em> setting with DuckDNS in the list (use your token from the DuckDNS page). If yours doesn't, the DuckDNS <em>install</em> page has a small updater for Windows, Mac and Linux.</li>
+</ol>
+
+<h2>2. Install Caddy</h2>
+<p><a href="https://caddyserver.com/download">Caddy</a> sits in front of Sworkr and handles HTTPS by itself: it gets and renews the certificate for your address, for free.</p>
+<ol>
+  <li>Download Caddy for your computer and put it in a folder, for example <code>C:\\Caddy</code>.</li>
+  <li>In that folder, make a file called <code>Caddyfile</code> (no extension) with:
+<pre><code>yourname.duckdns.org {
+    reverse_proxy 127.0.0.1:8080
+}</code></pre>
+  Use <code>8765</code> instead of <code>8080</code> for the Windows app.</li>
+  <li>Start it from that folder with <code>caddy run</code>. To have it start with the computer, see Caddy's <em>Keep Caddy running</em> page.</li>
+</ol>
+
+<h2>3. Open the door on your router</h2>
+<p>In your router's settings, find <em>Port forwarding</em>. Forward ports <strong>80</strong> and <strong>443</strong> (TCP) to the computer Sworkr runs on. Caddy needs both: 80 to get the certificate, 443 for everything else. Allow Caddy through your computer's firewall if it asks.</p>
+
+<h2>4. Check it</h2>
+<ol>
+  <li>On your phone, turn off Wi-Fi and open <code>https://yourname.duckdns.org</code>. You should see the Sworkr login with a padlock.</li>
+  <li>Sign in, then add a passkey on the phone (Settings → Security &amp; privacy → Passkeys).</li>
+  <li>Turn on <em>Away from home → passkeys only</em>.</li>
+</ol>
+
+<h2>Good to know</h2>
+<ul>
+  <li>Your computer has to be on and awake.</li>
+  <li>A passkey made on your DuckDNS address only works there; one made on <code>localhost</code> only works on the computer itself.</li>
+  <li>To limit passkeys to your address, add <code>PASSKEY_ORIGINS=https://yourname.duckdns.org</code> in the <a href="/docs/install.html">setup builder</a>.</li>
+  <li>To close it again: remove the port forwarding on the router and stop Caddy.</li>
 </ul>
 """),
 

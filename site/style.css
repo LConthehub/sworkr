@@ -154,3 +154,27 @@ footer p { margin: .3rem 0; }
   .cards a { background: #221a26; }
   .doc-layout aside a { color: var(--ink); }
 }
+
+/* The setup builder on /docs/install.html */
+.builder fieldset { border: 1px solid var(--line); border-radius: 12px; padding: .6rem 1rem 1rem; margin: 0 0 1rem; }
+.builder legend { font-weight: 600; color: var(--plum); padding: 0 .3rem; }
+.builder label { display: block; margin: .55rem 0 0; font-size: .95rem; }
+.builder label.radio { display: flex; gap: .5rem; align-items: baseline; }
+.builder input:not([type=radio]):not([type=checkbox]), .builder select {
+  display: block; width: 100%; max-width: 28rem; margin-top: .25rem; padding: .45rem .6rem;
+  border: 1px solid var(--line); border-radius: 8px; font: inherit; background: #fff; color: var(--ink);
+}
+.builder .hint { color: var(--muted); font-size: .85rem; margin: .4rem 0 0; }
+.code-box textarea {
+  width: 100%; box-sizing: border-box; font: .85rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  padding: .8rem; border: 1px solid var(--line); border-radius: 10px; background: #fbf6f9; color: var(--ink); resize: vertical;
+}
+.code-box button {
+  font: inherit; padding: .45rem .9rem; border-radius: 999px; border: 1px solid var(--plum);
+  background: var(--plum); color: #fff; cursor: pointer;
+}
+.code-box button + button { background: transparent; color: var(--plum); }
+@media (prefers-color-scheme: dark) {
+  .builder input:not([type=radio]):not([type=checkbox]), .builder select, .code-box textarea { background: #221a26; color: #f2e7ee; border-color: #3a2c40; }
+  .builder fieldset { border-color: #3a2c40; }
+}

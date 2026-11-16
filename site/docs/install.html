@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Install with Docker · Sworkr docs</title>
+  <meta name="robots" content="index,follow" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#a73178" />
+  <link rel="icon" type="image/png" href="/icon.png" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="docs">
+  <header class="top">
+    <a class="brand" href="/"><span class="mark">SW</span> Sworkr</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/docs/">Docs</a>
+      <a class="pill" href="https://demo.sworkr.com">Try the demo</a>
+    </nav>
+  </header>
+  <div class="doc-layout">
+    <aside>
+      <p class="side-title">Documentation</p>
+      <ul>
+      <li><a href="/docs/index.html">Start here</a></li>
+      <li><a href="/docs/getting-started.html">Get started</a></li>
+      <li><a href="/docs/privacy-and-backups.html">Privacy &amp; backups</a></li>
+      <li><a href="/docs/install.html" aria-current="page">Install with Docker</a></li>
+      <li><a href="/docs/phone.html">On your phone</a></li>
+      <li><a href="/docs/web-address.html">Your own web address</a></li>
+      <li><a href="/docs/people.html">Clients &amp; inquiries</a></li>
+      <li><a href="/docs/money.html">Money &amp; houses</a></li>
+      <li><a href="/docs/content.html">Content &amp; planning</a></li>
+      <li><a href="/docs/health-and-safety.html">Health &amp; safety</a></li>
+      <li><a href="/docs/notifications.html">Notifications</a></li>
+      <li><a href="/docs/troubleshooting.html">If something goes wrong</a></li>
+      </ul>
+    </aside>
+    <main class="doc">
+      <h1>Install with Docker</h1>
+
+<p class="lead">Pick your options, copy one file, start it. This page writes the setup file for you.</p>
+<p>Sworkr's Docker setup is one file, <code>docker-compose.prod.yml</code>: where your records live, which folders it can see, and who can open it. Fill in what you want below; the file updates as you type. <strong>Nothing you type here leaves your browser.</strong></p>
+<p id="no-script">This builder needs JavaScript. Without it, use <code>docker-compose.prod.yml</code> from the download as it is: it works without changes.</p>
+
+<div id="builder" hidden>
+<form id="setup" class="builder" onsubmit="return false">
+  <fieldset>
+    <legend>Where your records live</legend>
+    <label>Data folder <input name="data_folder" placeholder="Leave empty: Docker keeps it (recommended)"></label>
+    <label>Key folder <input name="keys_folder" placeholder="Leave empty: Docker keeps it (recommended)"></label>
+    <p class="hint">Your records are encrypted with a key. Keep the key apart from your backups: someone with both could read everything.</p>
+    <label>Backups folder <input name="backups" value="./backups" placeholder="./backups"></label>
+    <label>Backups to keep <input name="keep" type="number" min="1" max="365" value="14"></label>
+  </fieldset>
+  <fieldset>
+    <legend>Content library (optional)</legend>
+    <label>A folder or drive with your photos and videos <input name="content" placeholder="e.g. E:/Content or /Volumes/Content"></label>
+    <p class="hint">Sworkr only reads it, never changes it. Then choose <em>Mounted folder</em> in Settings → Content library.</p>
+  </fieldset>
+  <fieldset>
+    <legend>Who can open it</legend>
+    <label>Port <input name="port" type="number" min="1" max="65535" value="8080"></label>
+    <label class="radio"><input type="radio" name="network" value="computer" checked> Only this computer (safest; use <a href="/docs/phone.html">Tailscale</a> for your phone)</label>
+    <label class="radio"><input type="radio" name="network" value="network"> Other devices on my home network too</label>
+    <label>Web address for passkeys (optional) <input name="passkey_address" placeholder="e.g. https://you.duckdns.org"></label>
+    <label>Log me out after (minutes, 0 = never) <input name="idle" type="number" min="0" max="1440" value="120"></label>
+  </fieldset>
+  <fieldset>
+    <legend>Email (optional)</legend>
+    <label class="radio"><input type="checkbox" name="email"> Send safety check-in alerts and sign-in codes from an email account</label>
+    <div id="email-fields">
+      <label>Outgoing mail server <input name="smtp_host" placeholder="e.g. smtp.gmail.com"></label>
+      <label>Port <input name="smtp_port" value="587"></label>
+      <label>Security <select name="smtp_security"><option>starttls</option><option>ssl</option><option>none</option></select></label>
+      <label>Username <input name="smtp_user" placeholder="you@example.com"></label>
+      <label>Send as (optional) <input name="smtp_from" placeholder="Same as the username"></label>
+      <p class="hint">The password isn't typed here: you add it to the <code>.env</code> file yourself.</p>
+    </div>
+  </fieldset>
+</form>
+
+<h2>Your setup file</h2>
+<div class="code-box">
+  <textarea id="compose" readonly rows="24" spellcheck="false" aria-label="docker-compose.prod.yml"></textarea>
+  <p><button type="button" id="copy-compose">Copy</button> <button type="button" id="download-compose">Download docker-compose.prod.yml</button></p>
+</div>
+<div id="env-wrap" class="code-box" hidden>
+  <h3>And a <code>.env</code> file for email</h3>
+  <textarea id="env" readonly rows="9" spellcheck="false" aria-label=".env"></textarea>
+  <p><button type="button" id="copy-env">Copy</button> <button type="button" id="download-env">Download .env</button></p>
+</div>
+
+<h2>Install it</h2>
+<ol id="steps"></ol>
+</div>
+
+<h2>Good to know</h2>
+<ul>
+  <li>You need <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a> (Windows or Mac) or Docker on Linux. Don't want Docker? The <a href="/docs/getting-started.html">Windows app</a> needs nothing else.</li>
+  <li>Already using Sworkr? Keep the name <code>sworkr</code> at the top of the file and your records stay where they are. Changing the data folder later starts an empty one: move your records with a backup first (<a href="/docs/privacy-and-backups.html">how</a>).</li>
+  <li><strong>Never</strong> run <code>docker compose down -v</code>: the <code>-v</code> deletes your records.</li>
+</ul>
+<script src="/setup.js" defer></script>
+
+    </main>
+  </div>
+  <footer>
+    <p><span class="mark small">SW</span> Sworkr. Software for independent workers, kept on your own computer.</p>
+    <p class="fine">Sworkr is a record-keeping tool. It doesn't advertise, arrange or take part in anyone's work, and it isn't tax or legal advice.</p>
+  </footer>
+</body>
+</html>

@@ -59,6 +59,12 @@ export function toCsv(header, rows) {
   return '﻿' + [header, ...rows].map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n';
 }
 
+// ----- is this the public demo? (set once the app has asked the server) -----
+let demoMode = false;
+export const setDemoMode = (value) => { demoMode = !!value; };
+/** The public demo leaves out insider features: anyone can look at it. */
+export const isDemo = () => demoMode;
+
 // ----- the user's own expense categories -----
 let categoryCache = null;
 const categoryListeners = new Set();

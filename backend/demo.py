@@ -529,8 +529,9 @@ def _fill(api):
                 **{k: s[k] for k in ("name", "kind", "fee_percent", "fee_per_shift", "token_value", "payout_note", "notes", "archived",
                                      "work_type", "persona_id", "gift_share_percent")},
                 "tip_share_percent": 0, "holds_cash": True, "cash_limit": 20,
-                "cuts": [{"label": "Kelly cut (cab)", "kind": "percent", "value": 20}, {"label": "Kelly cut (limo)", "kind": "percent", "value": 30},
-                         {"label": "Card fee", "kind": "percent", "value": 3, "basis": "mine"}]}))
+                # No sample house rules: insider terms stay off anything public, and the demo shows
+                # "only in the full version" there instead.
+                "cuts": []}))
     _ok(api.post("/api/rates/tag-rules", json={"tag": "regular", "kind": "percent", "value": 10}))
 
     # ---------- health tests on this person's own schedule ----------

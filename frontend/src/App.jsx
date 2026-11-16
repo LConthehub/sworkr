@@ -9,7 +9,7 @@ import QuickCash from './components/QuickCash';
 import { DecoyScreen, useDiscreet, usePanicKey } from './components/Discreet';
 import Reminders from './components/Reminders';
 import { WorkTypesFirstRun } from './components/WorkTypes';
-import { clearCaches } from './api';
+import { clearCaches, setDemoMode } from './api';
 
 const navClass = ({ isActive }) =>
   `transition-colors ${isActive ? 'text-white font-semibold' : 'text-white/80 hover:text-white'}`;
@@ -69,6 +69,7 @@ function App() {
   const checkAuth = useCallback(async () => {
     try {
       const { data } = await axios.get('/api/auth/status');
+      setDemoMode(data.demo);
       setAuth({ user: data.user, setupRequired: data.setup_required, demo: !!data.demo, demoLogin: data.demo_login || null, passkeyHint: !!data.passkey_hint });
     } catch {
       setAuth({ user: null, setupRequired: false, offline: true });
