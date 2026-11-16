@@ -51,6 +51,20 @@ export default function AppointmentForm({
   });
   const [clients, setClients] = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
+  const [rateCard, setRateCard] = useState([]);
+  // Choosing a service that's on the rate card fills in its length and price (the price only if it's still empty or was filled this way).
+  const [cardPrice, setCardPrice] = useState(null);
+  const pickService = (e) => {
+    const value = e.target.value;
+    const matches = rateCard.filter((r) => r.label.toLowerCase() === value.trim().toLowerCase());
+    const rate = matches.find((r) => String(r.minutes) === String(form.duration_minutes)) || matches[0];
+    if (!rate) return setForm((f) => ({ ...f, service_type: value }));
+    setForm((f) => ({
+      ...f, service_type: value, duration_minutes: rate.minutes ? String(rate.minutes) : f.duration_minutes,
+      rate: f.rate === '' || f.rate === cardPrice ? String(rate.price) : f.rate,
+    }));
+    return setCardPrice(String(rate.price));
+  };
   const [safety, setSafety] = useState(null);
   const [tours, setTours] = useState([]);
   const [testCosts, setTestCosts] = useState({});
@@ -74,6 +88,7 @@ export default function AppointmentForm({
   useEffect(() => {
     fetchAll('/api/clients', { sort: 'name' }, 200).then(setClients).catch(() => {});
     axios.get('/api/appointments/service-types').then(({ data }) => setServiceTypes(data)).catch(() => {});
+    axios.get('/api/rates').then(({ data }) => setRateCard(data.filter((r) => !r.archived))).catch(() => {});
     axios.get('/api/safety').then(({ data }) => setSafety(data)).catch(() => {});
     axios.get('/api/tours', { params: { kind: 'tour' } }).then(({ data }) => setTours(data)).catch(() => {});
     axios.get('/api/appointments/test-costs').then(({ data }) => setTestCosts(data)).catch(() => {});
@@ -251,12 +266,12 @@ export default function AppointmentForm({
           required
           list="service-types"
           value={form.service_type}
-          onChange={set('service_type')}
+          onChange={pickService}
           placeholder="e.g. Individual Session"
           className={inputClass}
         />
         <datalist id="service-types">
-          {serviceTypes.map((s) => <option key={s} value={s} />)}
+          {[...new Set([...rateCard.map((r) => r.label), ...serviceTypes])].map((s) => <option key={s} value={s} />)}
         </datalist>
       </Field>
       </>)}

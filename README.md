@@ -48,7 +48,7 @@ A new database starts with a few example clients, appointments and expenses. Rem
 | Gone quiet | `/regulars` | Regulars who haven't booked for a while and have nothing booked ahead, biggest spenders first |
 | Contact page | `/contacts/:id` | One contact's details, visit history, money paid and owed, and dated notes |
 | Content | `/content` | Browse your photo/video library (Nextcloud, WebDAV or a mounted folder) and plan posts. Campaigns group a push's posts, one post can go to several platforms, places you post in keep their rules and posting limits, and saved text is one tap away. Shoots plans a content shoot: place, people and what was agreed, goals, shot list, wardrobe, prep, budget and marketing plan. Customs tracks made-to-order content from request to delivery, logs payments as income and keeps your price menu. Ads tracks each listing's end date and cost; renewing one logs the expense |
-| Money | `/money` | Income, expenses and profit, what's still owed, compare periods, tours and how clients found you (income against ad spend), goals, splits, tax-year export |
+| Money | `/money` | Income, expenses and profit, what's still owed, compare periods, tours and how clients found you (income against ad spend), busy times and what an hour brings in, your rate card with deposits to collect and clients on an old rate, goals, splits, tax-year export |
 | Account | `/account` | Health tests (how often each is due and what it costs, set to your local rules), password, auto log-out, email, content library, calendar sync, safety check-in, backups, users |
 
 There is also a global search (press `/`) across clients, appointments and expenses.

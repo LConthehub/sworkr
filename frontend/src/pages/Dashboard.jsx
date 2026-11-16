@@ -12,6 +12,7 @@ import { AdsExpiring } from '../components/Listings';
 import { CustomsDue } from '../components/Customs';
 import { TestsDue } from '../components/TestKinds';
 import { ShootsSoon } from '../components/Shoots';
+import { DepositsDue } from './Rates';
 import { fetchAll } from '../api';
 import {
   addDays, apptColorFor, dayLabel, endOf, formatTime, money, periodLabel, periodsOn, sameDay, startOfDay, TOUR_COLOR,
@@ -38,6 +39,7 @@ export default function Dashboard({ user }) {
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 items-start">
         <div className="space-y-4">
           <WeekAhead version={version} />
+          <DepositsDue />
           <TestsDue />
           <InquiriesWaiting />
           <ShootsSoon />

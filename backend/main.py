@@ -46,6 +46,7 @@ import listings
 import meds
 import personas
 import places
+import rates
 import demo
 import mail
 import marketing
@@ -2144,6 +2145,7 @@ app.include_router(listings.router)
 app.include_router(customs.router)
 app.include_router(healthtests.router)
 app.include_router(shoots.router)
+app.include_router(rates.router)
 
 init_db()
 if os.environ.get("SEED_DB", "1") == "1":
@@ -2171,6 +2173,7 @@ listings.setup(get_db)
 customs.setup(get_db)
 healthtests.setup(get_db)
 shoots.setup(get_db)
+rates.setup(get_db)
 csv_io.setup(get_db, after_client_import=lambda ids: [calendar_sync.queue_client(i) for i in ids])
 # BACKGROUND_JOBS=0 (the tests) keeps the background threads from starting.
 _background = os.environ.get("BACKGROUND_JOBS", os.environ.get("CALENDAR_SYNC", "1")) == "1"

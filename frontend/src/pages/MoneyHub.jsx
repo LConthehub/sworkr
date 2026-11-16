@@ -5,11 +5,13 @@ import Earnings from './Earnings';
 import Goals from './Goals';
 import Splits from './Splits';
 import TaxSummary from './TaxSummary';
+import Rates from './Rates';
 
 const TABS = [
   { id: 'overview', to: '/money', label: 'Overview' },
   { id: 'records', to: '/money/records', label: 'Income & expenses' },
   { id: 'compare', to: '/money/compare', label: 'Compare' },
+  { id: 'rates', to: '/money/rates', label: 'Rates' },
   { id: 'goals', to: '/money/goals', label: 'Goals' },
   { id: 'splits', to: '/money/splits', label: 'Splits' },
   { id: 'taxes', to: '/money/taxes', label: 'Taxes' },
@@ -45,6 +47,7 @@ export default function MoneyHub() {
       </div>
       {(tab === 'overview' || tab === 'records') && <Money view={tab} year={year} setYear={setYear} />}
       {tab === 'compare' && <Earnings />}
+      {tab === 'rates' && <Rates />}
       {tab === 'goals' && <Goals />}
       {tab === 'splits' && <Splits />}
       {tab === 'taxes' && <TaxSummary year={year} setYear={setYear} />}

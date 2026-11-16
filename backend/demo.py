@@ -512,6 +512,12 @@ def _fill(api):
     _ok(api.post(f"/api/shoots/{shoot['id']}/campaign"))
     _ok(api.post("/api/shoots", json={"title": "Beach day", "status": "idea", "concept": "Golden hour, the white set."}))
 
+    # ---------- the rate card ----------
+    for label, minutes, price, notes in (("One hour", 60, 450, None), ("Dinner date", 120, 800, "Dinner is on you"),
+                                         ("Extended evening", 240, 1400, None), ("Overnight", 720, 3200, "8pm to 8am"),
+                                         ("Duo with Jade", 60, 900, "Subject to her calendar")):
+        _ok(api.post("/api/rates", json={"label": label, "minutes": minutes, "price": price, "notes": notes, "persona_id": scarlett["id"]}))
+
     # ---------- health tests on this person's own schedule ----------
     for kind in _ok(api.get("/api/test-kinds")):
         if kind["key"] == "weekly":      # where she works, the panel is every 14 days

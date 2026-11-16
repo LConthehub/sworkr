@@ -1280,6 +1280,25 @@ def _m30_shoots(conn):
     conn.execute("ALTER TABLE expenses ADD COLUMN shoot_id INTEGER REFERENCES shoots(id) ON DELETE SET NULL")
 
 
+def _m31_rates(conn):
+    """The rate card: what each service costs, how long it is, and which persona it's under."""
+    conn.execute("""
+        CREATE TABLE rates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            label TEXT NOT NULL,
+            minutes INTEGER CHECK(minutes IS NULL OR minutes > 0),
+            price REAL NOT NULL CHECK(price >= 0),
+            notes TEXT,
+            persona_id INTEGER REFERENCES personas(id) ON DELETE SET NULL,
+            archived INTEGER NOT NULL DEFAULT 0 CHECK(archived IN (0, 1)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_rates_owner ON rates(owner_id)")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1311,6 +1330,7 @@ MIGRATIONS = [
     (28, "custom content orders and menu", _m28_custom_content, False),
     (29, "health tests on your own schedule", _m29_test_kinds, True),
     (30, "content shoot planning", _m30_shoots, False),
+    (31, "rate card", _m31_rates, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 
