@@ -1312,6 +1312,15 @@ def _m33_tips(conn):
     conn.execute("CREATE INDEX idx_income_appointment ON income(appointment_id)")
 
 
+def _m34_paid_how_and_kelly_cut(conn):
+    """Income says how it was paid (cash, bank transfer…). A workplace can take a Kelly cut: a share off the top
+    when a driver brought the client, before the house's own share. Income remembers how much that was."""
+    conn.execute("ALTER TABLE income ADD COLUMN payment_method TEXT")
+    conn.execute("ALTER TABLE income ADD COLUMN transport_cut REAL CHECK(transport_cut IS NULL OR transport_cut >= 0)")
+    conn.execute("ALTER TABLE income_sources ADD COLUMN transport_cut_percent REAL "
+                 "CHECK(transport_cut_percent IS NULL OR (transport_cut_percent >= 0 AND transport_cut_percent <= 100))")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1346,6 +1355,7 @@ MIGRATIONS = [
     (31, "rate card", _m31_rates, False),
     (32, "co-workers and crew become collaborators", _m32_collaborators, False),
     (33, "tips and the house's share of them", _m33_tips, False),
+    (34, "how income was paid, and the Kelly cut", _m34_paid_how_and_kelly_cut, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

@@ -204,12 +204,12 @@ export function Toolkit({ platforms }) {
     <div className="space-y-4">
       <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-          <h2 className="font-semibold text-gray-800">Places you post in</h2>
-          <button onClick={() => setPlace({})} className={buttonClass}>+ Add a place</button>
+          <h2 className="font-semibold text-gray-800">Your platforms</h2>
+          <button onClick={() => setPlace({})} className={buttonClass}>+ Add a platform</button>
         </div>
         <p className="text-xs text-gray-500 mb-3">
-          A subreddit, a channel, a group: anywhere with its own rules. Write the rules down once, and say how often you may post
-          there. The planner then warns you when a post is too soon after the last one.
+          Each platform you post on, and each channel within one that has its own rules (a subreddit, a group). Write the rules
+          down once and say how often you may post there. The planner then warns you when a post is too soon after the last one.
         </p>
         {places.length === 0 ? <p className="text-sm text-gray-400 py-4 text-center">None yet.</p> : (
           <ul className="divide-y divide-gray-100">
@@ -263,7 +263,7 @@ export function Toolkit({ platforms }) {
       </div>
 
       {place && (
-        <Modal title={place.id ? 'Edit place' : 'Add a place'} onClose={() => setPlace(null)}>
+        <Modal title={place.id ? 'Edit platform' : 'Add a platform'} onClose={() => setPlace(null)}>
           <PlaceForm place={place} platforms={platforms} onDone={() => { setPlace(null); reloadPlaces(); }} />
         </Modal>
       )}
@@ -291,11 +291,11 @@ function PlaceForm({ place, platforms, onDone }) {
       else await axios.post('/api/post-places', body);
       onDone();
     } catch (err) {
-      setError(errorMessage(err, 'Could not save the place'));
+      setError(errorMessage(err, 'Could not save it'));
     }
   };
   const remove = async () => {
-    if (!window.confirm('Delete this place? Posts that name it are kept.')) return;
+    if (!window.confirm('Delete this platform entry? Posts that name it are kept.')) return;
     await axios.delete(`/api/post-places/${place.id}`).catch(() => {});
     onDone();
   };
@@ -306,7 +306,7 @@ function PlaceForm({ place, platforms, onDone }) {
           <input required list="place-platforms" value={form.platform} onChange={set('platform')} placeholder="e.g. Reddit" className={inputClass} />
           <datalist id="place-platforms">{platforms.map((p) => <option key={p} value={p} />)}</datalist>
         </Field>
-        <Field label="Place *"><input required value={form.name} onChange={set('name')} placeholder="e.g. r/example, my channel" className={inputClass} /></Field>
+        <Field label="Account or channel *"><input required value={form.name} onChange={set('name')} placeholder="e.g. @myhandle, r/example, my channel" className={inputClass} /></Field>
       </div>
       <Field label="Its rules">
         <textarea rows={3} value={form.rules} onChange={set('rules')} placeholder="Title format, what's allowed, verification, flair…" className={inputClass} />
@@ -324,7 +324,7 @@ function PlaceForm({ place, platforms, onDone }) {
       )}
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex items-center justify-between">
-        {place.id ? <button type="button" onClick={remove} className="text-sm text-red-500 hover:text-red-700">Delete place</button> : <span />}
+        {place.id ? <button type="button" onClick={remove} className="text-sm text-red-500 hover:text-red-700">Delete</button> : <span />}
         <button type="submit" className={buttonClass}>Save</button>
       </div>
     </form>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, NavLink, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import Modal, { Field, inputClass, errorMessage, buttonClass, quietButtonClass } from '../components/Modal';
 import { PersonaSelect } from '../components/Personas';
@@ -27,32 +27,59 @@ const STATUS = {
 const thumbUrl = (path, size = 256) => `/api/content/thumbnail?path=${encodeURIComponent(path)}&size=${size}`;
 const whenText = (iso) => (iso ? `${dayLabel(new Date(iso), { weekday: 'short', month: 'short', day: 'numeric' })}, ${formatTime(new Date(iso))}` : 'No time set');
 
-/** Content: the library (sets in your own folder) and the post planner. */
+// Four sections. Each address still works; several lead to the same section.
+const SECTIONS = [['library', '/content', 'Library'], ['plan', '/content/planner', 'Plan'], ['promote', '/content/campaigns', 'Promote'], ['customs', '/content/customs', 'Customs']];
+const SECTION_OF = { planner: 'plan', plan: 'plan', shoots: 'plan', campaigns: 'promote', promote: 'promote', ads: 'promote', toolkit: 'promote', customs: 'customs' };
+
+/** The two halves of a section, as a small switch under the main tabs. */
+function Switch({ label, options }) {
+  return (
+    <div className="inline-flex rounded-lg bg-white/20 p-0.5 text-sm backdrop-blur-sm" role="group" aria-label={label}>
+      {options.map(([to, text, active]) => (
+        <Link key={to} to={to} aria-current={active ? 'page' : undefined} className={`px-3 py-1 rounded-md font-medium ${active ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'}`}>{text}</Link>
+      ))}
+    </div>
+  );
+}
+
+/** Content: your library, planning (posts and shoots), promoting (campaigns, ads, platforms) and custom orders. */
 export default function Content() {
   const { tab = 'library' } = useParams();
   const [modal, setModal] = useState(null); // { post } (post may be a draft with files)
   const [version, setVersion] = useState(0);
   const plan = (draft) => setModal({ post: draft });
+  const section = SECTION_OF[tab] || 'library';
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-white">Content</h1>
         <nav className="flex gap-1 overflow-x-auto rounded-full bg-white/20 p-1 backdrop-blur-sm" aria-label="Content">
-          {[['/content', 'Library'], ['/content/shoots', 'Shoots'], ['/content/planner', 'Post planner'], ['/content/campaigns', 'Campaigns'], ['/content/customs', 'Customs'], ['/content/ads', 'Ads'], ['/content/toolkit', 'Places & text']].map(([to, label]) => (
-            <NavLink key={to} to={to} end className={({ isActive }) => `whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium ${isActive ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'}`}>
+          {SECTIONS.map(([id, to, label]) => (
+            <Link key={id} to={to} aria-current={section === id ? 'page' : undefined}
+              className={`whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium ${section === id ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'}`}>
               {label}
-            </NavLink>
+            </Link>
           ))}
         </nav>
       </div>
-      {tab === 'planner' ? <Planner version={version} onEdit={(p) => setModal({ post: p })} onNew={plan} />
-        : tab === 'campaigns' ? <Campaigns version={version} onPlan={plan} />
-          : tab === 'shoots' ? <Shoots />
-          : tab === 'customs' ? <Customs />
-          : tab === 'ads' ? <Listings sites={PLATFORM_GROUPS['Ad sites']} />
+      {section === 'plan' && (
+        <Switch label="Plan" options={[['/content/planner', 'Posts', tab !== 'shoots'], ['/content/shoots', 'Shoots', tab === 'shoots']]} />
+      )}
+      {section === 'promote' && (
+        <Switch label="Promote" options={[['/content/campaigns', 'Campaigns & ads', tab !== 'toolkit'], ['/content/toolkit', 'Platforms & saved text', tab === 'toolkit']]} />
+      )}
+      {tab === 'shoots' ? <Shoots />
+        : section === 'plan' ? <Planner version={version} onEdit={(p) => setModal({ post: p })} onNew={plan} />
           : tab === 'toolkit' ? <Toolkit platforms={PLATFORMS} />
-            : <Library onPlan={plan} version={version} />}
+            : section === 'promote' ? (
+              <>
+                <Campaigns version={version} onPlan={plan} />
+                <Listings sites={PLATFORM_GROUPS['Ad sites']} />
+              </>
+            )
+              : section === 'customs' ? <Customs />
+                : <Library onPlan={plan} version={version} />}
       {modal && (
         <Modal title={modal.post.id ? 'Edit post' : 'Plan a post'} onClose={() => setModal(null)} wide>
           <PostForm post={modal.post} onDone={() => { setModal(null); setVersion((v) => v + 1); }} />
@@ -446,7 +473,7 @@ export function PostForm({ post, onDone }) {
         <Field label="Account (optional)">
           <input value={form.account} onChange={set('account')} placeholder="@yourhandle" className={inputClass} />
         </Field>
-        <Field label="Where on it (optional)">
+        <Field label="Account or channel (optional)">
           <input list="post-places" value={form.place} onChange={set('place')} placeholder="Subreddit, channel, group" className={inputClass} />
           <datalist id="post-places">{placesFor(form.platform).map((x) => <option key={x.id} value={x.name} />)}</datalist>
         </Field>

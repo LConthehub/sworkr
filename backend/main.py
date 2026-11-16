@@ -1813,7 +1813,7 @@ def get_tour_summary(tour_id: int, user: UserDep, db: DbDep):
 def stay_statement(db, owner_id: int, tour: dict, appointments: List[dict], expenses: List[dict],
                    income_rows: List[dict]) -> Optional[dict]:
     """For a stay at a place: what you earned there, the house's share, what it charged you, and so what you
-    should be paid. To check against the house's own settlement sheet."""
+    should be paid."""
     if not tour.get("source_id"):
         return None
     place = finance.get_source(db, tour["source_id"], owner_id)

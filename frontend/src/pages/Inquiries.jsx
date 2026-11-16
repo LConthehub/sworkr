@@ -24,7 +24,7 @@ export function PeopleNav({ dark = false }) {
   const active = dark ? 'bg-sworkr-500 text-white' : 'bg-white text-sworkr-600 shadow';
   return (
     <nav className={`flex gap-1 overflow-x-auto rounded-full p-1 ${dark ? 'bg-gray-50' : 'bg-white/20 backdrop-blur-sm'}`} aria-label="People">
-      {[['/contacts', 'Contacts'], ['/inquiries', 'Inquiries'], ['/regulars', 'Gone quiet']].map(([to, label]) => (
+      {[['/contacts', 'Everyone'], ['/contacts/inquiries', 'Inquiries'], ['/contacts/quiet', 'Gone quiet']].map(([to, label]) => (
         <NavLink key={to} to={to} end className={({ isActive }) => `whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium ${isActive ? active : base}`}>
           {label}
         </NavLink>
@@ -75,7 +75,7 @@ export default function Inquiries() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-white">Inquiries</h1>
+        <h1 className="text-xl font-bold text-white">Contacts</h1>
         <PeopleNav />
       </div>
 
@@ -331,7 +331,7 @@ export function GoneQuiet() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-white">Gone quiet</h1>
+        <h1 className="text-xl font-bold text-white">Contacts</h1>
         <PeopleNav />
       </div>
       <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
@@ -347,7 +347,7 @@ export function GoneQuiet() {
           </label>
         </div>
         {snippets.length === 0 && rows?.length > 0 && (
-          <p className="text-xs text-gray-400 mb-2">Tip: save a "checking in" message under <Link to="/content/toolkit" className="underline">Content → Places & text</Link> and it appears here to copy.</p>
+          <p className="text-xs text-gray-400 mb-2">Tip: save a "checking in" message under <Link to="/content/toolkit" className="underline">Content → Promote → Platforms & saved text</Link> and it appears here to copy.</p>
         )}
         {!rows ? null : rows.length === 0 ? (
           <p className="text-sm text-gray-400 py-8 text-center">Nobody has gone quiet. Regulars show up here once they've been away this long.</p>
@@ -394,12 +394,12 @@ export function InquiriesWaiting() {
     <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-gray-800">Inquiries to answer</h2>
-        <Link to="/inquiries" className="text-sm text-sworkr-600 hover:text-sworkr-800">All inquiries →</Link>
+        <Link to="/contacts/inquiries" className="text-sm text-sworkr-600 hover:text-sworkr-800">All inquiries →</Link>
       </div>
       <ul className="divide-y divide-gray-100">
         {rows.slice(0, 5).map((e) => (
           <li key={e.id} className="py-2">
-            <Link to="/inquiries" className="block">
+            <Link to="/contacts/inquiries" className="block">
               <span className="font-medium text-gray-800">{e.name}</span>
               <span className="text-xs text-gray-500"> · {shortDay(e.received_at)}{e.found_via ? ` · via ${e.found_via}` : ''}</span>
               {e.wanted && <span className="block text-sm text-gray-600 line-clamp-1">{e.wanted}</span>}

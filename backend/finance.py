@@ -302,6 +302,7 @@ class SourceIn(BaseModel):
     persona_id: Optional[int] = None        # the name you work under there
     gift_share_percent: Optional[float] = None   # the share of a gift's value the place charges you (brothels: often 50)
     tip_share_percent: Optional[float] = None    # the share of your tips the place keeps (a house cut or tip-out)
+    transport_cut_percent: Optional[float] = None  # the Kelly cut: taken off the top when a driver brought the client
 
 
 def _validate_source(s: SourceIn):
@@ -313,6 +314,8 @@ def _validate_source(s: SourceIn):
         raise HTTPException(status_code=400, detail="The share of gifts must be between 0 and 100%")
     if s.tip_share_percent is not None and not (0 <= s.tip_share_percent <= 100):
         raise HTTPException(status_code=400, detail="The share of tips must be between 0 and 100%")
+    if s.transport_cut_percent is not None and not (0 <= s.transport_cut_percent <= 100):
+        raise HTTPException(status_code=400, detail="The Kelly cut must be between 0 and 100%")
     if not (_amount_ok(s.fee_per_shift) and _amount_ok(s.token_value)):
         raise HTTPException(status_code=400, detail="Fees and token values must be 0 or more")
     s.currency = currencies.check(s.currency)
@@ -323,7 +326,7 @@ def _validate_source(s: SourceIn):
 
 def _source_values(s: SourceIn) -> tuple:
     return (s.name.strip(), s.kind.value, s.fee_percent, s.fee_per_shift, s.token_value, _clean(s.payout_note),
-            _clean(s.notes), s.currency, int(s.archived), s.work_type, s.gift_share_percent, s.tip_share_percent)
+            _clean(s.notes), s.currency, int(s.archived), s.work_type, s.gift_share_percent, s.tip_share_percent, s.transport_cut_percent)
 
 
 def _source_row(r) -> dict:
@@ -354,8 +357,8 @@ def create_source(body: SourceIn, request: Request):
         cur = db.execute("""
             INSERT INTO income_sources (name, kind, fee_percent, fee_per_shift, token_value, payout_note, notes,
                                         currency, archived, work_type, gift_share_percent, tip_share_percent,
-                                        owner_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                        transport_cut_percent, owner_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (*_source_values(body), _owner(request), now, now))
         personas.assign(db, "income_sources", cur.lastrowid, _owner(request), body)
         db.commit()
@@ -375,7 +378,7 @@ def update_source(source_id: int, body: SourceIn, request: Request):
         db.execute("""
             UPDATE income_sources SET name = ?, kind = ?, fee_percent = ?, fee_per_shift = ?, token_value = ?,
                    payout_note = ?, notes = ?, currency = ?, archived = ?, work_type = ?, gift_share_percent = ?,
-                   tip_share_percent = ?, updated_at = ?
+                   tip_share_percent = ?, transport_cut_percent = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (*_source_values(body), _now(), source_id, owner))
         personas.assign(db, "income_sources", source_id, owner, body)
@@ -433,6 +436,8 @@ class IncomeIn(BaseModel):
     notes: Optional[str] = None
     currency: str = currencies.DEFAULT
     client_id: Optional[int] = None  # who it came from (an allowance, a gift)
+    payment_method: Optional[str] = None   # how it was paid: cash, bank transfer, a payment app…
+    transport_cut: Optional[float] = None  # the part of the fees that was a Kelly cut (a driver brought the client)
 
 
 INCOME_SELECT = """
@@ -445,7 +450,7 @@ INCOME_SELECT = """
 
 
 def _validate_income(db, body: IncomeIn, owner_id: int):
-    if not (_amount_ok(body.gross) and _amount_ok(body.fees) and _amount_ok(body.tokens)):
+    if not (_amount_ok(body.gross) and _amount_ok(body.fees) and _amount_ok(body.tokens) and _amount_ok(body.transport_cut)):
         raise HTTPException(status_code=400, detail="Amounts must be 0 or more")
     body.currency = currencies.check(body.currency)
     if body.client_id is not None and not db.execute("SELECT 1 FROM clients WHERE id = ? AND owner_id = ?",
@@ -458,7 +463,8 @@ def _validate_income(db, body: IncomeIn, owner_id: int):
 def _income_values(body: IncomeIn) -> tuple:
     return (body.source_id, _utc_iso(body.date), _clean(body.description), body.kind.value, body.tokens,
             round(body.gross, 2), round(body.fees, 2), body.status.value,
-            body.payout_date.isoformat() if body.payout_date else None, _clean(body.notes), body.currency, body.client_id)
+            body.payout_date.isoformat() if body.payout_date else None, _clean(body.notes), body.currency, body.client_id,
+            (_clean(body.payment_method) or "")[:40] or None, body.transport_cut or None)
 
 
 def get_income(db, income_id: int, owner_id: int) -> Optional[dict]:
@@ -517,8 +523,8 @@ def create_income(body: IncomeIn, request: Request):
         now = _now()
         cur = db.execute("""
             INSERT INTO income (source_id, date, description, kind, tokens, gross, fees, status, payout_date, notes,
-                                currency, client_id, owner_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                currency, client_id, payment_method, transport_cut, owner_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (*_income_values(body), owner, now, now))
         db.commit()
         return get_income(db, cur.lastrowid, owner)
@@ -536,7 +542,8 @@ def update_income(income_id: int, body: IncomeIn, request: Request):
         _validate_income(db, body, owner)
         db.execute("""
             UPDATE income SET source_id = ?, date = ?, description = ?, kind = ?, tokens = ?, gross = ?, fees = ?,
-                   status = ?, payout_date = ?, notes = ?, currency = ?, client_id = ?, updated_at = ?
+                   status = ?, payout_date = ?, notes = ?, currency = ?, client_id = ?, payment_method = ?,
+                   transport_cut = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (*_income_values(body), _now(), income_id, owner))
         db.commit()
@@ -901,6 +908,7 @@ class TipIn(BaseModel):
     appointment_id: Optional[int] = None  # the booking it came with
     date: Optional[datetime] = None
     note: Optional[str] = None
+    payment_method: Optional[str] = None
 
 
 @router.post("/api/tips")
@@ -937,10 +945,11 @@ def log_tip(body: TipIn, request: Request):
             what = _clean(body.note) or ("Tip from " + booking["display_name"] if booking and booking["display_name"] else "Tip")
             cur = db.execute("""
                 INSERT INTO income (source_id, date, description, kind, gross, fees, status, currency, client_id, appointment_id,
-                                    owner_id, created_at, updated_at)
-                VALUES (?, ?, ?, 'tips', ?, ?, 'received', ?, ?, ?, ?, ?, ?)
+                                    payment_method, owner_id, created_at, updated_at)
+                VALUES (?, ?, ?, 'tips', ?, ?, 'received', ?, ?, ?, ?, ?, ?, ?)
             """, (body.source_id, when, what, amount, share, (source or {}).get("currency") or currencies.DEFAULT,
-                  booking["client_id"] if booking else None, body.appointment_id, owner, _now(), _now()))
+                  booking["client_id"] if booking else None, body.appointment_id, (_clean(body.payment_method) or "")[:40] or None,
+                  owner, _now(), _now()))
             income_id = cur.lastrowid
         db.commit()
         return {"tip": amount, "house_share": share, "kept": round(amount - share, 2), "income_id": income_id}

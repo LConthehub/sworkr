@@ -27,7 +27,6 @@ const PAGES = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/calendar', label: 'Calendar' },
   { to: '/contacts', label: 'Contacts' },
-  { to: '/inquiries', label: 'Inquiries' },
   { to: '/content', label: 'Content' },
   { to: '/money', label: 'Money' },
 ];
@@ -185,8 +184,10 @@ function App() {
             <Route path="/contacts/:id" element={<ClientDetail />} />
             <Route path="/clients" element={<Navigate to="/contacts" replace />} />
             <Route path="/clients/:id" element={<OldContactLink />} />
-            <Route path="/inquiries" element={<Inquiries />} />
-            <Route path="/regulars" element={<GoneQuiet />} />
+            <Route path="/contacts/inquiries" element={<Inquiries />} />
+            <Route path="/contacts/quiet" element={<GoneQuiet />} />
+            <Route path="/inquiries" element={<Navigate to="/contacts/inquiries" replace />} />
+            <Route path="/regulars" element={<Navigate to="/contacts/quiet" replace />} />
             <Route path="/content" element={<Content />} />
             <Route path="/content/:tab" element={<Content />} />
             <Route path="/money" element={<MoneyHub />} />

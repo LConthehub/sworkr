@@ -304,6 +304,7 @@ export function SourceForm({ source, onSaved }) {
     persona_id: source?.persona_id ? String(source.persona_id) : '',
     gift_share_percent: source?.gift_share_percent ?? '',
     tip_share_percent: source?.tip_share_percent ?? '',
+    transport_cut_percent: source?.transport_cut_percent ?? '',
   });
   const [workTypes, setWorkTypes] = useState([]);
   useEffect(() => {
@@ -343,6 +344,7 @@ export function SourceForm({ source, onSaved }) {
       persona_id: form.persona_id ? Number(form.persona_id) : null,
       gift_share_percent: numberOrNull(form.gift_share_percent),
       tip_share_percent: numberOrNull(form.tip_share_percent),
+      transport_cut_percent: numberOrNull(form.transport_cut_percent),
       currency: 'USD',
     };
     setSaving(true);
@@ -412,6 +414,12 @@ export function SourceForm({ source, onSaved }) {
         <input type="number" min="0" max="100" step="1" inputMode="decimal" value={form.tip_share_percent} onChange={set('tip_share_percent')} placeholder="Leave empty if tips are all yours" className={`${inputClass} max-w-[16rem]`} />
         <span className="block text-xs text-gray-500 mt-1">A house cut or tip-out. Logging a tip from here takes it off for you.</span>
       </Field>
+      {(form.kind === 'brothel' || form.transport_cut_percent !== '') && (
+        <Field label="Kelly cut (%)">
+          <input type="number" min="0" max="100" step="1" inputMode="decimal" value={form.transport_cut_percent} onChange={set('transport_cut_percent')} placeholder="e.g. 20" className={`${inputClass} max-w-[8rem]`} />
+          <span className="block text-xs text-gray-500 mt-1">The extra share taken when a driver brings the client. It comes off the top, before the house's own share. Tick "A driver brought this client" when you add income and it's worked out for you.</span>
+        </Field>
+      )}
       <h3 className="text-sm font-semibold text-gray-700 pt-1">Charges you pay them</h3>
       <p className="text-xs text-gray-500 -mt-2">
         Room & board, a house doctor, a license, room hire: anything you pay this place as well. Log each one from the
@@ -480,6 +488,8 @@ export function IncomeForm({ income, sources, defaultDate, onSaved }) {
     description: income?.description || '',
     notes: income?.notes || '',
     client_id: income?.client_id ? String(income.client_id) : '',
+    payment_method: income?.payment_method || '',
+    driver: !!income?.transport_cut,
   });
   const [feesTouched, setFeesTouched] = useState(!!income);
   // Gifts and allowances can say who they're from.
@@ -497,11 +507,13 @@ export function IncomeForm({ income, sources, defaultDate, onSaved }) {
     const s = sources.find((x) => String(x.id) === f.source_id);
     const gross = Number(f.gross) || 0;
     if (!s) return '';
+    // A Kelly cut comes off the top; the house's usual share is then taken from what's left.
+    const cut = f.driver && f.kind !== 'gift' && f.kind !== 'tips' ? gross * (s.transport_cut_percent || 0) / 100 : 0;
     // A gift: the place's share of its value (a brothel usually charges half), not its usual cut.
     const fees = f.kind === 'gift'
       ? gross * (s.gift_share_percent || 0) / 100
       : f.kind === 'tips' && s.tip_share_percent != null ? gross * s.tip_share_percent / 100
-      : gross * (s.fee_percent || 0) / 100 + (f.kind === 'shift' ? s.fee_per_shift || 0 : 0);
+      : cut + (gross - cut) * (s.fee_percent || 0) / 100 + (f.kind === 'shift' ? s.fee_per_shift || 0 : 0);
     return fees ? fees.toFixed(2) : '';
   };
   const update = (changes) => setForm((f) => {
@@ -539,6 +551,8 @@ export function IncomeForm({ income, sources, defaultDate, onSaved }) {
       notes: form.notes.trim() || null,
       currency: 'USD',
       client_id: fromSomeone && form.client_id ? Number(form.client_id) : null,
+      payment_method: form.payment_method.trim() || null,
+      transport_cut: form.driver && source?.transport_cut_percent ? Math.round(gross * source.transport_cut_percent) / 100 : null,
     };
     setSaving(true);
     try {
@@ -618,6 +632,18 @@ export function IncomeForm({ income, sources, defaultDate, onSaved }) {
             : ' If the place charges you a share of gifts (many brothels charge half), set it on the place and it fills in here.'}
         </p>
       )}
+      {source?.transport_cut_percent > 0 && form.kind !== 'gift' && form.kind !== 'tips' && (
+        <label className="flex items-start gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={form.driver} onChange={(e) => update({ driver: e.target.checked })} className="mt-1" />
+          <span>A driver brought this client <span className="text-xs text-gray-500">(Kelly cut: {source.transport_cut_percent}% off the top{gross > 0 ? `, ${money(gross * source.transport_cut_percent / 100)}` : ''}, then {source.name}'s share of the rest)</span></span>
+        </label>
+      )}
+      <Field label="How it was paid">
+        <input list="income-paid-how" value={form.payment_method} onChange={set('payment_method')} placeholder="Cash, bank transfer, platform payout…" className={inputClass} />
+        <datalist id="income-paid-how">
+          {['Cash', 'Bank transfer', 'Check', 'Platform payout', 'Card', 'Cash App', 'Venmo', 'PayPal', 'Zelle', 'Crypto', 'Gift card'].map((m) => <option key={m} value={m} />)}
+        </datalist>
+      </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Paid out?">
           <select value={form.status} onChange={set('status')} className={inputClass}>

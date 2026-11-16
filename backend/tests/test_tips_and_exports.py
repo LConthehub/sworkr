@@ -142,3 +142,19 @@ def test_upgrading_turns_crew_into_collaborators(tmp_path, monkeypatch):
     assert db.execute("SELECT name, role, industry FROM clients ORDER BY id").fetchall() == [
         ("Photo", "partner", "Crew"), ("Driver", "partner", "Driver"), ("Jade", "partner", None), ("Client", "client", "Law")]
     db.close()
+
+
+def test_income_says_how_it_was_paid_and_keeps_a_kelly_cut(api):
+    house = ok(api.post("/api/income-sources", json={"name": "The Ranch", "kind": "brothel", "fee_percent": 50, "transport_cut_percent": 20}), 201)
+    assert house["transport_cut_percent"] == 20
+    # $1,000 booking a driver brought in: 20% off the top ($200), then half of the remaining $800 to the house ($400).
+    made = ok(api.post("/api/income", json={"source_id": house["id"], "date": "2026-03-01T12:00:00Z", "kind": "booking", "gross": 1000,
+                                            "fees": 600, "transport_cut": 200, "payment_method": "  Cash "}), 201)
+    assert (made["fees"], made["transport_cut"], made["payment_method"]) == (600, 200, "Cash")
+    changed = ok(api.put(f"/api/income/{made['id']}", json={"source_id": house["id"], "date": "2026-03-01T12:00:00Z", "kind": "booking",
+                                                            "gross": 1000, "fees": 500, "payment_method": "Bank transfer"}))
+    assert (changed["fees"], changed["transport_cut"], changed["payment_method"]) == (500, None, "Bank transfer")
+    tip = ok(api.post("/api/tips", json={"amount": 20, "payment_method": "Cash"}))
+    assert [i["payment_method"] for i in ok(api.get("/api/income")) if i["id"] == tip["income_id"]] == ["Cash"]
+    assert api.post("/api/income-sources", json={"name": "x", "transport_cut_percent": 101}).status_code == 400
+    assert api.post("/api/income", json={"date": "2026-03-01T12:00:00Z", "gross": 10, "transport_cut": -1}).status_code == 400

@@ -13,11 +13,11 @@ const unreachable = (err) => !err.response || err.response.status >= 500 || err.
 
 async function send(entry) {
   if (entry.direction === 'tip') {
-    await axios.post('/api/tips', { amount: entry.amount, source_id: entry.source || null, date: entry.at, note: entry.note || null });
+    await axios.post('/api/tips', { amount: entry.amount, source_id: entry.source || null, date: entry.at, note: entry.note || null, payment_method: 'Cash' });
   } else if (entry.direction === 'in') {
     await axios.post('/api/income', {
       date: entry.at, gross: entry.amount, fees: 0, kind: 'booking', status: 'received',
-      description: entry.note || 'Cash', notes: 'Quick cash log',
+      description: entry.note || 'Cash', notes: 'Quick cash log', payment_method: 'Cash',
     });
   } else {
     await axios.post('/api/expenses', {

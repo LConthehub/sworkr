@@ -120,8 +120,8 @@ export default function Earnings() {
             )}
             {loading && <span className="w-4 h-4 animate-spin border-2 rounded-full border-sworkr-500/20 border-t-sworkr-500" role="status" aria-label="Loading" />}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden" role="group" aria-label="Compare">
+          <div className="flex flex-wrap items-center gap-2 min-w-0 max-w-full">
+            <div className="flex max-w-full overflow-x-auto rounded-lg border border-gray-200 whitespace-nowrap" role="group" aria-label="Compare">
               {VIEWS.filter((v) => !v.needsPersonas || personas.length > 0).map((v) => (
                 <button
                   key={v.id}
@@ -422,7 +422,7 @@ function CompareTable({ items, firstColumn, onPick }) {
 }
 
 /**
- * A stay at one of your places: what you earned there, the house's share, what it charged you, and so what
+ * A tour at one of your workplaces: what you earned there, the house's share, what it charged you, and so what
  * you should be paid. For checking against the house's own sheet.
  */
 function StayStatement({ statement: s }) {
@@ -434,8 +434,8 @@ function StayStatement({ statement: s }) {
   );
   return (
     <section className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
-      <h3 className="font-semibold text-gray-800">Stay statement · {s.place.name}</h3>
-      <p className="text-xs text-gray-500 mb-2">Check it against the house's settlement sheet. Income and bookings logged at this place during the stay, and the charges logged for it.</p>
+      <h3 className="font-semibold text-gray-800">Tour statement · {s.place.name}</h3>
+      <p className="text-xs text-gray-500 mb-2">Income and bookings logged at this place during the tour, and the charges logged for it.</p>
       <dl className="text-sm max-w-md">
         {row('Earned', money(s.gross))}
         {row(`House share${s.place.fee_percent ? ` (${s.place.fee_percent}%)` : ''}`, `− ${money(s.house_share)}`)}
