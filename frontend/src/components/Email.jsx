@@ -20,11 +20,21 @@ export function EmailPanel() {
   const [notSetUp, setNotSetUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(null); // a uid
+  // With more than one email account, a switch between them. Each is its own inbox.
+  const [accounts, setAccounts] = useState([]);
+  const [account, setAccount] = useState(1);
+  useEffect(() => {
+    axios.get('/api/mail/accounts').then(({ data: d }) => {
+      const on = d.accounts.filter((a) => a.enabled);
+      setAccounts(on);
+      if (on.length && !on.some((a) => a.account === 1)) setAccount(on[0].account);
+    }).catch(() => {});
+  }, []);
 
   const load = useCallback(async (fresh = false) => {
     setLoading(true);
     try {
-      const { data: result } = await axios.get('/api/mail/messages', { params: { which, fresh } });
+      const { data: result } = await axios.get('/api/mail/messages', { params: { which, fresh, account } });
       setData(result);
       setError('');
       setNotSetUp(false);
@@ -34,7 +44,7 @@ export function EmailPanel() {
     } finally {
       setLoading(false);
     }
-  }, [which]);
+  }, [which, account]);
   useEffect(() => { load(); }, [load]);
 
   if (notSetUp) {
@@ -53,7 +63,13 @@ export function EmailPanel() {
     <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="font-semibold text-gray-800">Email</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {accounts.length > 1 && (
+            <select value={account} onChange={(e) => { setData(null); setAccount(Number(e.target.value)); }} aria-label="Email account"
+              className="rounded-lg border border-gray-200 px-2 py-1 text-sm text-gray-700 bg-white max-w-[10rem]">
+              {accounts.map((a) => <option key={a.account} value={a.account}>{a.label}</option>)}
+            </select>
+          )}
           <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm" role="group" aria-label="Which emails">
             {[['unread', 'Unread'], ['important', 'Important']].map(([id, label]) => (
               <button key={id} onClick={() => setWhich(id)} aria-pressed={which === id}
@@ -96,12 +112,12 @@ export function EmailPanel() {
       {data && data.total > data.messages.length && (
         <p className="text-xs text-gray-400 mt-2">Showing the newest {data.messages.length} of {data.total}.</p>
       )}
-      {open && <MessageModal uid={open} onClose={() => setOpen(null)} onChanged={() => load(true)} />}
+      {open && <MessageModal uid={open} account={account} onClose={() => setOpen(null)} onChanged={() => load(true)} />}
     </div>
   );
 }
 
-function MessageModal({ uid, onClose, onChanged }) {
+function MessageModal({ uid, account = 1, onClose, onChanged }) {
   const navigate = useNavigate();
   const [m, setM] = useState(null);
   const [error, setError] = useState('');
@@ -114,7 +130,7 @@ function MessageModal({ uid, onClose, onChanged }) {
 
   const load = useCallback(async () => {
     try {
-      const { data } = await axios.get(`/api/mail/messages/${uid}`);
+      const { data } = await axios.get(`/api/mail/messages/${uid}`, { params: { account } });
       setM(data);
     } catch (err) {
       setError(errorMessage(err, "Couldn't open that email."));
@@ -124,7 +140,7 @@ function MessageModal({ uid, onClose, onChanged }) {
 
   const setFlags = async (changes) => {
     try {
-      await axios.post(`/api/mail/messages/${uid}/flags`, changes);
+      await axios.post(`/api/mail/messages/${uid}/flags`, changes, { params: { account } });
       setM((x) => ({ ...x, ...changes }));
       onChanged();
     } catch (err) {
@@ -135,7 +151,7 @@ function MessageModal({ uid, onClose, onChanged }) {
     setSending(true);
     setError('');
     try {
-      const { data } = await axios.post(`/api/mail/messages/${uid}/reply`, { body: reply, reply_all: replyAll });
+      const { data } = await axios.post(`/api/mail/messages/${uid}/reply`, { body: reply, reply_all: replyAll }, { params: { account } });
       setReplying(false);
       setReply('');
       setNotice(data.demo ? 'Demo: the reply was not actually sent.' : `Sent to ${data.sent_to}.`);

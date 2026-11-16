@@ -54,7 +54,13 @@ class MailError(Exception):
 # ==================== SETTINGS (per person) ====================
 
 KEYS = ("mail_enabled", "mail_imap_host", "mail_imap_port", "mail_imap_security", "mail_smtp_host", "mail_smtp_port",
-        "mail_smtp_security", "mail_username", "mail_password", "mail_from_name", "mail_from_address", "mail_folder")
+        "mail_smtp_security", "mail_username", "mail_password", "mail_from_name", "mail_from_address", "mail_folder", "mail_label")
+MAX_ACCOUNTS = 5
+
+
+def _prefix(account: int) -> str:
+    """Where an account's settings are kept. The first account has the names it always had."""
+    return "mail_" if account == 1 else f"mail{account}_"
 
 # Common providers, to fill the form in. Every one of them needs an app password, not the account password.
 PROVIDERS = {
@@ -83,8 +89,9 @@ def _set(db, user_id: int, key: str, value: Optional[str]):
                "ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value", (user_id, key, vault.seal(key, value)))
 
 
-def load_settings(db, user_id: int) -> dict:
-    s = {k[5:]: _get(db, user_id, k) for k in KEYS}
+def load_settings(db, user_id: int, account: int = 1) -> dict:
+    s = {k[5:]: _get(db, user_id, _prefix(account) + k[5:]) for k in KEYS}
+    s["account"] = account
     s["enabled"] = s["enabled"] == "1"
     s["imap_port"] = int(s["imap_port"] or 993)
     s["smtp_port"] = int(s["smtp_port"] or 587)
@@ -420,10 +427,10 @@ def _forget(user_id: int):
         _cache.pop(key, None)
 
 
-def _settings_or_fail(request: Request) -> dict:
+def _settings_or_fail(request: Request, account: int = 1) -> dict:
     db = _get_db()
     try:
-        s = load_settings(db, request.state.user["id"])
+        s = load_settings(db, request.state.user["id"], account)
     finally:
         db.close()
     if not s["enabled"]:
@@ -463,6 +470,10 @@ class MailSettings(BaseModel):
     from_name: Optional[str] = None
     from_address: Optional[str] = None
     folder: str = "INBOX"
+    label: Optional[str] = None         # what you call this account: "Work", a persona's name
+
+
+Account = Query(1, ge=1, le=MAX_ACCOUNTS, description="Which of your email accounts (1 to 5)")
 
 
 def _public(s: dict) -> dict:
@@ -487,13 +498,13 @@ def _check(body: MailSettings):
 _SERVER_FIELDS = ("imap_host", "imap_port", "imap_security", "smtp_host", "smtp_port", "smtp_security", "username")
 
 
-def _password_for(db, user_id: int, body: MailSettings) -> Optional[str]:
+def _password_for(db, user_id: int, body: MailSettings, account: int = 1) -> Optional[str]:
     """The password typed in, or else the saved one, but only for the same servers and username it was saved for.
     Otherwise anyone with a logged-in session could point the settings at their own server and collect it."""
     typed = (body.password or "").strip()
     if typed:
         return typed
-    saved = load_settings(db, user_id)
+    saved = load_settings(db, user_id, account)
     if not saved.get("password"):
         return None
     def norm(value) -> str:
@@ -503,49 +514,82 @@ def _password_for(db, user_id: int, body: MailSettings) -> Optional[str]:
     return saved["password"]
 
 
-@router.get("/settings")
-def get_settings(request: Request):
+@router.get("/accounts")
+def list_accounts(request: Request):
+    """The email accounts this person has set up, and the next free slot (None when all five are used)."""
+    if _demo():
+        return {"accounts": [{"account": 1, "label": "Demo inbox", "username": "demo@example.com", "enabled": True}], "next": None}
     db = _get_db()
     try:
-        return _public(load_settings(db, request.state.user["id"]))
+        every = [load_settings(db, request.state.user["id"], n) for n in range(1, MAX_ACCOUNTS + 1)]
+    finally:
+        db.close()
+    used = [s for s in every if s["username"] or s["imap_host"]]
+    return {"accounts": [{"account": s["account"], "label": s["label"] or s["from_address"] or s["username"] or f"Account {s['account']}",
+                          "username": s["username"], "enabled": s["enabled"]} for s in used],
+            "next": next((s["account"] for s in every if not (s["username"] or s["imap_host"])), None)}
+
+
+@router.delete("/settings", status_code=204)
+def remove_account(request: Request, account: int = Account):
+    """Forget an email account: its servers, its username and its saved password. Nothing is deleted from the mailbox."""
+    if _demo():
+        raise HTTPException(status_code=403, detail="Email is turned off in the demo.")
+    user_id = request.state.user["id"]
+    db = _get_db()
+    try:
+        for key in KEYS:
+            db.execute("DELETE FROM user_settings WHERE user_id = ? AND key = ?", (user_id, _prefix(account) + key[5:]))
+        db.commit()
+        _forget(user_id)
+    finally:
+        db.close()
+
+
+@router.get("/settings")
+def get_settings(request: Request, account: int = Account):
+    db = _get_db()
+    try:
+        return _public(load_settings(db, request.state.user["id"], account))
     finally:
         db.close()
 
 
 @router.put("/settings")
-def save_settings(body: MailSettings, request: Request):
+def save_settings(body: MailSettings, request: Request, account: int = Account):
     if _demo():
         raise HTTPException(status_code=403, detail="Email is turned off in the demo. Never enter real account details in a demo.")
     _check(body)
     user_id = request.state.user["id"]
     db = _get_db()
     try:
-        password = _password_for(db, user_id, body)
+        password = _password_for(db, user_id, body, account)
         if body.enabled and not (body.imap_host.strip() and body.username.strip() and password):
             raise HTTPException(status_code=400, detail="Fill in the incoming server, username and app password first")
         values = {"enabled": "1" if body.enabled else "0", "imap_host": body.imap_host.strip(), "imap_port": str(body.imap_port),
                   "imap_security": body.imap_security, "smtp_host": body.smtp_host.strip(), "smtp_port": str(body.smtp_port),
                   "smtp_security": body.smtp_security, "username": body.username.strip(), "password": password,
                   "from_name": _clean_header(body.from_name or "") or None,
-                  "from_address": (body.from_address or "").strip() or None, "folder": body.folder.strip() or "INBOX"}
+                  "from_address": (body.from_address or "").strip() or None, "folder": body.folder.strip() or "INBOX",
+                  "label": _clean_header(body.label or "")[:40] or None}
         for key, value in values.items():
-            _set(db, user_id, f"mail_{key}", value)
+            _set(db, user_id, _prefix(account) + key, value)
         db.commit()
         _forget(user_id)
-        return _public(load_settings(db, user_id))
+        return _public(load_settings(db, user_id, account))
     finally:
         db.close()
 
 
 @router.post("/test")
-def test_settings(body: MailSettings, request: Request):
+def test_settings(body: MailSettings, request: Request, account: int = Account):
     """Log in to the incoming and outgoing servers with these details, without saving them."""
     if _demo():
         raise HTTPException(status_code=403, detail="Email is turned off in the demo. Never enter real account details in a demo.")
     _check(body)
     db = _get_db()
     try:
-        password = _password_for(db, request.state.user["id"], body)
+        password = _password_for(db, request.state.user["id"], body, account)
     finally:
         db.close()
     s = {**body.model_dump(), "password": password or ""}
@@ -570,7 +614,7 @@ def test_settings(body: MailSettings, request: Request):
 
 @router.get("/messages")
 def list_messages(request: Request, which: str = Query("unread", description="unread or important"),
-                  limit: int = Query(25, ge=1, le=MAX_LIST), fresh: bool = False):
+                  limit: int = Query(25, ge=1, le=MAX_LIST), fresh: bool = False, account: int = Account):
     if which not in ("unread", "important"):
         raise HTTPException(status_code=400, detail="which must be unread or important")
     user_id = request.state.user["id"]
@@ -579,8 +623,8 @@ def list_messages(request: Request, which: str = Query("unread", description="un
         chosen = [m for m in box if (m["unread"] if which == "unread" else m["flagged"])]
         listed = [{k: m[k] for k in ("uid", "from", "subject", "date", "unread", "flagged")} for m in chosen]
         return {"messages": _with_contacts(user_id, listed[:limit]), "total": len(chosen), "demo": True}
-    s = _settings_or_fail(request)
-    key = (user_id, which, limit)
+    s = _settings_or_fail(request, account)
+    key = (user_id, account, which, limit)
     cached = _cache.get(key)
     if cached and not fresh and time.time() - cached[0] < CACHE_SECONDS:
         return cached[1]
@@ -595,14 +639,14 @@ def list_messages(request: Request, which: str = Query("unread", description="un
 
 
 @router.get("/messages/{uid}")
-def get_message(uid: int, request: Request):
+def get_message(uid: int, request: Request, account: int = Account):
     user_id = request.state.user["id"]
     if _demo():
         found = next((m for m in _demo_box(user_id) if m["uid"] == uid), None)
         if not found:
             raise HTTPException(status_code=404, detail="Message not found")
         return _with_contacts(user_id, [dict(found)])[0]
-    s = _settings_or_fail(request)
+    s = _settings_or_fail(request, account)
     try:
         with Mailbox(s) as box:
             return _with_contacts(user_id, [box.get(uid)])[0]
@@ -616,7 +660,7 @@ class Flags(BaseModel):
 
 
 @router.post("/messages/{uid}/flags")
-def set_flags(uid: int, body: Flags, request: Request):
+def set_flags(uid: int, body: Flags, request: Request, account: int = Account):
     user_id = request.state.user["id"]
     if _demo():
         found = next((m for m in _demo_box(user_id) if m["uid"] == uid), None)
@@ -627,7 +671,7 @@ def set_flags(uid: int, body: Flags, request: Request):
         if body.flagged is not None:
             found["flagged"] = body.flagged
         return {"ok": True}
-    s = _settings_or_fail(request)
+    s = _settings_or_fail(request, account)
     try:
         with Mailbox(s) as box:
             box.set_flags(uid, seen=None if body.unread is None else not body.unread, flagged=body.flagged)
@@ -643,7 +687,7 @@ class Reply(BaseModel):
 
 
 @router.post("/messages/{uid}/reply")
-def reply(uid: int, body: Reply, request: Request):
+def reply(uid: int, body: Reply, request: Request, account: int = Account):
     """Send a reply from your own account. It's quoted underneath, threaded, and kept in your Sent folder."""
     if not body.body.strip():
         raise HTTPException(status_code=400, detail="Write something first")
@@ -657,7 +701,7 @@ def reply(uid: int, body: Reply, request: Request):
         found["answered"] = True
         found["unread"] = False
         return {"ok": True, "sent_to": found["from"]["email"], "demo": True}
-    s = _settings_or_fail(request)
+    s = _settings_or_fail(request, account)
     try:
         with Mailbox(s) as box:
             original = box.get(uid)

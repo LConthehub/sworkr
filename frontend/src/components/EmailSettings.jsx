@@ -12,7 +12,7 @@ const HELP = {
 };
 
 /** Each person's own email account: read over IMAP, reply over SMTP. */
-export default function EmailSettings() {
+function EmailAccountForm({ account, onChanged }) {
   const [s, setS] = useState(null);
   const [form, setForm] = useState(null);
   const [provider, setProvider] = useState('other');
@@ -20,7 +20,7 @@ export default function EmailSettings() {
   const [working, setWorking] = useState('');
 
   useEffect(() => {
-    axios.get('/api/mail/settings').then(({ data }) => {
+    axios.get('/api/mail/settings', { params: { account } }).then(({ data }) => {
       setS(data);
       const match = Object.entries(data.providers).find(([, p]) => p.imap_host && p.imap_host === data.imap_host);
       setProvider(match ? match[0] : data.imap_host ? 'other' : 'gmail');
@@ -28,14 +28,14 @@ export default function EmailSettings() {
         enabled: data.enabled, imap_host: data.imap_host || '', imap_port: data.imap_port, imap_security: data.imap_security,
         smtp_host: data.smtp_host || '', smtp_port: data.smtp_port, smtp_security: data.smtp_security,
         username: data.username || '', password: '', from_name: data.from_name || '', from_address: data.from_address || '',
-        folder: data.folder || 'INBOX',
+        folder: data.folder || 'INBOX', label: data.label || '',
       });
       if (!data.imap_host) {
         const p = data.providers.gmail;
         setForm((f) => ({ ...f, ...pick(p) }));
       }
     }).catch((err) => setMessage({ error: errorMessage(err, 'Could not load your email settings') }));
-  }, []);
+  }, [account]);
 
   if (!form) return message?.error ? <p className="text-sm text-red-600">{message.error}</p> : null;
 
@@ -57,15 +57,16 @@ export default function EmailSettings() {
     }
   };
   const test = () => run('test', async () => {
-    const { data } = await axios.post('/api/mail/test', body());
+    const { data } = await axios.post('/api/mail/test', body(), { params: { account } });
     setMessage({ ok: `Connected. ${data.unread} unread email${data.unread === 1 ? '' : 's'} in your inbox.` });
   });
   const save = (e) => {
     e.preventDefault();
     run('save', async () => {
-      const { data } = await axios.put('/api/mail/settings', body());
+      const { data } = await axios.put('/api/mail/settings', body(), { params: { account } });
       setS(data);
       setForm({ ...form, password: '' });
+      onChanged?.();
       setMessage({ ok: data.enabled ? 'Saved. Your email shows on the dashboard.' : 'Saved. Email is off.' });
     });
   };
@@ -78,6 +79,9 @@ export default function EmailSettings() {
           The dashboard shows a made-up inbox instead, and replies aren't sent anywhere.
         </p>
       )}
+      <Field label="What to call this account (optional)">
+        <input value={form.label} onChange={set('label')} maxLength={40} placeholder="e.g. Work, Personal, a persona's name" className={`${inputClass} max-w-xs`} />
+      </Field>
       <p className="text-sm text-gray-600">
         Shows your unread and important (flagged or starred) emails on the dashboard, so you can reply and add senders as
         contacts. Emails are read straight from your mail server and are never stored in sworkr. They're shown as plain
@@ -163,4 +167,45 @@ function pick(p) {
     imap_host: p.imap_host, imap_port: p.imap_port, imap_security: p.imap_security,
     smtp_host: p.smtp_host, smtp_port: p.smtp_port, smtp_security: p.smtp_security,
   };
+}
+
+/** Email accounts: up to five, each with its own servers and app password. */
+export default function EmailSettings() {
+  const [list, setList] = useState(null);
+  const [account, setAccount] = useState(1);
+  const load = () => axios.get('/api/mail/accounts').then(({ data }) => { setList(data); return data; }).catch(() => setList({ accounts: [], next: null }));
+  useEffect(() => { load(); }, []);
+  if (!list) return null;
+  const tabs = list.accounts.some((a) => a.account === account) || account === list.next ? list.accounts : [...list.accounts];
+  const isNew = !list.accounts.some((a) => a.account === account);
+  const remove = async () => {
+    if (!window.confirm('Remove this email account from sworkr? Nothing is deleted from the mailbox itself.')) return;
+    await axios.delete('/api/mail/settings', { params: { account } }).catch(() => {});
+    const data = await load();
+    setAccount(data.accounts?.[0]?.account || 1);
+  };
+  return (
+    <div className="space-y-4">
+      {(list.accounts.length > 1 || list.next !== null) && list.accounts.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1" role="tablist" aria-label="Email accounts">
+          {tabs.map((a) => (
+            <button key={a.account} type="button" role="tab" aria-selected={account === a.account} onClick={() => setAccount(a.account)}
+              className={`px-3 py-1.5 rounded-full text-sm border ${account === a.account ? 'bg-sworkr-500 text-white border-sworkr-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+              {a.label}{!a.enabled && ' (off)'}
+            </button>
+          ))}
+          {list.next !== null && (
+            <button type="button" onClick={() => setAccount(list.next)}
+              className={`px-3 py-1.5 rounded-full text-sm border border-dashed ${account === list.next && isNew ? 'bg-sworkr-50 text-sworkr-700 border-sworkr-300' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+              + Add another account
+            </button>
+          )}
+        </div>
+      )}
+      <EmailAccountForm key={account} account={account} onChanged={load} />
+      {!isNew && list.accounts.length > 0 && (
+        <button type="button" onClick={remove} className="text-sm text-red-500 hover:text-red-700">Remove this account</button>
+      )}
+    </div>
+  );
 }

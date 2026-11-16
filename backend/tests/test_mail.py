@@ -249,3 +249,61 @@ def test_saved_password_is_never_sent_to_a_different_server(api, monkeypatch):
     # The same servers still reuse it, and a typed password works anywhere.
     assert api.put("/api/mail/settings", json={**SETTINGS, "password": "", "imap_host": "IMAP.example.com "}).status_code == 200
     assert api.put("/api/mail/settings", json={**SETTINGS, "imap_host": "imap.new.example", "password": "new-pw"}).status_code == 200
+
+
+# ---------- more than one account ----------
+
+SECOND = {**SETTINGS, "imap_host": "imap.other.example", "smtp_host": "smtp.other.example", "username": "scarlett@other.example",
+          "password": "second-app-password", "label": "Scarlett"}
+
+
+def test_a_second_account_is_kept_apart_from_the_first(api, box, monkeypatch):
+    connected(api)
+    assert api.get("/api/mail/accounts").json() == {
+        "accounts": [{"account": 1, "label": "me@example.com", "username": "me@example.com", "enabled": True}], "next": 2}
+    assert api.get("/api/mail/messages", params={"account": 2}).status_code == 409             # not set up yet
+
+    # The first account's saved password can't be borrowed for a different server.
+    assert api.put("/api/mail/settings", params={"account": 2}, json={**SECOND, "password": ""}).status_code == 400
+    saved = api.put("/api/mail/settings", params={"account": 2}, json=SECOND)
+    assert saved.status_code == 200, saved.text
+    assert (saved.json()["account"], saved.json()["label"], saved.json()["username"], saved.json()["has_password"]) == (2, "Scarlett", "scarlett@other.example", True)
+    assert "second-app-password" not in saved.text
+    assert api.get("/api/mail/settings").json()["username"] == "me@example.com"                # the first is untouched
+    assert [(a["account"], a["label"]) for a in api.get("/api/mail/accounts").json()["accounts"]] == [(1, "me@example.com"), (2, "Scarlett")]
+    assert api.get("/api/mail/accounts").json()["next"] == 3
+
+    # Each account reads its own mailbox, with its own login.
+    used = []
+    real = mail.Mailbox
+
+    class Recording(real):
+        def __init__(self, settings):
+            used.append((settings["account"], settings["username"], settings["password"]))
+            super().__init__(settings)
+    monkeypatch.setattr(mail, "Mailbox", Recording)
+    assert api.get("/api/mail/messages", params={"account": 2, "fresh": True}).status_code == 200
+    assert api.get("/api/mail/messages", params={"fresh": True}).status_code == 200
+    assert api.get("/api/mail/messages/1", params={"account": 2}).status_code == 200
+    assert used == [(2, "scarlett@other.example", "second-app-password"), (1, "me@example.com", "app-password-123"),
+                    (2, "scarlett@other.example", "second-app-password")]
+
+    # Both passwords are sealed in the database, each under its own name.
+    db = main.get_db()
+    try:
+        stored = {r["key"]: r["value"] for r in db.execute("SELECT key, value FROM user_settings WHERE key LIKE '%password'")}
+    finally:
+        db.close()
+    assert stored["mail2_password"].startswith("sealed:") and "second-app-password" not in str(stored)
+
+    assert api.delete("/api/mail/settings", params={"account": 2}).status_code == 204
+    assert [a["account"] for a in api.get("/api/mail/accounts").json()["accounts"]] == [1]
+    assert api.get("/api/mail/settings", params={"account": 2}).json()["has_password"] is False
+    assert api.get("/api/mail/settings", params={"account": 6}).status_code == 422
+    assert TestClient(main.app).get("/api/mail/accounts").status_code == 401
+
+
+def test_another_person_never_sees_your_accounts(api, admin, box):
+    api.put("/api/mail/settings", params={"account": 2}, json=SECOND)
+    assert admin.get("/api/mail/settings", params={"account": 2}).json()["has_password"] is False
+    assert all(a["username"] != "scarlett@other.example" for a in admin.get("/api/mail/accounts").json()["accounts"])
