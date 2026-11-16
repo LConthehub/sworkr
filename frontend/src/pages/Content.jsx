@@ -7,7 +7,7 @@ import { Campaigns, Toolkit, useCampaigns, usePlaces, useSnippets } from '../com
 import Listings from '../components/Listings';
 import Customs from '../components/Customs';
 import Shoots from '../components/Shoots';
-import { dayLabel, formatTime, fromDateTimeInputs, money, repeatDates, toDateInput, toTimeInput } from '../colors';
+import { dayLabel, formatTime, fromDateTimeInputs, money, monthGrid, repeatDates, toDateInput, toTimeInput } from '../colors';
 
 /** Suggestions only: any platform, ad site or your own website can be typed in. */
 export const PLATFORM_GROUPS = {
@@ -186,6 +186,7 @@ function Planner({ version, onEdit, onNew }) {
   const campaignId = search.get('campaign') || '';
   const campaignNames = Object.fromEntries(campaigns.map((c) => [c.id, c.name]));
   const load = useCallback(() => {
+    if (filter === 'month') return;      // the month view loads its own days
     const params = { ...(filter === 'all' ? {} : { status: filter }), ...(campaignId ? { campaign_id: campaignId } : {}) };
     axios.get('/api/posts', { params }).then(({ data }) => setPosts(data)).catch(() => setPosts([]));
   }, [filter, campaignId]);
@@ -203,7 +204,7 @@ function Planner({ version, onEdit, onNew }) {
     <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm" role="group" aria-label="Show">
-          {[['open', 'To do'], ['posted', 'Posted'], ['all', 'All']].map(([id, label]) => (
+          {[['open', 'To do'], ['posted', 'Posted'], ['all', 'All'], ['month', 'Month']].map(([id, label]) => (
             <button key={id} onClick={() => setFilter(id)} aria-pressed={filter === id} className={`px-3 py-1.5 ${filter === id ? 'bg-sworkr-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{label}</button>
           ))}
         </div>
@@ -221,7 +222,9 @@ function Planner({ version, onEdit, onNew }) {
         allow apps to): it reminds you when one is due (turn on Reminders in settings), you copy the text and post it, then mark it as posted.
       </p>
       {notice && <p className="text-sm text-emerald-700 mb-2">{notice}</p>}
-      {!posts ? null : posts.length === 0 ? (
+      {filter === 'month' ? (
+        <PlannerMonth campaignId={campaignId} campaignNames={campaignNames} version={version} onEdit={onEdit} onNew={onNew} />
+      ) : !posts ? null : posts.length === 0 ? (
         <p className="text-sm text-gray-400 py-8 text-center">{filter === 'open' ? 'Nothing planned. Plan a post or an ad renewal from a set in your library, or start a new one.' : 'Nothing here yet.'}</p>
       ) : (
         <div className="space-y-4">
@@ -237,6 +240,68 @@ function Planner({ version, onEdit, onNew }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** The planner as a month: posts on their days, and the day each ad runs out. */
+function PlannerMonth({ campaignId, campaignNames, version, onEdit, onNew }) {
+  const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [posts, setPosts] = useState([]);
+  const [ads, setAds] = useState([]);
+  const grid = monthGrid(month);
+  useEffect(() => {
+    const params = { start: grid[0].toISOString(), end: new Date(grid[41].getFullYear(), grid[41].getMonth(), grid[41].getDate() + 1).toISOString() };
+    if (campaignId) params.campaign_id = campaignId;
+    axios.get('/api/posts', { params }).then(({ data }) => setPosts(data)).catch(() => setPosts([]));
+    axios.get('/api/listings').then(({ data }) => setAds(data.listings.filter((l) => l.end_date && !l.paused))).catch(() => setAds([]));
+  }, [month, campaignId, version]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const byDay = {};
+  for (const p of posts) {
+    const when = p.posted_at || p.scheduled_at;
+    if (when && p.status !== 'skipped') (byDay[toDateInput(new Date(when))] ||= []).push(p);
+  }
+  const today = toDateInput(new Date());
+  const step = (n) => setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1));
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <button onClick={() => step(-1)} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Previous month">←</button>
+        <span className="font-semibold text-gray-700 w-40 text-center">{month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</span>
+        <button onClick={() => step(1)} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Next month">→</button>
+        <button onClick={() => setMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} className="text-xs text-sworkr-600 hover:text-sworkr-800">Today</button>
+      </div>
+      <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+        <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden min-w-[640px]">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <div key={d} className="bg-gray-50 text-xs font-medium text-gray-500 px-2 py-1">{d}</div>)}
+          {grid.map((d) => {
+            const key = toDateInput(d);
+            const inMonth = d.getMonth() === month.getMonth();
+            return (
+              <div key={key} className={`min-h-[5.5rem] p-1 ${inMonth ? 'bg-white' : 'bg-gray-50'}`}>
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs w-5 h-5 flex items-center justify-center rounded-full ${key === today ? 'bg-sworkr-500 text-white' : inMonth ? 'text-gray-600' : 'text-gray-300'}`}>{d.getDate()}</span>
+                  <button onClick={() => onNew({ scheduled_at: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 19).toISOString(), ...(campaignId ? { campaign_id: Number(campaignId) } : {}) })}
+                    className="text-gray-300 hover:text-sworkr-600 text-sm leading-none px-1" aria-label={`Plan a post on ${key}`}>+</button>
+                </div>
+                {ads.filter((l) => l.end_date === key).map((l) => (
+                  <Link key={`ad${l.id}`} to="/content/ads" className="block truncate text-[10px] px-1 py-0.5 mb-0.5 rounded bg-amber-100 text-amber-800" title={`${l.site} ad runs out`}>
+                    ⏳ {l.site} ad ends
+                  </Link>
+                ))}
+                {(byDay[key] || []).map((p) => (
+                  <button key={p.id} onClick={() => onEdit(p)} title={`${p.platform}${p.place ? ` ${p.place}` : ''} · ${STATUS[p.status].label}${campaignNames[p.campaign_id] ? ` · ${campaignNames[p.campaign_id]}` : ''}${p.caption ? `\n${p.caption}` : ''}`}
+                    className={`block w-full truncate text-left text-[10px] px-1 py-0.5 mb-0.5 rounded ${p.status === 'posted' ? 'bg-emerald-100 text-emerald-700' : p.status === 'idea' ? 'bg-gray-100 text-gray-600'
+                      : new Date(p.scheduled_at) < new Date() ? 'bg-red-100 text-red-700' : 'bg-sworkr-50 text-sworkr-600'}`}>
+                    {p.status === 'posted' ? '✓ ' : ''}{formatTime(new Date(p.posted_at || p.scheduled_at))} {p.platform}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <p className="text-xs text-gray-400 mt-2">Green is posted, red is overdue, grey is an idea. Tap a day's + to plan a post on it.</p>
     </div>
   );
 }

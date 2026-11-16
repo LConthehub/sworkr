@@ -121,6 +121,8 @@ def _fill(api):
         dict(name="Drew Hollis", contact_phone="+1-555-0164", screening_status="declined", do_not_see=True,
              do_not_see_reason="Pushed boundaries and refused to screen", bio="Do not book."),
     ]
+    for p, via in zip(people, ("Referral", "X", "Tryst", "Tryst", "Eros", "Tryst", "X", "Tryst")):
+        p["found_via"] = via
     clients = {p["name"].split()[0]: _ok(api.post("/api/clients", json=p)) for p in people}
     # Sometimes a handle is all you know.
     _ok(api.post("/api/clients", json={
@@ -425,6 +427,95 @@ def _fill(api):
         _ok(api.post("/api/tax-summary/payments", json={"year": today.year, "quarter": q, "amount": 900,
                                                          "paid_on": (_quarter_due(today.year, q) - timedelta(days=2)).isoformat(),
                                                          "note": "Paid at irs.gov"}))
+    # ---------- marketing: campaigns, places to post, saved text, ads, inquiries ----------
+    for label, body in (("Booking line", "Booking now, screening required. Link in bio."), ("Hashtags", "#miami #touring #companion"),
+                        ("Checking in", "Hi! It's been a while. I have a little time next week if you'd like to catch up."),
+                        ("Screening reply", "Thanks for getting in touch. To book I need your full name, a work link or two references, and a 25% deposit.")):
+        _ok(api.post("/api/snippets", json={"label": label, "body": body}))
+    _ok(api.post("/api/post-places", json={"platform": "Reddit", "name": "r/example_ads", "wait_days": 3,
+                                           "rules": "Title starts with the city. One post every 3 days. Verified posters only."}))
+    _ok(api.post("/api/post-places", json={"platform": "Telegram", "name": "My channel", "rules": "No prices in public posts."}))
+    tour_push = _ok(api.post("/api/campaigns", json={"name": "Miami tour", "goal": "Fill 8 bookings before I land", "tour_id": miami["id"],
+                                                     "start_date": day(-5).isoformat(), "end_date": day(13).isoformat()}))
+    _ok(api.post("/api/posts", json={
+        "platform": "X", "account": "@sunny_xo", "status": "posted", "scheduled_at": at(-4, 12), "posted_at": at(-4, 12),
+        "caption": "Miami, see you soon. Booking now.", "campaign_id": tour_push["id"], "inquiries": 4}))
+    _ok(api.post("/api/posts", json={
+        "platform": "X", "account": "@sunny_xo", "status": "scheduled", "scheduled_at": at(2, 12), "campaign_id": tour_push["id"],
+        "caption": "One week until Miami. A few evenings left.",
+        "also": [{"platform": "Reddit", "place": "r/example_ads", "caption": "Miami: visiting next week", "scheduled_at": at(2, 14)},
+                 {"platform": "Telegram", "place": "My channel"}]}))
+    _ok(api.post("/api/posts", json={"platform": "Bluesky", "status": "ready", "scheduled_at": at(-1, 18), "campaign_id": tour_push["id"],
+                                     "caption": "Miami dates are up."}))
+
+    for site, extra in (("Tryst", dict(end_date=day(2).isoformat(), cost=60, renew_days=30,
+                                       ad_text="Warm, witty and well travelled. Dinner dates and overnights. Screening required.")),
+                        ("Eros", dict(title="Miami", city="Miami", end_date=day(14).isoformat(), cost=250, renew_days=30, tour_id=miami["id"])),
+                        ("Slixa", dict(end_date=day(-2).isoformat(), cost=90, renew_days=30))):
+        ad = _ok(api.post("/api/listings", json={"site": site, **extra}))
+        if site != "Slixa":
+            _ok(api.post(f"/api/listings/{ad['id']}/renew", json={"days": 0 + extra["renew_days"], "paid_on": day(-20).isoformat(),
+                                                                  "log_expense": True}))
+            _ok(api.put(f"/api/listings/{ad['id']}", json={"site": site, **extra}))      # the dates above are the ones to show
+
+    for i, (name, via, stages, lost, wanted) in enumerate((
+            ("@quiet_guy", "Tryst", ("replied", "screening"), None, "2 hours, dinner, Friday in Miami"),
+            ("Marcus W", "Tryst", ("replied", "screening", "deposit", "booked"), None, "Overnight, the Saturday"),
+            ("Dan P", "X", ("replied",), "Wanted a discount", "1 hour"),
+            ("@late_night", "X", (), "Went quiet", "Asked for rates at 3am"),
+            ("Theo", "Referral", ("replied", "screening", "deposit"), None, "Dinner date, Miami, the Thursday"),
+            ("New person", "Eros", (), None, "90 minutes, incall"),
+            ("Sam W", "Tryst", (), None, "Duo with Jade?"))):
+        inquiry = _ok(api.post("/api/inquiries", json={"name": name, "found_via": via, "received_at": at(-(i + 1), 15),
+                                                       "contact": f"+1-555-02{i:02d}", "wanted": wanted}))
+        for stage in stages:
+            _ok(api.post(f"/api/inquiries/{inquiry['id']}/stage", json={"stage": stage}))
+        if lost:
+            _ok(api.post(f"/api/inquiries/{inquiry['id']}/stage", json={"stage": "lost", "lost_reason": lost}))
+
+    # ---------- custom content: a menu and a few orders ----------
+    for label, price, notes in (("5 minute video", 100, None), ("10 minute video", 180, None), ("Say my name", 20, "add-on"),
+                                ("Photo set (10)", 60, None), ("Rush, 24 hours", 40, "add-on")):
+        _ok(api.post("/api/customs/menu", json={"label": label, "price": price, "notes": notes}))
+
+    def custom(paid=0, delivered=False, **body):
+        order = _ok(api.post("/api/customs", json={"source_id": onlyfans, "persona_id": kitty["id"], **body}))
+        if paid:   # these sales are already in the OnlyFans payouts above, so they aren't logged a second time
+            _ok(api.post(f"/api/customs/{order['id']}/payment", json={"amount": paid, "log_income": False}))
+        if delivered:
+            _ok(api.post(f"/api/customs/{order['id']}/delivered", json={"delivery_note": "Sent in DMs"}))
+
+    custom(buyer="@newfan", title="Photo set (10)", price=60, requested_at=at(-1, 20))
+    custom(120, buyer="@alex_k", title="5 minute video + Say my name", price=120, due_date=day(-1).isoformat(),
+           details="Say 'Alex'. The red dress.", requested_at=at(-6, 20))
+    custom(50, buyer="@mystery", title="10 minute video", price=180, due_date=day(4).isoformat(), status="to_make", requested_at=at(-3, 20))
+    custom(100, True, buyer="@regular_sam", title="5 minute video", price=100, can_resell=True, requested_at=at(-14, 20))
+
+    # ---------- a shoot being planned ----------
+    shoot = _ok(api.post("/api/shoots", json={
+        "title": "Red lace boudoir with Jade", "status": "booked", "shoot_date": day(6).isoformat(), "start_time": "14:00", "hours": 3,
+        "concept": "Warm window light, slow and close. Two looks each, then together.", "location_name": "Studio 5",
+        "location_address": "12 Mill St", "location_notes": "Ring the bell. Parking behind. Best light before 4.",
+        "set_path": "2026-11 Collab with Jade", "persona_id": kitty["id"]}))
+    _ok(api.post(f"/api/shoots/{shoot['id']}/people", json={"name": "Alex", "role": "photographer", "fee": 300, "confirmed": True}))
+    _ok(api.post(f"/api/shoots/{shoot['id']}/people", json={
+        "contact_id": jade["id"], "role": "co-star", "id_checked": True, "confirmed": True,
+        "agreement": "Both can post it. Sales are 60/40 to whoever sells. Nothing goes out before the 1st."}))
+    for kind, label, extra in (("goal", "3 pay-per-view sets", {}), ("goal", "10 teasers for X", {}), ("goal", "A 30 second trailer", {}),
+                               ("shot", "On the bed, red lace, 20 photos", {}), ("shot", "Window light, robes, together", {}),
+                               ("wardrobe", "Red lace set", {"done": True}), ("wardrobe", "Black robe", {}), ("wardrobe", "Ring light", {}),
+                               ("prep", "Send Jade the release", {"due_date": day(2).isoformat()}), ("prep", "Pay the studio deposit", {"done": True}),
+                               ("budget", "Studio hire", {"amount": 150}), ("budget", "Lingerie", {"amount": 80}),
+                               ("marketing", "Teaser on X the day before", {"due_date": day(5).isoformat()}),
+                               ("marketing", "Pay-per-view drop on OnlyFans", {"due_date": day(12).isoformat()})):
+        _ok(api.post(f"/api/shoots/{shoot['id']}/items", json={"kind": kind, "label": label, **extra}))
+    _ok(api.post(f"/api/shoots/{shoot['id']}/campaign"))
+    _ok(api.post("/api/shoots", json={"title": "Beach day", "status": "idea", "concept": "Golden hour, the white set."}))
+
+    # ---------- health tests on this person's own schedule ----------
+    for kind in _ok(api.get("/api/test-kinds")):
+        if kind["key"] == "weekly":      # where she works, the panel is every 14 days
+            _ok(api.put(f"/api/test-kinds/{kind['id']}", json={"label": "Two-week panel", "every_days": 14, "cost": 85}))
 
 
 def _quarter_due(year, quarter):

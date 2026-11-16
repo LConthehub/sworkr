@@ -161,3 +161,26 @@ def test_people_only_see_and_use_their_own(api, admin):
     assert len(ok(api.get("/api/campaigns"))) == 1 and len(ok(api.get("/api/post-places"))) == 1 and len(ok(api.get("/api/snippets"))) == 1
     for path in ("/api/campaigns", "/api/post-places", "/api/snippets"):
         assert TestClient(main.app).get(path).status_code == 401
+
+
+def test_a_tour_campaign_can_suggest_its_posts(api):
+    from datetime import datetime, timedelta, timezone
+    today = datetime.now(timezone.utc).date()
+    first, last = today + timedelta(days=10), today + timedelta(days=14)
+    tour = ok(api.post("/api/tours", json={"name": "Chicago", "start_date": first.isoformat(), "end_date": last.isoformat(),
+                                           "starts_at": f"{first}T00:00:00Z", "ends_at": f"{last + timedelta(days=1)}T00:00:00Z"}), 201)
+    camp = ok(api.post("/api/campaigns", json={"name": "Chicago tour", "tour_id": tour["id"], "set_path": "Teasers"}), 201)
+    made = ok(api.post(f"/api/campaigns/{camp['id']}/plan", json={"platforms": ["X", " Reddit ", "x "], "hour_utc": 17}), 201)
+    assert made["created"] == 8 and made["campaign"]["posts"] == 8          # two weeks before has already gone: 4 days x 2 platforms
+    posts = ok(api.get("/api/posts", params={"campaign_id": camp["id"]}))
+    assert {p["status"] for p in posts} == {"idea"} and {p["platform"] for p in posts} == {"X", "Reddit"}
+    assert sorted({p["scheduled_at"][:10] for p in posts}) == [d.isoformat() for d in (first - timedelta(days=7), first - timedelta(days=1), first, last)]
+    assert all(p["scheduled_at"][11:13] == "17" and p["set_path"] == "Teasers" for p in posts)
+    assert any("Chicago" in p["caption"] and "One week to go" in p["caption"] for p in posts)
+    again = ok(api.post(f"/api/campaigns/{camp['id']}/plan", json={"platforms": ["X", "Bluesky"]}), 201)
+    assert again["created"] == 4                                             # only the new platform
+
+    plain = ok(api.post("/api/campaigns", json={"name": "No tour"}), 201)
+    assert api.post(f"/api/campaigns/{plain['id']}/plan", json={"platforms": ["X"]}).status_code == 400
+    assert api.post(f"/api/campaigns/{camp['id']}/plan", json={"platforms": [" "]}).status_code == 400
+    assert api.post("/api/campaigns/999999/plan", json={"platforms": ["X"]}).status_code == 404

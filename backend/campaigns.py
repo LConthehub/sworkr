@@ -11,7 +11,7 @@ Promo posts, organized.
 As with the rest of the planner, sworkr posts nothing itself. This only keeps track.
 """
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Callable, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
@@ -135,6 +135,63 @@ def update_campaign(campaign_id: int, body: CampaignIn, request: Request):
         """, (*_campaign_values(db, owner, body), _now(), campaign_id, owner))
         db.commit()
         return _campaign_rows(db, owner, campaign_id)[0]
+    finally:
+        db.close()
+
+
+class PlanIn(BaseModel):
+    platforms: List[str]
+    hour_utc: int = 17                    # the browser sends the UTC hour that is midday for the person
+
+
+# A tour's usual run of posts: (days from the tour's first day, or None for its last day; what to say).
+TOUR_POSTS = [(-14, "Announce it: {city}, {dates}. Booking is open."), (-7, "One week to go: {city}, {dates}. A few times left."),
+              (-1, "Arriving tomorrow: {city}. Last chance to book ahead."), (0, "I'm here: {city} until {last}."),
+              (None, "Last day in {city}. Back soon.")]
+
+
+@router.post("/api/campaigns/{campaign_id}/plan", status_code=201)
+def plan_tour_posts(campaign_id: int, body: PlanIn, request: Request):
+    """
+    For a campaign that's for a tour: add the usual run of posts as ideas, on each platform asked for. Two
+    weeks before, a week before, the day before, the day of arrival and the last day. Days already gone are
+    left out, and so is anything this was already asked for. The wording is a starting point to rewrite.
+    """
+    owner = _owner(request)
+    platforms = list({p.strip().lower(): p.strip()[:60] for p in reversed(body.platforms) if p.strip()}.values())[::-1]   # "X" and "x" are one
+    if not platforms or len(platforms) > 10 or not (0 <= body.hour_utc <= 23):
+        raise HTTPException(status_code=400, detail="Say which platforms (up to 10)")
+    db = _get_db()
+    try:
+        found = _campaign_rows(db, owner, campaign_id)
+        if not found:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+        tour = db.execute("SELECT * FROM tours WHERE id = ? AND owner_id = ?", (found[0]["tour_id"], owner)).fetchone()
+        if not tour:
+            raise HTTPException(status_code=400, detail="This works for a campaign that's for a tour. Edit the campaign and choose its tour.")
+        first, last = date.fromisoformat(tour["start_date"]), date.fromisoformat(tour["end_date"])
+        words = {"city": tour["name"] or tour["location"] or "the tour", "dates": f"{first:%b} {first.day} to {last:%b} {last.day}",
+                 "last": f"{last:%b} {last.day}"}
+        today = datetime.now(timezone.utc).date()
+        have = {(r["platform"].lower(), r["scheduled_at"][:10]) for r in db.execute(
+            "SELECT platform, scheduled_at FROM posts WHERE campaign_id = ? AND scheduled_at IS NOT NULL", (campaign_id,))}
+        made = 0
+        for offset, text in TOUR_POSTS:
+            day = last if offset is None else first + timedelta(days=offset)
+            if day < today or (offset is None and last == first):
+                continue
+            when = datetime.combine(day, time(body.hour_utc), timezone.utc).isoformat(timespec="seconds")
+            for platform in platforms:
+                if (platform.lower(), when[:10]) in have:
+                    continue
+                have.add((platform.lower(), when[:10]))
+                db.execute("""
+                    INSERT INTO posts (platform, scheduled_at, status, caption, file_paths, campaign_id, set_path, owner_id, created_at, updated_at)
+                    VALUES (?, ?, 'idea', ?, '[]', ?, ?, ?, ?, ?)
+                """, (platform, when, text.format(**words), campaign_id, found[0]["set_path"], owner, _now(), _now()))
+                made += 1
+        db.commit()
+        return {"created": made, "campaign": _campaign_rows(db, owner, campaign_id)[0]}
     finally:
         db.close()
 

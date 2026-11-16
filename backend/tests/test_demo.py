@@ -44,6 +44,11 @@ out["stay"] = [st["gross"] > 0, st["charges_total"] > 0, st["place"]["name"]]
 out["arrangements"] = [a["client_name"] for a in c.get("/api/arrangements").json()]
 out["documents"] = len(c.get("/api/documents").json()["documents"])
 out["miles"] = c.get("/api/tax-summary/mileage", params={"year": datetime.date.today().year}).json()["miles"]
+out["marketing"] = [len(c.get("/api/campaigns").json()), len(c.get("/api/inquiries", params={"show": "all"}).json()), len(c.get("/api/listings").json()["listings"]), len(c.get("/api/customs", params={"show": "all"}).json()["orders"]), len(c.get("/api/shoots", params={"show": "all"}).json()), len(c.get("/api/customs/menu").json())]
+year = datetime.date.today().year
+found = c.get("/api/marketing/found-via", params={"start": f"{year - 1}-01-01T00:00:00Z", "end": f"{year + 1}-01-01T00:00:00Z"}).json()
+out["found_via"] = sorted(r["label"] for r in found["rows"] if r["income"] > 0)
+out["test_kinds"] = sorted((k["label"], k["every_days"]) for k in c.get("/api/test-kinds").json())
 out["change_password"] = c.post("/api/auth/change-password", json={"current_password": "demo-password-1", "new_password": "something-else"}).status_code
 print("RESULT" + json.dumps(out))
 """
@@ -76,6 +81,9 @@ def test_demo_reset_builds_a_complete_sample():
     assert out["clients_kept_phones"] >= 5            # adding personas kept the contacts' details
     assert out["stay"] == [True, True, "The Velvet Room"]
     assert out["arrangements"] == ["Robert"] and out["documents"] == 2 and out["miles"] > 0
+    assert out["marketing"] == [2, 7, 3, 4, 2, 5]      # campaigns (one made from the shoot), inquiries, ads, customs, shoots, menu
+    assert "Tryst" in out["found_via"] and "Referral" in out["found_via"]
+    assert ["Two-week panel", 14] in out["test_kinds"]
 
 
 def test_the_demo_refuses_passkeys_and_bad_date_lists(monkeypatch):

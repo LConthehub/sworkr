@@ -28,6 +28,19 @@ export function Campaigns({ version, onPlan }) {
   const [showOld, setShowOld] = useState(false);
   const shown = campaigns.filter((c) => showOld || !c.archived);
   const done = () => { setEditing(null); reload(); };
+  const [notice, setNotice] = useState('');
+  const suggest = async (c) => {
+    const answer = window.prompt('Which platforms should the tour posts be for? Separate them with commas.', c.platforms.join(', ') || 'X');
+    if (answer === null) return;
+    try {
+      // 12 noon here, as an hour in UTC
+      const { data } = await axios.post(`/api/campaigns/${c.id}/plan`, { platforms: answer.split(','), hour_utc: new Date(2000, 0, 1, 12).getUTCHours() });
+      setNotice(data.created ? `Added ${data.created} post idea${data.created === 1 ? '' : 's'} to ${c.name}. Open "See its posts" to rewrite and schedule them.` : 'Nothing to add: those posts are already there, or the dates have passed.');
+      reload();
+    } catch (err) {
+      setNotice(errorMessage(err, 'Could not add the posts'));
+    }
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
@@ -39,6 +52,7 @@ export function Campaigns({ version, onPlan }) {
         A campaign is one push: a tour announcement, a set launch, a week you want to fill. Put its posts together here so you can see
         what's gone out, what's late and what it brought in.
       </p>
+      {notice && <p className="text-sm text-emerald-700 mb-3">{notice}</p>}
       {shown.length === 0 ? (
         <p className="text-sm text-gray-400 py-8 text-center">No campaigns yet. Start one for your next tour or set.</p>
       ) : (
@@ -71,6 +85,7 @@ export function Campaigns({ version, onPlan }) {
               )}
               <div className="flex flex-wrap gap-2 mt-3">
                 <button onClick={() => onPlan({ campaign_id: c.id, set_path: c.set_path || null })} className={buttonClass}>+ Post</button>
+                {c.tour_id && <button onClick={() => suggest(c)} className={quietButtonClass} title="Adds the usual run of tour posts as ideas">Suggest tour posts</button>}
                 <Link to={`/content/planner?campaign=${c.id}`} className={quietButtonClass}>See its posts</Link>
               </div>
             </li>
