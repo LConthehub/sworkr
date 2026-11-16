@@ -14,7 +14,7 @@ A failure here never stops the local backup: it is recorded and shown on the Bac
 import logging
 import os
 import re
-import sqlite3
+import dbfile as sqlite3
 import tempfile
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone

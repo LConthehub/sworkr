@@ -3,7 +3,7 @@ Run with:  docker compose run --rm tests"""
 import csv
 import io
 import os
-import sqlite3
+import dbfile as sqlite3  # noqa: E402  (the encrypted engine, like the app)
 import sys
 import tempfile
 import uuid

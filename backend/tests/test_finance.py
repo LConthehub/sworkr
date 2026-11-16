@@ -331,3 +331,15 @@ def test_income_compared_by_kind_of_work_and_by_place(api):
     labels = {x["label"]: x["net"] for x in by_place["rows"]}
     assert labels == {"In-person bookings": 600, "OnlyFans": 400, "My club": 240, "Side gig": 100}
     assert api.get("/api/earnings/by-source", params={**range_, "group": "moon"}).status_code == 400
+
+
+def test_choosing_a_kind_of_work_again_doesnt_add_a_renamed_place_twice(api):
+    r = api.put("/api/work-profile", json={"work_types": ["brothel"]})
+    assert r.status_code == 200, r.text
+    mine = [s for s in api.get("/api/income-sources").json() if s["kind"] == "brothel"]
+    assert len(mine) == 1
+    body = {k: mine[0][k] for k in ("kind", "fee_percent", "fee_per_shift", "token_value", "payout_note", "notes", "archived", "work_type")}
+    assert api.put(f"/api/income-sources/{mine[0]['id']}", json={**body, "name": "The Velvet Room"}).status_code == 200
+    assert api.put("/api/work-profile", json={"work_types": ["brothel", "dancer"]}).status_code == 200
+    names = [s["name"] for s in api.get("/api/income-sources").json() if s["kind"] == "brothel"]
+    assert names == ["The Velvet Room"]

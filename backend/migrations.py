@@ -12,7 +12,7 @@ has already shipped; add a new one instead.
 
 import logging
 import os
-import sqlite3
+import dbfile as sqlite3
 
 log = logging.getLogger("sworkr.migrations")
 
@@ -1366,6 +1366,18 @@ def _m36_tag_pricing(conn):
     """)
 
 
+def _m37_preset_names(conn):
+    """A workplace remembers which starter place it began as, so renaming it doesn't bring the starter back."""
+    import json as _json
+    conn.execute("ALTER TABLE income_sources ADD COLUMN preset_name TEXT")
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "presets.json")
+    with open(path, encoding="utf-8") as f:
+        names = {s["name"].lower() for key, p in _json.load(f).items() if not key.startswith("_") for s in p.get("sources", [])}
+    for row in conn.execute("SELECT id, name FROM income_sources").fetchall():
+        if (row[1] or "").lower() in names:
+            conn.execute("UPDATE income_sources SET preset_name = name WHERE id = ?", (row[0],))
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1403,6 +1415,7 @@ MIGRATIONS = [
     (34, "how income was paid, and the Kelly cut", _m34_paid_how_and_kelly_cut, False),
     (35, "house rules: cuts, and cash the office holds", _m35_house_rules, False),
     (36, "prices by contact tag", _m36_tag_pricing, False),
+    (37, "workplaces remember their starter place", _m37_preset_names, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 
@@ -1434,6 +1447,8 @@ def _save_copy(conn, db_path: str, target: int) -> str:
 def run(db_path: str) -> int:
     """Bring the database at db_path up to date. Returns the version it ends at."""
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    # A database (and upgrade copies) saved before encryption: encrypted first, once, and checked.
+    sqlite3.encrypt_folder(os.path.dirname(db_path))
     # isolation_level=None: we say BEGIN/COMMIT ourselves, so table changes are part of the transaction too.
     conn = sqlite3.connect(db_path, timeout=30, isolation_level=None)
     try:

@@ -1,6 +1,6 @@
 """Database upgrade tests. Run with:  docker compose run --rm tests"""
 import os
-import sqlite3
+import dbfile as sqlite3  # noqa: E402  (the encrypted engine, like the app)
 import subprocess
 import sys
 import tempfile
@@ -11,6 +11,7 @@ BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BACKEND)
 
 import migrations  # noqa: E402
+import vault  # noqa: E402
 
 OLD_SCHEMA = """
     CREATE TABLE clients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, contact_phone TEXT,
@@ -158,7 +159,7 @@ def test_a_database_from_a_newer_sworkr_is_refused():
 
 def run_app(path, script):
     """Start the real app on a database, in its own process, and run a few lines against it."""
-    env = {**os.environ, "DATA_DIR": os.path.dirname(path), "SEED_DB": "1", "BACKGROUND_JOBS": "0", "CALENDAR_SYNC": "0"}
+    env = {**os.environ, "DATA_DIR": os.path.dirname(path), "KEY_DIR": vault.key_dir(), "SEED_DB": "1", "BACKGROUND_JOBS": "0", "CALENDAR_SYNC": "0"}
     code = ("from fastapi.testclient import TestClient\nimport main\napi = TestClient(main.app)\n" + script)
     out = subprocess.run([sys.executable, "-c", code], cwd=BACKEND, env=env, capture_output=True, text=True)
     assert out.returncode == 0, out.stderr[-2000:]

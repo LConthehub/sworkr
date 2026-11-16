@@ -19,7 +19,7 @@ import hashlib
 import logging
 import os
 import secrets
-import sqlite3
+import dbfile as sqlite3
 import tempfile
 import threading
 import time
@@ -73,18 +73,18 @@ def decrypt(blob: bytes, passphrase: str) -> bytes:
 
 def snapshot(db) -> bytes:
     """A consistent copy of the live database, as bytes. Safe while the app is in use."""
+    # Unencrypted inside: a backup is opened with its passphrase alone, on any computer. It is then encrypted
+    # (encrypt below) before it's written anywhere but this temporary file.
     fd, path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
+    os.remove(path)
     try:
-        dest = sqlite3.connect(path)
-        try:
-            db.backup(dest)
-        finally:
-            dest.close()
+        sqlite3.export_plain(db, path)
         with open(path, "rb") as f:
             return f.read()
     finally:
-        os.remove(path)
+        if os.path.exists(path):
+            os.remove(path)
 
 
 def make_backup(db, passphrase: str) -> bytes:
@@ -97,14 +97,20 @@ def restore_into(db_path: str, blob: bytes, passphrase: str) -> None:
     if not data.startswith(b"SQLite format 3\x00"):
         raise BackupError("The backup doesn't contain a database")
     fd, path = tempfile.mkstemp(suffix=".db")
+    keyed = path + ".keyed"
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(data)
-        source = sqlite3.connect(path)
+        source = sqlite3.connect(path, plain=True)
         try:
             if source.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 raise BackupError("The database inside the backup is damaged")
-            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        finally:
+            source.close()
+        sqlite3.import_plain(path, keyed)            # encrypted with this computer's key
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        source = sqlite3.connect(keyed)
+        try:
             dest = sqlite3.connect(db_path, timeout=30)
             try:
                 source.backup(dest)   # copies page by page, so it also works while the app is running
@@ -113,7 +119,9 @@ def restore_into(db_path: str, blob: bytes, passphrase: str) -> None:
         finally:
             source.close()
     finally:
-        os.remove(path)
+        for leftover in (path, keyed):
+            if os.path.exists(leftover):
+                os.remove(leftover)
 
 
 def backup_filename(now: Optional[datetime] = None) -> str:

@@ -1,7 +1,9 @@
 """Tests for sealing saved passwords with a key kept outside the database.
 Run with:  docker compose run --rm tests"""
 import os
-import sqlite3
+
+import pytest
+import dbfile as sqlite3  # noqa: E402  (the encrypted engine, like the app)
 import sys
 import tempfile
 
@@ -120,3 +122,90 @@ def test_passwords_saved_by_an_older_version_are_sealed_at_startup():
     backup._set(db, "backup_passphrase", None)
     db.commit()
     db.close()
+
+
+# ---------- the database file itself ----------
+
+def test_the_database_file_is_encrypted_and_older_plain_ones_are_converted(tmp_path, monkeypatch):
+    import sqlite3 as stdlib
+    import dbfile
+    import migrations
+    monkeypatch.setenv("KEY_DIR", str(tmp_path / "keys"))
+    folder = tmp_path / "data"
+    folder.mkdir()
+    path = str(folder / "sworkr.db")
+
+    # A database saved before encryption, and an upgrade copy next to it.
+    plain = stdlib.connect(path)
+    plain.execute("CREATE TABLE notes (body TEXT)")
+    plain.execute("INSERT INTO notes VALUES ('Jordan, Friday 7pm')")
+    plain.execute("PRAGMA user_version = 0")
+    plain.commit()
+    plain.close()
+    copy = stdlib.connect(str(folder / "sworkr.before-v3.db"))
+    copy.execute("CREATE TABLE x (a)")
+    copy.commit()
+    copy.close()
+    assert dbfile.is_plain(path)
+
+    assert migrations.run(path) == migrations.LATEST
+    raw = open(path, "rb").read()
+    assert not dbfile.is_plain(path) and b"Jordan" not in raw and b"SQLite format 3" not in raw[:16]
+    assert not dbfile.is_plain(str(folder / "sworkr.before-v3.db"))
+    assert not any(n.endswith(".encrypting") for n in os.listdir(folder))
+    # Readable with the key, and the data came across.
+    db = dbfile.connect(path)
+    assert db.execute("SELECT body FROM notes").fetchall() == [("Jordan, Friday 7pm",)]
+    db.close()
+    # Not readable without it: neither plain SQLite nor another key opens it.
+    other_engine = stdlib.connect(path)
+    with pytest.raises(stdlib.DatabaseError):
+        other_engine.execute("SELECT * FROM notes").fetchall()
+    other_engine.close()
+    other = tmp_path / "other-keys"
+    monkeypatch.setenv("KEY_DIR", str(other))
+    wrong = dbfile.connect(path)
+    with pytest.raises(dbfile.DatabaseError):
+        wrong.execute("SELECT * FROM notes").fetchall()
+    wrong.close()
+    monkeypatch.setenv("KEY_DIR", str(tmp_path / "keys"))
+    assert migrations.run(path) == migrations.LATEST           # already encrypted: left alone
+
+
+def test_a_backup_restores_with_its_passphrase_on_a_computer_with_another_key(tmp_path, monkeypatch):
+    import backup
+    import dbfile
+    monkeypatch.setenv("KEY_DIR", str(tmp_path / "first"))
+    first = str(tmp_path / "first.db")
+    db = dbfile.connect(first)
+    db.execute("CREATE TABLE notes (body TEXT)")
+    db.execute("INSERT INTO notes VALUES ('kept')")
+    db.execute("PRAGMA user_version = 7")
+    db.commit()
+    blob = backup.make_backup(db, "a long backup passphrase")
+    db.close()
+    assert b"kept" not in blob
+
+    monkeypatch.setenv("KEY_DIR", str(tmp_path / "second"))       # another computer, another key
+    second = str(tmp_path / "second.db")
+    backup.restore_into(second, blob, "a long backup passphrase")
+    assert not dbfile.is_plain(second)
+    db = dbfile.connect(second)
+    assert db.execute("SELECT body FROM notes").fetchall() == [("kept",)] and db.execute("PRAGMA user_version").fetchone()[0] == 7
+    db.close()
+    assert not [n for n in os.listdir(tmp_path) if n.endswith(".keyed")]
+
+
+def test_keys_can_live_in_the_system_keychain(monkeypatch):
+    import sys as _sys
+    import types
+    saved = {}
+    fake = types.SimpleNamespace(get_password=lambda service, name: saved.get((service, name)),
+                                 set_password=lambda service, name, value: saved.__setitem__((service, name), value))
+    monkeypatch.setitem(_sys.modules, "keyring", fake)
+    monkeypatch.setenv("SWORKR_KEY_STORE", "keychain")
+    monkeypatch.setattr(vault, "_secrets", {})
+    first = vault.secret("database.key")
+    assert len(first) == 32 and ("sworkr", "database.key") in saved
+    monkeypatch.setattr(vault, "_secrets", {})
+    assert vault.secret("database.key") == first                  # the same key next time

@@ -13,7 +13,7 @@ to that computer can't reset a password.
 import argparse
 import getpass
 import os
-import sqlite3
+import dbfile as sqlite3
 import sys
 from datetime import datetime
 

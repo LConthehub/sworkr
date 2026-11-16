@@ -8,7 +8,7 @@ Run with: docker compose up --build
 import json
 import os
 import vault
-import sqlite3
+import dbfile as sqlite3
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from enum import Enum

@@ -1,7 +1,7 @@
 """Tests for encrypted backups, the maintenance commands and safety check-in alerts.
 Run with:  docker compose run --rm tests"""
 import os
-import sqlite3
+import dbfile as sqlite3  # noqa: E402  (the encrypted engine, like the app)
 import subprocess
 import sys
 import tempfile
@@ -22,6 +22,7 @@ import auth  # noqa: E402
 import backup  # noqa: E402
 import main  # noqa: E402
 import migrations  # noqa: E402
+import vault  # noqa: E402
 import safety  # noqa: E402
 
 PASSWORD = "correct-horse-battery"
@@ -137,7 +138,7 @@ def test_automatic_backup_failure_is_reported(api, monkeypatch):
 # ==================== MAINTENANCE COMMANDS ====================
 
 def manage(data_dir, *args, stdin=""):
-    env = {**os.environ, "DATA_DIR": data_dir}
+    env = {**os.environ, "DATA_DIR": data_dir, "KEY_DIR": vault.key_dir()}   # the same keys that made the database
     return subprocess.run([sys.executable, "manage.py", *args], cwd=BACKEND, env=env, input=stdin,
                           capture_output=True, text=True)
 

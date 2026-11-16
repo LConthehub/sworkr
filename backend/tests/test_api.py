@@ -1,6 +1,6 @@
 """API tests. Run them inside Docker with:  docker compose run --rm tests"""
 import os
-import sqlite3
+import dbfile as sqlite3  # noqa: E402  (the encrypted engine, like the app)
 import sys
 import tempfile
 from datetime import datetime, timezone

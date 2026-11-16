@@ -1,7 +1,7 @@
 """Health tests on each person's own schedule: kinds of test with their own interval and cost.
 Run with:  docker compose run --rm tests"""
 import os
-import sqlite3
+import dbfile as sqlite3  # noqa: E402  (the encrypted engine, like the app)
 import sys
 import tempfile
 import uuid

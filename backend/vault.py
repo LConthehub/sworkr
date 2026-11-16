@@ -35,7 +35,6 @@ PREFIX = "sealed:v1:"
 KEY_FILE = "settings.key"
 
 _lock = threading.Lock()
-_cached: Optional[tuple] = None   # (path, key)
 
 
 def key_dir() -> str:
@@ -47,33 +46,63 @@ def key_dir() -> str:
     return os.path.join(data, "keys")
 
 
-def _key() -> bytes:
-    global _cached
-    path = os.path.join(key_dir(), KEY_FILE)
+def _keyring_secret(name: str) -> bytes:
+    """A 32-byte secret kept in the computer's own keychain (Windows Credential Manager, the macOS Keychain, the
+    Secret Service on Linux), made the first time. Used by the desktop app, so the keys aren't files at all."""
+    import keyring
+    stored = keyring.get_password("sworkr", name)
+    if stored:
+        key = base64.b64decode(stored)
+        if len(key) == 32:
+            return key
+        raise ValueError(f"The keychain entry sworkr/{name} isn't a sworkr key")
+    key = secrets.token_bytes(32)
+    keyring.set_password("sworkr", name, base64.b64encode(key).decode())
+    return key
+
+
+_secrets: dict = {}
+
+
+def secret(name: str) -> bytes:
+    """A 32-byte secret by name (settings.key seals saved passwords; database.key encrypts the database).
+    Kept in the system keychain when SWORKR_KEY_STORE=keychain, otherwise as a file in key_dir()."""
+    store = os.environ.get("SWORKR_KEY_STORE", "file")
+    cache_key = (store, key_dir(), name)
     with _lock:
-        if _cached and _cached[0] == path:
-            return _cached[1]
-        try:
-            with open(path, "rb") as f:
-                key = f.read()
-            if len(key) != 32:
-                raise ValueError(f"{path} is not a sworkr key file")
-        except FileNotFoundError:
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            key = secrets.token_bytes(32)
-            # "x": never write over a key that appeared in the meantime; that would orphan what it sealed.
-            try:
-                with open(path, "xb") as f:
-                    f.write(key)
-            except FileExistsError:
-                with open(path, "rb") as f:
-                    key = f.read()
-            try:
-                os.chmod(path, 0o600)
-            except OSError:
-                pass
-        _cached = (path, key)
+        if cache_key not in _secrets:
+            _secrets[cache_key] = _keyring_secret(name) if store == "keychain" else _file_secret(os.path.join(key_dir(), name))
+        return _secrets[cache_key]
+
+
+def _key() -> bytes:
+    return secret(KEY_FILE)
+
+
+def _file_secret(path: str) -> bytes:
+    """A 32-byte secret kept in a file, made the first time."""
+    try:
+        with open(path, "rb") as f:
+            key = f.read()
+        if len(key) != 32:
+            raise ValueError(f"{path} is not a sworkr key file")
         return key
+    except FileNotFoundError:
+        pass
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    key = secrets.token_bytes(32)
+    # "x": never write over a key that appeared in the meantime; that would orphan what it sealed.
+    try:
+        with open(path, "xb") as f:
+            f.write(key)
+    except FileExistsError:
+        with open(path, "rb") as f:
+            key = f.read()
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+    return key
 
 
 def is_sealed(value: Optional[str]) -> bool:

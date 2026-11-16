@@ -9,7 +9,7 @@ Every amount has a currency (see currencies.py). Only USD is switched on for now
 import json
 import os
 import secrets
-import sqlite3
+import dbfile as sqlite3
 import datetime as dt
 from datetime import date, datetime, timedelta, timezone
 from enum import Enum
@@ -917,16 +917,18 @@ def apply_presets(db, owner_id: int, work_types: List[str]) -> dict:
                     _add_category(db, owner_id, label, parent_key=parent)
                     added["categories"].append(label)
         for source in preset.get("sources", []):
-            if not db.execute("SELECT 1 FROM income_sources WHERE owner_id = ? AND LOWER(name) = LOWER(?)",
-                              (owner_id, source["name"])).fetchone():
+            # Skipped when it's already there: by name, or because it was added before and since renamed
+            # (a "My brothel" someone called "The Velvet Room" isn't added a second time).
+            if not db.execute("SELECT 1 FROM income_sources WHERE owner_id = ? AND (LOWER(name) = LOWER(?) OR LOWER(preset_name) = LOWER(?))",
+                              (owner_id, source["name"], source["name"])).fetchone():
                 now = _now()
                 db.execute("""
                     INSERT INTO income_sources (name, kind, fee_percent, fee_per_shift, token_value, payout_note,
-                                                gift_share_percent, work_type, owner_id, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                                gift_share_percent, work_type, preset_name, owner_id, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (source["name"], source.get("kind", "other"), source.get("fee_percent"), source.get("fee_per_shift"),
                       source.get("token_value"), source.get("payout_note"), source.get("gift_share_percent"),
-                      work_type, owner_id, now, now))
+                      work_type, source["name"], owner_id, now, now))
                 source_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
                 categories = category_lookup(db, owner_id)
                 for order, charge in enumerate(source.get("charges", [])):
