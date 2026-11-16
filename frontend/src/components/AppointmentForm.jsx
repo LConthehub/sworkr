@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { useTestKinds } from './TestKinds';
 import { Field, inputClass, errorMessage, buttonClass, quietButtonClass } from './Modal';
 import { fetchAll, saveAppointment } from '../api';
 import { SplitEditor, useSplit } from './Splits';
 import {
-  toDateInput, toTimeInput, fromDateTimeInputs, repeatDates, formatTime, dayLabel, LOCATION_LABELS, money, TEST_TYPES,
+  toDateInput, toTimeInput, fromDateTimeInputs, repeatDates, formatTime, dayLabel, LOCATION_LABELS, money,
 } from '../colors';
 
 const DURATIONS = [30, 45, 60, 90, 120, 180, 240, 480, 720];
@@ -77,6 +78,12 @@ export default function AppointmentForm({
     axios.get('/api/tours', { params: { kind: 'tour' } }).then(({ data }) => setTours(data)).catch(() => {});
     axios.get('/api/appointments/test-costs').then(({ data }) => setTestCosts(data)).catch(() => {});
   }, []);
+  const { options: TEST_TYPES } = useTestKinds(form.test_type);
+  // The usual first choice may be one this person has hidden: start on one they use.
+  useEffect(() => {
+    const keys = Object.keys(TEST_TYPES);
+    if (!appointment && keys.length && !keys.includes(form.test_type)) setForm((f) => ({ ...f, test_type: keys[0] }));
+  }, [TEST_TYPES]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // A test's cost starts as what that kind of test cost last time.
   useEffect(() => {

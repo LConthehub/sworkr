@@ -7,6 +7,11 @@ import { EmailPanel } from '../components/Email';
 import GoalsGlance from '../components/GoalsGlance';
 import { CycleCard } from '../components/Cycle';
 import { PostsDue } from './Content';
+import { InquiriesWaiting } from './Inquiries';
+import { AdsExpiring } from '../components/Listings';
+import { CustomsDue } from '../components/Customs';
+import { TestsDue } from '../components/TestKinds';
+import { ShootsSoon } from '../components/Shoots';
 import { fetchAll } from '../api';
 import {
   addDays, apptColorFor, dayLabel, endOf, formatTime, money, periodLabel, periodsOn, sameDay, startOfDay, TOUR_COLOR,
@@ -33,6 +38,11 @@ export default function Dashboard({ user }) {
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 items-start">
         <div className="space-y-4">
           <WeekAhead version={version} />
+          <TestsDue />
+          <InquiriesWaiting />
+          <ShootsSoon />
+          <CustomsDue />
+          <AdsExpiring />
           <PostsDue />
           <TasksPanel version={version} onChanged={() => setVersion((v) => v + 1)} onOpen={(task) => setTaskModal({ task })} />
         </div>

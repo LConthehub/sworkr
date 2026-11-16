@@ -203,7 +203,7 @@ def test_a_health_test_with_a_cost_is_a_medical_expense(api):
 
     # It counts toward the tour it was put on, even though it's the day before.
     f = summary(api, tour)["figures"]
-    assert f["tests"] == 80 and f["tests_by_type"] == {"weekly": 80, "monthly": 0, "yearly": 0}
+    assert f["tests"] == 80 and f["tests_by_type"] == {"weekly": 80}   # only the kinds that cost something
 
     # The expense follows the test, and is changed there, not by hand.
     assert api.delete(f"/api/expenses/{medical[0]['id']}").status_code == 400

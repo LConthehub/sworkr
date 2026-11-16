@@ -43,11 +43,13 @@ A new database starts with a few example clients, appointments and expenses. Rem
 |---|---|---|
 | Dashboard | `/` | This week's bookings, tasks, unread email and savings goals at a glance |
 | Calendar | `/calendar` | Month, week, day and list views. Add, edit, repeat, complete or cancel appointments, tours and time off |
-| Contacts | `/contacts` | Clients, co-workers and crew, with screening status and a "do not see" flag. CSV import/export |
+| Contacts | `/contacts` | Clients, co-workers and crew, with screening status, how each one found you and a "do not see" flag. CSV import/export |
+| Inquiries | `/inquiries` | Everyone who got in touch, moved from new to replied, screening, deposit and booked (or lost, with why). Shows where inquiries drop out and which ad sites send people who book |
+| Gone quiet | `/regulars` | Regulars who haven't booked for a while and have nothing booked ahead, biggest spenders first |
 | Contact page | `/contacts/:id` | One contact's details, visit history, money paid and owed, and dated notes |
-| Content | `/content` | Browse your photo/video library (Nextcloud, WebDAV or a mounted folder) and plan posts |
-| Money | `/money` | Income, expenses and profit, what's still owed, compare periods and tours, goals, splits, tax-year export |
-| Account | `/account` | Password, auto log-out, email, content library, calendar sync, safety check-in, backups, users |
+| Content | `/content` | Browse your photo/video library (Nextcloud, WebDAV or a mounted folder) and plan posts. Campaigns group a push's posts, one post can go to several platforms, places you post in keep their rules and posting limits, and saved text is one tap away. Shoots plans a content shoot: place, people and what was agreed, goals, shot list, wardrobe, prep, budget and marketing plan. Customs tracks made-to-order content from request to delivery, logs payments as income and keeps your price menu. Ads tracks each listing's end date and cost; renewing one logs the expense |
+| Money | `/money` | Income, expenses and profit, what's still owed, compare periods, tours and how clients found you (income against ad spend), goals, splits, tax-year export |
+| Account | `/account` | Health tests (how often each is due and what it costs, set to your local rules), password, auto log-out, email, content library, calendar sync, safety check-in, backups, users |
 
 There is also a global search (press `/`) across clients, appointments and expenses.
 

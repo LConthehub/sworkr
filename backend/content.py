@@ -34,6 +34,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
+import campaigns
 import personas
 
 router = APIRouter()
@@ -609,6 +610,22 @@ class PostIn(BaseModel):
     notes: Optional[str] = None
     repeat_dates: List[datetime] = []     # more times for the same post ("every Tuesday"), worked out by the browser
     persona_id: Optional[int] = None      # which of your names it's posted under
+    campaign_id: Optional[int] = None     # the push it's part of
+    place: Optional[str] = None           # where on the platform: a subreddit, a channel, a group
+    inquiries: Optional[int] = None       # how many inquiries or sales it brought, once you know
+    also: List["PostTarget"] = []         # the same post on other platforms: one more row each (new posts only)
+
+
+class PostTarget(BaseModel):
+    """One more place the same post goes. Anything left out is taken from the main post."""
+    platform: str
+    account: Optional[str] = None
+    place: Optional[str] = None
+    caption: Optional[str] = None
+    scheduled_at: Optional[datetime] = None
+
+
+PostIn.model_rebuild()
 
 
 def _iso(dt: Optional[datetime]) -> Optional[str]:
@@ -631,8 +648,11 @@ def _check_post(body: PostIn):
         raise HTTPException(status_code=400, detail="That caption is too long")
     if body.post_url and not re.match(r"https?://", body.post_url.strip()):
         raise HTTPException(status_code=400, detail="The link to the post must start with https://")
-    if len(body.file_paths) > 200 or len(body.repeat_dates) > 52:
-        raise HTTPException(status_code=400, detail="Too many files or repeats")
+    if len(body.file_paths) > 200 or len(body.repeat_dates) > 52 or len(body.also) > 20:
+        raise HTTPException(status_code=400, detail="Too many files, repeats or platforms")
+    if body.inquiries is not None and not (0 <= body.inquiries <= 1_000_000):
+        raise HTTPException(status_code=400, detail="Inquiries must be 0 or more")
+    body.place = (body.place or "").strip()[:120] or None
     body.set_path = clean_path(body.set_path) or None
     body.file_paths = list(dict.fromkeys(clean_path(p) for p in body.file_paths if p))
     if body.status == "posted" and body.posted_at is None:
@@ -671,13 +691,17 @@ def _warnings(db, owner_id: int, body: PostIn, exclude_id: Optional[int] = None)
             if planned < ready:
                 note += f" (your {wait}-day wait for {p['platform']} ends {ready.date().isoformat()})"
         out.append(note)
+    out += campaigns.place_warnings(db, owner_id, body.platform, body.place, body.scheduled_at, exclude_id)
     return out
 
 
 @router.get("/api/posts")
 def list_posts(request: Request, start: Optional[datetime] = None, end: Optional[datetime] = None,
-               status: Optional[str] = None, limit: int = Query(500, ge=1, le=2000)):
+               status: Optional[str] = None, campaign_id: Optional[int] = None, limit: int = Query(500, ge=1, le=2000)):
     conditions, params = ["owner_id = ?"], [request.state.user["id"]]
+    if campaign_id is not None:
+        conditions.append("campaign_id = ?")
+        params.append(campaign_id)
     if start:
         conditions.append("COALESCE(posted_at, scheduled_at) >= ?")
         params.append(_iso(start))
@@ -703,7 +727,7 @@ def list_posts(request: Request, start: Optional[datetime] = None, end: Optional
 def _values(body: PostIn, scheduled: Optional[datetime]) -> tuple:
     return (body.platform, (body.account or "").strip() or None, _iso(scheduled), body.status, (body.caption or "").strip() or None,
             body.price, body.set_path, json.dumps(body.file_paths), _iso(body.posted_at), (body.post_url or "").strip() or None,
-            (body.notes or "").strip() or None)
+            (body.notes or "").strip() or None, body.campaign_id, body.place, body.inquiries)
 
 
 def _queue_sync(post_ids, owner_id):
@@ -719,18 +743,30 @@ def create_post(body: PostIn, request: Request):
     owner = request.state.user["id"]
     db = _get_db()
     try:
-        warnings = _warnings(db, owner, body)
+        campaigns.check_campaign(db, owner, body.campaign_id)
+        # The post itself, then the same post for each other platform it also goes to.
+        versions = [body]
+        for target in body.also:
+            copy = body.model_copy(update={
+                "platform": target.platform, "account": target.account or None, "place": target.place,
+                "caption": target.caption if (target.caption or "").strip() else body.caption,
+                "scheduled_at": target.scheduled_at or body.scheduled_at, "also": [], "repeat_dates": [],
+                "post_url": None, "inquiries": None})
+            _check_post(copy)
+            versions.append(copy)
+        warnings = [w for v in versions for w in _warnings(db, owner, v)]
         now = _now()
         series = uuid.uuid4().hex if body.repeat_dates else None
         ids = []
-        for when in [body.scheduled_at, *body.repeat_dates]:
-            cur = db.execute("""
-                INSERT INTO posts (platform, account, scheduled_at, status, caption, price, set_path, file_paths, posted_at,
-                                   post_url, notes, series_id, owner_id, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (*_values(body, when), series, owner, now, now))
-            ids.append(cur.lastrowid)
-            personas.assign(db, "posts", cur.lastrowid, owner, body)
+        for version in versions:
+            for when in [version.scheduled_at, *version.repeat_dates]:
+                cur = db.execute("""
+                    INSERT INTO posts (platform, account, scheduled_at, status, caption, price, set_path, file_paths, posted_at,
+                                       post_url, notes, campaign_id, place, inquiries, series_id, owner_id, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (*_values(version, when), series if version is body else None, owner, now, now))
+                ids.append(cur.lastrowid)
+                personas.assign(db, "posts", cur.lastrowid, owner, body)
         db.commit()
         _queue_sync(ids, owner)
         return {**get_post(db, ids[0], owner), "warnings": warnings, "created": len(ids)}
@@ -746,10 +782,11 @@ def update_post(post_id: int, body: PostIn, request: Request):
     try:
         if not get_post(db, post_id, owner):
             raise HTTPException(status_code=404, detail="Post not found")
+        campaigns.check_campaign(db, owner, body.campaign_id)
         warnings = _warnings(db, owner, body, exclude_id=post_id)
         db.execute("""
             UPDATE posts SET platform = ?, account = ?, scheduled_at = ?, status = ?, caption = ?, price = ?, set_path = ?,
-                   file_paths = ?, posted_at = ?, post_url = ?, notes = ?, updated_at = ?
+                   file_paths = ?, posted_at = ?, post_url = ?, notes = ?, campaign_id = ?, place = ?, inquiries = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (*_values(body, body.scheduled_at), _now(), post_id, owner))
         personas.assign(db, "posts", post_id, owner, body)
@@ -763,6 +800,7 @@ def update_post(post_id: int, body: PostIn, request: Request):
 class Posted(BaseModel):
     post_url: Optional[str] = None
     posted_at: Optional[datetime] = None
+    inquiries: Optional[int] = None
 
 
 @router.post("/api/posts/{post_id}/posted")
@@ -775,9 +813,12 @@ def mark_posted(post_id: int, body: Posted, request: Request):
     try:
         if not get_post(db, post_id, owner):
             raise HTTPException(status_code=404, detail="Post not found")
-        db.execute("UPDATE posts SET status = 'posted', posted_at = ?, post_url = COALESCE(?, post_url), updated_at = ? "
-                   "WHERE id = ? AND owner_id = ?",
-                   (_iso(body.posted_at or datetime.now(timezone.utc)), (body.post_url or "").strip() or None, _now(), post_id, owner))
+        if body.inquiries is not None and not (0 <= body.inquiries <= 1_000_000):
+            raise HTTPException(status_code=400, detail="Inquiries must be 0 or more")
+        db.execute("UPDATE posts SET status = 'posted', posted_at = ?, post_url = COALESCE(?, post_url), "
+                   "inquiries = COALESCE(?, inquiries), updated_at = ? WHERE id = ? AND owner_id = ?",
+                   (_iso(body.posted_at or datetime.now(timezone.utc)), (body.post_url or "").strip() or None, body.inquiries,
+                    _now(), post_id, owner))
         db.commit()
         _queue_sync([post_id], owner)
         return get_post(db, post_id, owner)

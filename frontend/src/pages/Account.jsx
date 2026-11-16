@@ -6,6 +6,7 @@ import { PersonaSettings } from '../components/Personas';
 import { BlocklistSettings } from '../components/Blocklist';
 import MedsSettings from '../components/Meds';
 import DocumentsSettings from '../components/Documents';
+import { TestKindsSettings } from '../components/TestKinds';
 import { DiscreetSettings } from '../components/Discreet';
 import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from '../components/SignInSecurity';
 import { WorkTypesPicker } from '../components/WorkTypes';
@@ -45,6 +46,10 @@ const GROUPS = [
             <DocumentsSettings />
           </Section>
         ),
+      },
+      {
+        id: 'tests', title: 'Health tests', words: 'test testing sti std screening doctor weekly monthly schedule interval cost county rules',
+        render: () => <Section title="Health tests" hint="How often each test is due and what it costs, set to the rules where you work."><TestKindsSettings /></Section>,
       },
       { id: 'policy', title: 'Deposits & cancellations', words: 'deposit no-show no show cancellation fee late policy', render: () => <BookingPolicy /> },
       { id: 'categories', title: 'Expense categories', words: 'rename hide colour color', render: () => <ExpenseCategories /> },

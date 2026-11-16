@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import ClientForm from '../components/ClientForm';
 import CsvTools from '../components/CsvTools';
 import { usePersonas } from '../components/Personas';
+import { PeopleNav } from './Inquiries';
 
 const LIMIT = 21;
 const FILTERS = [
@@ -58,7 +59,10 @@ export default function ClientList() {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h1 className="text-xl font-bold text-gray-800">Contacts</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-xl font-bold text-gray-800">Contacts</h1>
+          <PeopleNav dark />
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <CsvTools kind="clients" onImported={loadClients} />
           <button

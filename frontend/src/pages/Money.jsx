@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { useTestKinds } from '../components/TestKinds';
 import Modal, { Field, inputClass, errorMessage, buttonClass, quietButtonClass } from '../components/Modal';
 import CsvTools from '../components/CsvTools';
 import GoalsGlance from '../components/GoalsGlance';
 import { CategoryManager, CategorySelect, chargeSummary, IncomeForm, LogChargeForm, SourceForm, sourceFees } from '../components/MoneyForms';
 import { SplitEditor, useSplit } from '../components/Splits';
 import { downloadBlob, fetchAll, toCsv, useCategories } from '../api';
-import { CHART, dayLabel, INCOME_KINDS, money, moneyShort, SOURCE_KINDS, TEST_TYPES, toDateInput } from '../colors';
+import { CHART, dayLabel, INCOME_KINDS, money, moneyShort, SOURCE_KINDS, toDateInput } from '../colors';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const shortDate = (iso) => dayLabel(new Date(iso), { month: 'short', day: 'numeric' });
 
@@ -17,6 +18,7 @@ const shortDate = (iso) => dayLabel(new Date(iso), { month: 'short', day: 'numer
  * that has been paid out (payouts, tips, sales, shifts), after the venue's or platform's fees.
  */
 export default function Money({ view = 'overview', year: shownYear, setYear: setShownYear }) {
+  const { labels: TEST_TYPES } = useTestKinds();
   const thisYear = new Date().getFullYear();
   const [ownYear, setOwnYear] = useState(thisYear);
   // The Money page's tabs share one year; on its own, this keeps its own.
@@ -121,7 +123,7 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
   for (const key of Object.keys(groups)) if (!chips.includes(key)) chips.push(key);
   const pickedTop = category === 'all' ? null : cats.topOf(category);
   const subChips = pickedTop ? cats.subsOf(pickedTop).filter((c) => !c.hidden || totals[c.key]).map((c) => c.key) : [];
-  const testTotals = Object.keys(TEST_TYPES)
+  const testTotals = [...new Set([...Object.keys(TEST_TYPES), ...expenses.map((e) => e.test_type).filter(Boolean)])]
     .map((type) => ({ type, total: expenses.filter((e) => e.category === 'medical' && e.test_type === type).reduce((s, e) => s + e.amount, 0) }))
     .filter((t) => t.total > 0);
 
@@ -346,7 +348,7 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
             })}
             {testTotals.length > 0 && (
               <p className="text-xs text-gray-500 pl-1">
-                Health tests: {testTotals.map((t) => `${TEST_TYPES[t.type].replace(' test', '').toLowerCase()} ${money(t.total)}`).join(' · ')}
+                Health tests: {testTotals.map((t) => `${(TEST_TYPES[t.type] || 'other').replace(/ test$/i, '').toLowerCase()} ${money(t.total)}`).join(' · ')}
               </p>
             )}
           </div>

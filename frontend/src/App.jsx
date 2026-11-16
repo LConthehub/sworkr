@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Content from './pages/Content';
 import Account from './pages/Account';
 import Login from './pages/Login';
+import Inquiries, { GoneQuiet } from './pages/Inquiries';
 import SearchBar from './components/SearchBar';
 import CheckInBanner from './components/CheckInBanner';
 import QuickCash from './components/QuickCash';
@@ -179,6 +180,8 @@ function App() {
             <Route path="/contacts/:id" element={<ClientDetail />} />
             <Route path="/clients" element={<Navigate to="/contacts" replace />} />
             <Route path="/clients/:id" element={<OldContactLink />} />
+            <Route path="/inquiries" element={<Inquiries />} />
+            <Route path="/regulars" element={<GoneQuiet />} />
             <Route path="/content" element={<Content />} />
             <Route path="/content/:tab" element={<Content />} />
             <Route path="/money" element={<MoneyHub />} />

@@ -111,9 +111,9 @@ export default function ClientDetail() {
                 💞 Couple with <Link to={`/contacts/${client.couple_with}`} className="underline">{client.couple_name}</Link>
               </p>
             )}
-            {(client.name && client.name !== client.display_name) || client.industry ? (
+            {(client.name && client.name !== client.display_name) || client.industry || client.found_via ? (
               <p className="text-sm text-gray-500">
-                {[client.name && client.name !== client.display_name && client.name, client.industry].filter(Boolean).join(' · ')}
+                {[client.name && client.name !== client.display_name && client.name, client.industry, client.found_via && `Found you via ${client.found_via}`].filter(Boolean).join(' · ')}
               </p>
             ) : null}
             <div className="flex flex-wrap gap-2 mt-1">

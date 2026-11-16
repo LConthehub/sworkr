@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useTestKinds } from './TestKinds';
 import { Field, inputClass, errorMessage, buttonClass } from './Modal';
 import { fetchAll, reloadCategories, useCategories } from '../api';
 import { SplitEditor, useSplit } from './Splits';
 import { PersonaSelect } from './Personas';
-import { CADENCES, INCOME_KINDS, money, SOURCE_KINDS, TEST_TYPES, toDateInput } from '../colors';
+import { CADENCES, INCOME_KINDS, money, SOURCE_KINDS, toDateInput } from '../colors';
 
 const numberOrNull = (value) => (value === '' || value == null ? null : Number(value));
 
@@ -198,6 +199,7 @@ export function chargeSummary(c) {
 }
 
 function ChargesEditor({ rows, onChange, onRemove }) {
+  const { labels: TEST_TYPES } = useTestKinds();
   const update = (i, changes) => onChange(rows.map((r, j) => (j === i ? { ...r, ...changes } : r)));
   const remove = (i) => { onRemove(rows[i]); onChange(rows.filter((_, j) => j !== i)); };
   return (

@@ -6,8 +6,10 @@ import AppointmentForm from '../components/AppointmentForm';
 import { AppointmentItem } from './AppointmentCalendar';
 import { useCategories } from '../api';
 import { usePersonas } from '../components/Personas';
+import { useTestKinds } from '../components/TestKinds';
+import FoundViaCompare from '../components/FoundVia';
 import {
-  CHART, dayLabel, fromDateInput, INCOME_KINDS, money, moneyShort, TEST_TYPES, toDateInput, TOUR_COLOR,
+  CHART, dayLabel, fromDateInput, INCOME_KINDS, money, moneyShort, toDateInput, TOUR_COLOR,
 } from '../colors';
 
 const VIEWS = [
@@ -17,6 +19,7 @@ const VIEWS = [
   { id: 'work', label: 'By type of work' },
   { id: 'place', label: 'By place' },
   { id: 'persona', label: 'By persona', needsPersonas: true },
+  { id: 'found', label: 'By how they found you' },
 ];
 const BY_SOURCE = { work: 'work_type', place: 'source', persona: 'persona' };
 const METRICS = [
@@ -35,6 +38,7 @@ const rowLabel = (by, row) => (by === 'month'
  * Every comparison counts working days, so days off and vacations don't make a stretch look worse.
  */
 export default function Earnings() {
+  const { labels: TEST_TYPES } = useTestKinds();
   const thisYear = new Date().getFullYear();
   const [view, setView] = useState(null); // decided once the "How I work" setting has loaded
   const personas = usePersonas();
@@ -57,6 +61,7 @@ export default function Earnings() {
 
   const load = useCallback(async () => {
     if (!view) return;
+    if (view === 'found') { setLoading(false); return; }   // that view loads its own figures
     setLoading(true);
     try {
       if (view === 'tour') {
@@ -136,7 +141,9 @@ export default function Earnings() {
 
         {error && <p className="mb-3 text-sm rounded-lg px-3 py-2 bg-red-50 text-red-700">{error}</p>}
 
-        {BY_SOURCE[view] ? (
+        {view === 'found' ? (
+          <FoundViaCompare year={year} />
+        ) : BY_SOURCE[view] ? (
           <SourceCompare data={sourceData} byWork={view === 'work'} year={year} />
         ) : view && !loading && items.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-10">
@@ -194,7 +201,7 @@ export default function Earnings() {
         </Modal>
       )}
       {modal && (modal.test || modal.appointment) && (
-        <Modal title={modal.appointment ? 'Edit' : `New ${TEST_TYPES[modal.test.testType].toLowerCase()}`} onClose={() => setModal(null)}>
+        <Modal title={modal.appointment ? 'Edit' : `New ${(TEST_TYPES[modal.test.testType] || 'health test').toLowerCase()}`} onClose={() => setModal(null)}>
           <AppointmentForm
             appointment={modal.appointment}
             defaultKind="test"
@@ -438,6 +445,7 @@ function StayStatement({ statement: s }) {
 }
 
 function TourDetail({ tourId, version, onEdit, onAddTest, onOpenAppointment, onChanged }) {
+  const { options: TEST_TYPES } = useTestKinds();
   const cats = useCategories();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { clearPersonaCache } from './components/Personas';
+import { clearTestKindCache } from './components/TestKinds';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from './colors';
 
 /** For requests the page makes on a timer. The server doesn't count these as "the user is active". */
@@ -104,4 +105,5 @@ export function useCategories() {
 export function clearCaches() {
   categoryCache = null;
   clearPersonaCache();
+  clearTestKindCache();
 }

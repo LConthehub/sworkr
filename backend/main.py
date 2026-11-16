@@ -24,13 +24,16 @@ import offsite
 import auth
 import backup
 import calendar_sync
+import campaigns
 import collab
 import contacts
 import cycle
 import content
 import csv_io
+import customs
 import currencies
 import finance
+import healthtests
 import arrangements
 import calendar_dates
 import blocklist
@@ -38,13 +41,17 @@ import signin
 import taxes
 import noshow
 import documents
+import inquiries
+import listings
 import meds
 import personas
 import places
 import demo
 import mail
+import marketing
 import migrations
 import safety
+import shoots
 import tasks
 
 # The interactive API docs (/docs, /redoc, /openapi.json) map out every endpoint. They're off unless
@@ -84,13 +91,6 @@ class AppointmentKind(str, Enum):
     TEST = "test"         # a health test (weekly, monthly or yearly); its cost is an expense
 
 
-class TestType(str, Enum):
-    WEEKLY = "weekly"
-    MONTHLY = "monthly"
-    YEARLY = "yearly"
-
-
-TEST_LABELS = {"weekly": "Weekly test", "monthly": "Monthly test", "yearly": "Yearly test"}
 
 
 class TourKind(str, Enum):
@@ -131,6 +131,7 @@ class ClientIn(BaseModel):
     drink_preferences: Optional[str] = None
     food_preferences: Optional[str] = None
     persona_id: Optional[int] = None        # which of your names they know you by
+    found_via: Optional[str] = None         # how they found you: an ad site, a social account, a referral…
     _handles: list = PrivateAttr(default_factory=list)   # worked out by _validate_client
     _display: str = PrivateAttr(default="")
 
@@ -149,7 +150,7 @@ class AppointmentIn(BaseModel):
     location: Optional[str] = None
     safety_checkin: bool = False          # alert the trusted contact if not checked in afterwards
     kind: AppointmentKind = AppointmentKind.CLIENT
-    test_type: Optional[TestType] = None  # health tests only
+    test_type: Optional[str] = None       # health tests only: which of your kinds of test (see healthtests.py)
     cost: Optional[float] = None          # health tests only: what the test costs (becomes an expense)
     tour_id: Optional[int] = None         # health tests only: the tour its cost belongs to
     second_client_id: Optional[int] = None  # a couple booked together: the other person
@@ -734,7 +735,7 @@ def _client_values(client: ClientIn) -> tuple:
             clean(client.bio), int(client.is_active), client.screening_status.value, clean(client.screening_notes),
             clean(client.references), int(client.do_not_see), clean(client.do_not_see_reason),
             client.birthday.isoformat() if client.birthday else None,
-            clean(client.drink_preferences), clean(client.food_preferences))
+            clean(client.drink_preferences), clean(client.food_preferences), marketing.clean_found_via(client.found_via))
 
 
 @app.post("/api/clients", response_model=Client, status_code=201)
@@ -745,9 +746,9 @@ def create_client(client: ClientIn, user: UserDep, db: DbDep):
         cur = db.execute("""
             INSERT INTO clients (name, display_name, handles, display_handle, role, industry, contact_phone, email, bio,
                                  is_active, screening_status, screening_notes, references_text, do_not_see,
-                                 do_not_see_reason, birthday, drink_preferences, food_preferences, owner_id,
-                                 created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                 do_not_see_reason, birthday, drink_preferences, food_preferences, found_via,
+                                 owner_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (*_client_values(client), user["id"], now, now))
     except sqlite3.IntegrityError:
         db.rollback()
@@ -895,7 +896,7 @@ def update_client(client_id: int, client: ClientIn, user: UserDep, db: DbDep):
         db.execute("""
             UPDATE clients SET name = ?, display_name = ?, handles = ?, display_handle = ?, role = ?, industry = ?, contact_phone = ?, email = ?, bio = ?, is_active = ?, screening_status = ?,
                                screening_notes = ?, references_text = ?, do_not_see = ?, do_not_see_reason = ?,
-                               birthday = ?, drink_preferences = ?, food_preferences = ?, updated_at = ?
+                               birthday = ?, drink_preferences = ?, food_preferences = ?, found_via = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (*_client_values(client), now_iso(), client_id, user["id"]))
     except sqlite3.IntegrityError:
@@ -939,8 +940,7 @@ def _validate_appointment(db, appointment: AppointmentIn, owner_id: int) -> Opti
     if appointment.duration_minutes <= 0:
         raise HTTPException(status_code=400, detail="Duration must be more than 0 minutes")
     if appointment.kind == AppointmentKind.TEST:
-        if not appointment.test_type:
-            raise HTTPException(status_code=400, detail="Choose which test this is: weekly, monthly or yearly")
+        test_kind = healthtests.check(db, owner_id, appointment.test_type)
         if not _is_amount(appointment.cost):
             raise HTTPException(status_code=400, detail="Cost must be 0 or more")
         if appointment.tour_id is not None:
@@ -949,7 +949,7 @@ def _validate_appointment(db, appointment: AppointmentIn, owner_id: int) -> Opti
                 raise HTTPException(status_code=400, detail="Tour does not exist")
         appointment.client_id = None
         appointment.second_client_id = None
-        appointment.service_type = TEST_LABELS[appointment.test_type.value]
+        appointment.service_type = test_kind["label"]
         appointment.rate = None
         appointment.amount_paid = 0
         appointment.payment_method = None
@@ -1067,7 +1067,7 @@ def _appointment_values(a: AppointmentIn) -> tuple:
     return (a.client_id, a.service_type.strip(), a.duration_minutes, a.status.value, clean(a.notes),
             a.rate, a.amount_paid or 0, clean(a.payment_method),
             a.location_type.value if a.location_type else None, clean(a.location), int(a.safety_checkin),
-            a.kind.value, a.test_type.value if a.test_type else None, a.cost, a.second_client_id)
+            a.kind.value, a.test_type or None, a.cost, a.second_client_id)
 
 
 _KEEP = object()
@@ -1115,7 +1115,7 @@ def log_health_test(db, owner_id: int, when: datetime, test_type: str, cost: flo
 def _remember_test_cost(db, owner_id: int, appointment: AppointmentIn):
     """The next test of the same kind starts with this cost filled in."""
     if appointment.kind == AppointmentKind.TEST and appointment.test_type and appointment.cost is not None:
-        set_user_setting(db, owner_id, f"test_cost_{appointment.test_type.value}", str(appointment.cost))
+        healthtests.remember_cost(db, owner_id, appointment.test_type, appointment.cost)
 
 
 @app.post("/api/appointments", response_model=Appointment, status_code=201)
@@ -1210,11 +1210,7 @@ def list_service_types(user: UserDep, db: DbDep):
 @app.get("/api/appointments/test-costs")
 def last_test_costs(user: UserDep, db: DbDep):
     """What each kind of health test cost last time, to fill in the next one."""
-    out = {}
-    for t in TestType:
-        value = get_user_setting(db, user["id"], f"test_cost_{t.value}")
-        out[t.value] = float(value) if value not in (None, "") else None
-    return out
+    return {k["key"]: k["cost"] for k in healthtests.kinds(db, user["id"])}
 
 
 @app.get("/api/appointments/{appointment_id}", response_model=Appointment)
@@ -1698,10 +1694,10 @@ def _money_figures(appointments: List[dict], expenses: List[dict], days: int, da
     income = booking_income + other_income
     room_rent = sum(e["amount"] for e in expenses if e["category"] == "room_rent")
     tests = sum(e["amount"] for e in expenses if e["category"] == "medical")
-    tests_by_type = {t.value: 0.0 for t in TestType}
+    tests_by_type = {}
     for e in expenses:
-        if e["category"] == "medical" and e.get("test_type") in tests_by_type:
-            tests_by_type[e["test_type"]] += e["amount"]
+        if e["category"] == "medical" and e.get("test_type"):
+            tests_by_type[e["test_type"]] = tests_by_type.get(e["test_type"], 0.0) + e["amount"]
     total_expenses = sum(e["amount"] for e in expenses)
     profit = income - total_expenses
     working_days = max(days - days_off, 0)
@@ -2141,6 +2137,13 @@ app.include_router(privacy.router)
 app.include_router(offsite.router)
 app.include_router(arrangements.router)
 app.include_router(calendar_dates.router)
+app.include_router(marketing.router)
+app.include_router(campaigns.router)
+app.include_router(inquiries.router)
+app.include_router(listings.router)
+app.include_router(customs.router)
+app.include_router(healthtests.router)
+app.include_router(shoots.router)
 
 init_db()
 if os.environ.get("SEED_DB", "1") == "1":
@@ -2161,6 +2164,13 @@ taxes.setup(get_db)
 signin.setup(get_db)
 arrangements.setup(get_db)
 calendar_dates.setup(get_db)
+marketing.setup(get_db)
+campaigns.setup(get_db)
+inquiries.setup(get_db)
+listings.setup(get_db)
+customs.setup(get_db)
+healthtests.setup(get_db)
+shoots.setup(get_db)
 csv_io.setup(get_db, after_client_import=lambda ids: [calendar_sync.queue_client(i) for i in ids])
 # BACKGROUND_JOBS=0 (the tests) keeps the background threads from starting.
 _background = os.environ.get("BACKGROUND_JOBS", os.environ.get("CALENDAR_SYNC", "1")) == "1"

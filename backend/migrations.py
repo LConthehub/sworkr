@@ -1025,6 +1025,261 @@ def _m23_sign_in_hardening(conn):
     """)
 
 
+def _m24_found_via(conn):
+    """How each client found you (an ad site, a social account, a referral), so income can be compared by where
+    clients come from."""
+    conn.execute("ALTER TABLE clients ADD COLUMN found_via TEXT")
+
+
+def _m25_campaigns_places_snippets(conn):
+    """Promo posts, organized: campaigns (a push with a goal and dates), the places you post in (a subreddit, a
+    channel) with their rules, and saved bits of text. A post can belong to a campaign, name its place, and
+    record how many inquiries it brought."""
+    conn.execute("""
+        CREATE TABLE campaigns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            goal TEXT,
+            start_date TEXT,
+            end_date TEXT,
+            tour_id INTEGER REFERENCES tours(id) ON DELETE SET NULL,
+            set_path TEXT,
+            notes TEXT,
+            archived INTEGER NOT NULL DEFAULT 0 CHECK(archived IN (0, 1)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_campaigns_owner ON campaigns(owner_id)")
+    conn.execute("""
+        CREATE TABLE post_places (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            platform TEXT NOT NULL,
+            name TEXT NOT NULL,
+            rules TEXT,
+            wait_days INTEGER CHECK(wait_days IS NULL OR wait_days >= 0),
+            link TEXT,
+            archived INTEGER NOT NULL DEFAULT 0 CHECK(archived IN (0, 1)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_post_places_owner ON post_places(owner_id)")
+    conn.execute("""
+        CREATE TABLE snippets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            label TEXT NOT NULL,
+            body TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_snippets_owner ON snippets(owner_id)")
+    conn.execute("ALTER TABLE posts ADD COLUMN campaign_id INTEGER REFERENCES campaigns(id) ON DELETE SET NULL")
+    conn.execute("ALTER TABLE posts ADD COLUMN place TEXT")
+    conn.execute("ALTER TABLE posts ADD COLUMN inquiries INTEGER CHECK(inquiries IS NULL OR inquiries >= 0)")
+    conn.execute("CREATE INDEX idx_posts_campaign ON posts(campaign_id)")
+
+
+def _m26_inquiries(conn):
+    """Inquiries: who got in touch, where they came from, and how far each one got towards a booking."""
+    conn.execute("""
+        CREATE TABLE inquiries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            contact TEXT,
+            found_via TEXT,
+            received_at TEXT NOT NULL,
+            wanted TEXT,
+            wanted_date TEXT,
+            stage TEXT NOT NULL DEFAULT 'new' CHECK(stage IN ('new', 'replied', 'screening', 'deposit', 'booked', 'lost')),
+            lost_from TEXT,
+            lost_reason TEXT,
+            client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_inquiries_owner ON inquiries(owner_id, received_at)")
+
+
+def _m27_listings(conn):
+    """Ad listings: an ad on a site that runs for a while, costs money and gets renewed. A renewal's cost is an
+    expense that remembers which ad it paid for."""
+    conn.execute("""
+        CREATE TABLE listings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            site TEXT NOT NULL,
+            title TEXT,
+            city TEXT,
+            start_date TEXT,
+            end_date TEXT,
+            cost REAL CHECK(cost IS NULL OR cost >= 0),
+            renew_days INTEGER CHECK(renew_days IS NULL OR renew_days > 0),
+            ad_text TEXT,
+            link TEXT,
+            paused INTEGER NOT NULL DEFAULT 0 CHECK(paused IN (0, 1)),
+            notes TEXT,
+            tour_id INTEGER REFERENCES tours(id) ON DELETE SET NULL,
+            persona_id INTEGER REFERENCES personas(id) ON DELETE SET NULL,
+            currency TEXT NOT NULL DEFAULT 'USD',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_listings_owner ON listings(owner_id, end_date)")
+    conn.execute("ALTER TABLE expenses ADD COLUMN listing_id INTEGER REFERENCES listings(id) ON DELETE SET NULL")
+
+
+def _m28_custom_content(conn):
+    """Custom content: made-to-order photos and videos (who, what, price, paid, due, delivered), a menu of usual
+    prices, and income that remembers which order it was a payment for."""
+    conn.execute("""
+        CREATE TABLE custom_orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            buyer TEXT NOT NULL,
+            title TEXT NOT NULL,
+            details TEXT,
+            client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+            source_id INTEGER REFERENCES income_sources(id) ON DELETE SET NULL,
+            persona_id INTEGER REFERENCES personas(id) ON DELETE SET NULL,
+            requested_at TEXT NOT NULL,
+            price REAL CHECK(price IS NULL OR price >= 0),
+            amount_paid REAL NOT NULL DEFAULT 0 CHECK(amount_paid >= 0),
+            status TEXT NOT NULL DEFAULT 'requested' CHECK(status IN ('requested', 'quoted', 'to_make', 'delivered', 'declined')),
+            due_date TEXT,
+            delivered_at TEXT,
+            delivery_note TEXT,
+            set_path TEXT,
+            can_resell INTEGER NOT NULL DEFAULT 0 CHECK(can_resell IN (0, 1)),
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_custom_orders_owner ON custom_orders(owner_id, status, due_date)")
+    conn.execute("""
+        CREATE TABLE custom_menu (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            label TEXT NOT NULL,
+            price REAL CHECK(price IS NULL OR price >= 0),
+            notes TEXT,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_custom_menu_owner ON custom_menu(owner_id)")
+    conn.execute("ALTER TABLE income ADD COLUMN custom_order_id INTEGER REFERENCES custom_orders(id) ON DELETE SET NULL")
+
+
+def _m29_test_kinds(conn):
+    """Health tests on each person's own schedule: kinds of test with a name, how many days apart they're due and
+    a usual cost, instead of a fixed weekly, monthly and yearly. A place's doctor charge can be any of them."""
+    import re
+    conn.execute("""
+        CREATE TABLE test_kinds (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            key TEXT NOT NULL,
+            label TEXT NOT NULL,
+            every_days INTEGER CHECK(every_days IS NULL OR every_days > 0),
+            cost REAL CHECK(cost IS NULL OR cost >= 0),
+            archived INTEGER NOT NULL DEFAULT 0 CHECK(archived IN (0, 1)),
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE (owner_id, key)
+        )
+    """)
+    # place_charges only allowed the three fixed kinds: rebuild it without that rule.
+    old_sql = conn.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'place_charges'").fetchone()[0]
+    rule = "test_type TEXT CHECK(test_type IS NULL OR test_type IN ('weekly', 'monthly', 'yearly')),"
+    assert rule in old_sql, "place_charges is not as v12 made it"
+    new_sql = re.sub(r'CREATE TABLE "?place_charges"?', "CREATE TABLE place_charges_new", old_sql.replace(rule, "test_type TEXT,"), count=1)
+    conn.execute(new_sql)
+    columns = ", ".join(r[1] for r in conn.execute("PRAGMA table_info(place_charges)"))
+    conn.execute(f"INSERT INTO place_charges_new ({columns}) SELECT {columns} FROM place_charges")
+    conn.execute("DROP TABLE place_charges")
+    conn.execute("ALTER TABLE place_charges_new RENAME TO place_charges")
+    conn.execute("CREATE INDEX idx_place_charges_source ON place_charges(source_id)")
+
+
+def _m30_shoots(conn):
+    """Planning a content shoot: the shoot (date, place, concept), the people on it, and its lists (goals, shots,
+    wardrobe, prep, budget, marketing). An expense can remember which shoot it was for."""
+    conn.execute("""
+        CREATE TABLE shoots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'planning'
+                CHECK(status IN ('idea', 'planning', 'booked', 'shot', 'editing', 'released', 'cancelled')),
+            shoot_date TEXT,
+            start_time TEXT,
+            hours REAL,
+            concept TEXT,
+            location_name TEXT,
+            location_address TEXT,
+            location_notes TEXT,
+            set_path TEXT,
+            campaign_id INTEGER REFERENCES campaigns(id) ON DELETE SET NULL,
+            tour_id INTEGER REFERENCES tours(id) ON DELETE SET NULL,
+            persona_id INTEGER REFERENCES personas(id) ON DELETE SET NULL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_shoots_owner ON shoots(owner_id, shoot_date)")
+    conn.execute("""
+        CREATE TABLE shoot_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            shoot_id INTEGER NOT NULL REFERENCES shoots(id) ON DELETE CASCADE,
+            kind TEXT NOT NULL CHECK(kind IN ('goal', 'shot', 'wardrobe', 'prep', 'budget', 'marketing')),
+            label TEXT NOT NULL,
+            notes TEXT,
+            done INTEGER NOT NULL DEFAULT 0 CHECK(done IN (0, 1)),
+            amount REAL CHECK(amount IS NULL OR amount >= 0),
+            actual REAL CHECK(actual IS NULL OR actual >= 0),
+            due_date TEXT,
+            expense_id INTEGER REFERENCES expenses(id) ON DELETE SET NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_shoot_items_shoot ON shoot_items(shoot_id)")
+    conn.execute("""
+        CREATE TABLE shoot_people (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            shoot_id INTEGER NOT NULL REFERENCES shoots(id) ON DELETE CASCADE,
+            name TEXT,
+            contact_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
+            role TEXT NOT NULL DEFAULT 'other',
+            fee REAL CHECK(fee IS NULL OR fee >= 0),
+            agreement TEXT,
+            id_checked INTEGER NOT NULL DEFAULT 0 CHECK(id_checked IN (0, 1)),
+            release_signed INTEGER NOT NULL DEFAULT 0 CHECK(release_signed IN (0, 1)),
+            confirmed INTEGER NOT NULL DEFAULT 0 CHECK(confirmed IN (0, 1)),
+            notes TEXT,
+            expense_id INTEGER REFERENCES expenses(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_shoot_people_shoot ON shoot_people(shoot_id)")
+    conn.execute("ALTER TABLE expenses ADD COLUMN shoot_id INTEGER REFERENCES shoots(id) ON DELETE SET NULL")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1049,6 +1304,13 @@ MIGRATIONS = [
     (21, "estimated tax payments, passkeys, two-step sign-in", _m21_tax_payments_passkeys_two_step, False),
     (22, "arrangements and mileage", _m22_arrangements_mileage, False),
     (23, "session details, sign-in history, lasting throttle, recovery codes", _m23_sign_in_hardening, False),
+    (24, "how each client found you", _m24_found_via, False),
+    (25, "campaigns, places you post in, saved text", _m25_campaigns_places_snippets, False),
+    (26, "inquiries", _m26_inquiries, False),
+    (27, "ad listings", _m27_listings, False),
+    (28, "custom content orders and menu", _m28_custom_content, False),
+    (29, "health tests on your own schedule", _m29_test_kinds, True),
+    (30, "content shoot planning", _m30_shoots, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

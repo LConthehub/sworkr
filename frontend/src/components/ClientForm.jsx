@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Field, inputClass, errorMessage, buttonClass } from './Modal';
 import { PersonaSelect } from './Personas';
+import { FoundViaField } from './FoundVia';
 import { BadDateWarning } from './Blocklist';
 import { SCREENING_STYLES } from '../colors';
 import { fetchAll } from '../api';
@@ -24,6 +25,7 @@ export default function ClientForm({ client, initial, onSaved, onDeleted }) {
     name: client?.name || initial?.name || '',
     industry: client?.industry || '',
     persona_id: client?.persona_id ? String(client.persona_id) : '',
+    found_via: client?.found_via || initial?.found_via || '',
     role: client?.role || initial?.role || 'client',
     email: client?.email || initial?.email || '',
     contact_phone: client?.contact_phone || '',
@@ -64,6 +66,7 @@ export default function ClientForm({ client, initial, onSaved, onDeleted }) {
       display_handle: shownIndex < 0 ? null : shownIndex,
       industry: form.industry.trim() || null,
       persona_id: form.persona_id ? Number(form.persona_id) : null,
+      found_via: form.role === 'client' ? form.found_via.trim() || null : null,
       role: form.role,
       couple_with: form.couple_with ? Number(form.couple_with) : null,
       email: form.email.trim() || null,
@@ -161,6 +164,7 @@ export default function ClientForm({ client, initial, onSaved, onDeleted }) {
       )}
 
       <PersonaSelect value={form.persona_id} onChange={set('persona_id')} />
+      {form.role === 'client' && <FoundViaField value={form.found_via} onChange={set('found_via')} />}
       <Field label="Industry (what they do for work)">
         <input list="industries" value={form.industry} onChange={set('industry')} placeholder="e.g. Finance, Tech, Law" className={inputClass} />
         <datalist id="industries">{INDUSTRIES.map((x) => <option key={x} value={x} />)}</datalist>

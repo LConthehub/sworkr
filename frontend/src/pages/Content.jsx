@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, NavLink, useParams } from 'react-router-dom';
+import { Link, NavLink, useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import Modal, { Field, inputClass, errorMessage, buttonClass, quietButtonClass } from '../components/Modal';
 import { PersonaSelect } from '../components/Personas';
+import { Campaigns, Toolkit, useCampaigns, usePlaces, useSnippets } from '../components/Promo';
+import Listings from '../components/Listings';
+import Customs from '../components/Customs';
+import Shoots from '../components/Shoots';
 import { dayLabel, formatTime, fromDateTimeInputs, money, repeatDates, toDateInput, toTimeInput } from '../colors';
 
 /** Suggestions only: any platform, ad site or your own website can be typed in. */
@@ -34,16 +38,21 @@ export default function Content() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-white">Content</h1>
-        <nav className="flex gap-1 rounded-full bg-white/20 p-1 backdrop-blur-sm" aria-label="Content">
-          {[['/content', 'Library'], ['/content/planner', 'Post planner']].map(([to, label]) => (
-            <NavLink key={to} to={to} end className={({ isActive }) => `px-4 py-1.5 rounded-full text-sm font-medium ${isActive ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'}`}>
+        <nav className="flex gap-1 overflow-x-auto rounded-full bg-white/20 p-1 backdrop-blur-sm" aria-label="Content">
+          {[['/content', 'Library'], ['/content/shoots', 'Shoots'], ['/content/planner', 'Post planner'], ['/content/campaigns', 'Campaigns'], ['/content/customs', 'Customs'], ['/content/ads', 'Ads'], ['/content/toolkit', 'Places & text']].map(([to, label]) => (
+            <NavLink key={to} to={to} end className={({ isActive }) => `whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium ${isActive ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'}`}>
               {label}
             </NavLink>
           ))}
         </nav>
       </div>
-      {tab === 'planner' ? <Planner version={version} onEdit={(p) => setModal({ post: p })} onNew={() => plan({})} />
-        : <Library onPlan={plan} version={version} />}
+      {tab === 'planner' ? <Planner version={version} onEdit={(p) => setModal({ post: p })} onNew={plan} />
+        : tab === 'campaigns' ? <Campaigns version={version} onPlan={plan} />
+          : tab === 'shoots' ? <Shoots />
+          : tab === 'customs' ? <Customs />
+          : tab === 'ads' ? <Listings sites={PLATFORM_GROUPS['Ad sites']} />
+          : tab === 'toolkit' ? <Toolkit platforms={PLATFORMS} />
+            : <Library onPlan={plan} version={version} />}
       {modal && (
         <Modal title={modal.post.id ? 'Edit post' : 'Plan a post'} onClose={() => setModal(null)} wide>
           <PostForm post={modal.post} onDone={() => { setModal(null); setVersion((v) => v + 1); }} />
@@ -172,9 +181,14 @@ function Planner({ version, onEdit, onNew }) {
   const [filter, setFilter] = useState('open');
   const [posts, setPosts] = useState(null);
   const [notice, setNotice] = useState('');
+  const [campaigns] = useCampaigns(version);
+  const [search, setSearch] = useSearchParams();
+  const campaignId = search.get('campaign') || '';
+  const campaignNames = Object.fromEntries(campaigns.map((c) => [c.id, c.name]));
   const load = useCallback(() => {
-    axios.get('/api/posts', { params: filter === 'all' ? {} : { status: filter } }).then(({ data }) => setPosts(data)).catch(() => setPosts([]));
-  }, [filter]);
+    const params = { ...(filter === 'all' ? {} : { status: filter }), ...(campaignId ? { campaign_id: campaignId } : {}) };
+    axios.get('/api/posts', { params }).then(({ data }) => setPosts(data)).catch(() => setPosts([]));
+  }, [filter, campaignId]);
   useEffect(() => { load(); }, [load, version]);
 
   const byDay = {};
@@ -193,7 +207,14 @@ function Planner({ version, onEdit, onNew }) {
             <button key={id} onClick={() => setFilter(id)} aria-pressed={filter === id} className={`px-3 py-1.5 ${filter === id ? 'bg-sworkr-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{label}</button>
           ))}
         </div>
-        <button onClick={onNew} className="px-4 py-2 rounded-full text-sm font-medium bg-sworkr-500 text-white hover:bg-sworkr-600">+ New post</button>
+        {campaigns.length > 0 && (
+          <select value={campaignId} onChange={(e) => setSearch(e.target.value ? { campaign: e.target.value } : {})} aria-label="Campaign"
+            className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-700 bg-white max-w-[14rem]">
+            <option value="">All campaigns</option>
+            {campaigns.filter((c) => !c.archived || String(c.id) === campaignId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        )}
+        <button onClick={() => onNew(campaignId ? { campaign_id: Number(campaignId) } : {})} className="px-4 py-2 rounded-full text-sm font-medium bg-sworkr-500 text-white hover:bg-sworkr-600">+ New post</button>
       </div>
       <p className="text-xs text-gray-500 mb-3">
         Plan social posts, fan-site drops, ad renewals and bumps, and tour announcements. sworkr doesn't post for you (sites don't
@@ -210,7 +231,7 @@ function Planner({ version, onEdit, onNew }) {
                 {d === 'unscheduled' ? 'No date yet' : dayLabel(new Date(`${d}T12:00:00`), { weekday: 'long', month: 'short', day: 'numeric' })}
               </h3>
               <ul className="divide-y divide-gray-100">
-                {byDay[d].map((p) => <PostRow key={p.id} post={p} onEdit={onEdit} onChanged={(msg) => { setNotice(msg || ''); load(); }} />)}
+                {byDay[d].map((p) => <PostRow key={p.id} post={p} campaign={campaignNames[p.campaign_id]} onEdit={onEdit} onChanged={(msg) => { setNotice(msg || ''); load(); }} />)}
               </ul>
             </section>
           ))}
@@ -221,7 +242,7 @@ function Planner({ version, onEdit, onNew }) {
 }
 
 /** One post, with Copy caption and Mark as posted. Also used on the dashboard. */
-export function PostRow({ post: p, onEdit, onChanged }) {
+export function PostRow({ post: p, campaign, onEdit, onChanged }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -248,8 +269,11 @@ export function PostRow({ post: p, onEdit, onChanged }) {
       <button onClick={() => onEdit?.(p)} className="flex-1 min-w-48 text-left">
         <span className="flex flex-wrap items-center gap-2">
           <span className="font-medium text-gray-800">{p.platform}</span>
+          {p.place && <span className="text-sm text-gray-700">{p.place}</span>}
           {p.account && <span className="text-xs text-gray-500">{p.account}</span>}
           <span className={`text-[10px] px-2 py-0.5 rounded-full ${STATUS[p.status].badge}`}>{STATUS[p.status].label}</span>
+          {campaign && <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">{campaign}</span>}
+          {p.inquiries != null && <span className="text-xs text-gray-600">{p.inquiries} inquir{p.inquiries === 1 ? 'y' : 'ies'}</span>}
           {p.price != null && <span className="text-xs text-gray-600">{money(p.price)}</span>}
         </span>
         <span className={`block text-xs ${overdue ? 'text-red-600' : 'text-gray-500'}`}>
@@ -278,7 +302,14 @@ export function PostForm({ post, onDone }) {
     date: start ? toDateInput(start) : '', time: start ? toTimeInput(start) : '19:00',
     caption: post.caption || '', price: post.price ?? '', notes: post.notes || '', post_url: post.post_url || '',
     repeat: '', repeat_count: '4',
+    campaign_id: post.campaign_id ? String(post.campaign_id) : '', place: post.place || '', inquiries: post.inquiries ?? '',
   });
+  const [also, setAlso] = useState([]); // the same post on other platforms
+  const [campaigns] = useCampaigns();
+  const [places] = usePlaces();
+  const [snippets] = useSnippets();
+  const placesFor = (platform) => places.filter((x) => !x.archived && x.platform.toLowerCase() === platform.trim().toLowerCase());
+  const savedPlace = placesFor(form.platform).find((x) => x.name.toLowerCase() === form.place.trim().toLowerCase());
   const [files, setFiles] = useState(post.file_paths || []);
   const [setPath] = useState(post.set_path || null);
   const [error, setError] = useState('');
@@ -296,7 +327,15 @@ export function PostForm({ post, onDone }) {
       scheduled_at: when ? when.toISOString() : null, caption: form.caption, price: form.price === '' ? null : Number(form.price),
       set_path: setPath, file_paths: files, notes: form.notes, post_url: form.post_url.trim() || null,
       posted_at: post.posted_at || null,
+      campaign_id: form.campaign_id ? Number(form.campaign_id) : null, place: form.place.trim() || null,
+      inquiries: form.inquiries === '' ? null : Number(form.inquiries),
     };
+    if (!editing) {
+      body.also = also.filter((a) => a.platform.trim()).map((a) => ({
+        platform: a.platform.trim(), account: a.account.trim() || null, place: a.place.trim() || null, caption: a.caption.trim() || null,
+        scheduled_at: form.date && a.time ? fromDateTimeInputs(form.date, a.time).toISOString() : null,
+      }));
+    }
     if (!editing && form.repeat && when) {
       body.repeat_dates = repeatDates(when, form.repeat, Math.min(Math.max(Number(form.repeat_count) || 2, 2), 52)).map((d) => d.toISOString());
     }
@@ -342,13 +381,30 @@ export function PostForm({ post, onDone }) {
         <Field label="Account (optional)">
           <input value={form.account} onChange={set('account')} placeholder="@yourhandle" className={inputClass} />
         </Field>
+        <Field label="Where on it (optional)">
+          <input list="post-places" value={form.place} onChange={set('place')} placeholder="Subreddit, channel, group" className={inputClass} />
+          <datalist id="post-places">{placesFor(form.platform).map((x) => <option key={x.id} value={x.name} />)}</datalist>
+        </Field>
         <PersonaSelect value={form.persona_id} onChange={set('persona_id')} label="Persona" />
+        {(campaigns.length > 0 || form.campaign_id) && (
+          <Field label="Campaign">
+            <select value={form.campaign_id} onChange={set('campaign_id')} className={inputClass}>
+              <option value="">None</option>
+              {campaigns.filter((c) => !c.archived || String(c.id) === form.campaign_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </Field>
+        )}
         <Field label="Status">
           <select value={form.status} onChange={set('status')} className={inputClass}>
             {Object.entries(STATUS).map(([v, s]) => <option key={v} value={v}>{s.label}</option>)}
           </select>
         </Field>
       </div>
+      {savedPlace?.rules && (
+        <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 whitespace-pre-wrap">
+          <b>{savedPlace.name} rules:</b> {savedPlace.rules}
+        </p>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Field label="Day"><input type="date" value={form.date} onChange={set('date')} className={inputClass} /></Field>
         <Field label="Time"><input type="time" value={form.time} onChange={set('time')} disabled={!form.date} className={inputClass} /></Field>
@@ -371,7 +427,44 @@ export function PostForm({ post, onDone }) {
       )}
       <Field label={`Caption (${form.caption.length} characters)`}>
         <textarea rows={4} value={form.caption} onChange={set('caption')} placeholder="Caption or ad text" className={inputClass} />
+        {snippets.length > 0 && (
+          <span className="flex flex-wrap items-center gap-1 mt-1">
+            <span className="text-xs text-gray-400">Add:</span>
+            {snippets.map((x) => (
+              <button key={x.id} type="button" title={x.body}
+                onClick={() => setForm((f) => ({ ...f, caption: f.caption.trim() ? `${f.caption.replace(/\s+$/, '')}\n${x.body}` : x.body }))}
+                className="text-xs px-2 py-0.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50">{x.label}</button>
+            ))}
+          </span>
+        )}
       </Field>
+      {!editing && (
+        <fieldset className="rounded-lg border border-gray-200 px-3 pt-2 pb-3 space-y-2">
+          <legend className="px-1 text-xs font-medium text-gray-500">Also post it on</legend>
+          {also.length === 0 && <p className="text-xs text-gray-400">The same post on another platform: each gets its own line in the planner to tick off.</p>}
+          {also.map((a, i) => {
+            const change = (k) => (e) => setAlso(also.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)));
+            return (
+              <div key={i} className="rounded-lg bg-gray-50 p-2 space-y-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <input list="post-platforms" value={a.platform} onChange={change('platform')} placeholder="Platform" aria-label="Platform" className={inputClass} />
+                  <input list={`also-places-${i}`} value={a.place} onChange={change('place')} placeholder="Where on it" aria-label="Where on it" className={inputClass} />
+                  <datalist id={`also-places-${i}`}>{placesFor(a.platform).map((x) => <option key={x.id} value={x.name} />)}</datalist>
+                  <input value={a.account} onChange={change('account')} placeholder="@account" aria-label="Account" className={inputClass} />
+                  <span className="flex items-center gap-1">
+                    <input type="time" value={a.time} onChange={change('time')} disabled={!form.date} aria-label="Time" className={inputClass} />
+                    <button type="button" onClick={() => setAlso(also.filter((_, j) => j !== i))} className="text-gray-300 hover:text-red-500 px-1" aria-label="Remove">✕</button>
+                  </span>
+                </div>
+                <textarea rows={2} value={a.caption} onChange={change('caption')} placeholder="A different caption for this one (leave empty to use the one above)" aria-label="Caption" className={inputClass} />
+              </div>
+            );
+          })}
+          <button type="button" onClick={() => setAlso([...also, { platform: '', place: '', account: '', time: form.time, caption: '' }])} className="text-xs text-sworkr-600 hover:text-sworkr-800">
+            + Add a platform
+          </button>
+        </fieldset>
+      )}
       <div>
         <p className="text-xs font-medium text-gray-500 mb-1">Files{setPath ? ` from ${setPath}` : ''}</p>
         {files.length === 0 ? (
@@ -387,8 +480,13 @@ export function PostForm({ post, onDone }) {
           </ul>
         )}
       </div>
-      {(form.status === 'posted' || form.post_url) && (
-        <Field label="Link to the post"><input value={form.post_url} onChange={set('post_url')} placeholder="https://…" className={inputClass} /></Field>
+      {(form.status === 'posted' || form.post_url || form.inquiries !== '') && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <span className="sm:col-span-2"><Field label="Link to the post"><input value={form.post_url} onChange={set('post_url')} placeholder="https://…" className={inputClass} /></Field></span>
+          <Field label="Inquiries or sales it brought">
+            <input type="number" min="0" step="1" inputMode="numeric" value={form.inquiries} onChange={set('inquiries')} placeholder="If you know" className={inputClass} />
+          </Field>
+        </div>
       )}
       <Field label="Notes"><textarea rows={2} value={form.notes} onChange={set('notes')} className={inputClass} /></Field>
       {error && <p className="text-sm text-red-600">{error}</p>}

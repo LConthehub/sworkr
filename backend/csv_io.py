@@ -16,6 +16,7 @@ import io
 import re
 
 import contacts
+import marketing
 import finance
 from datetime import date, datetime, timedelta, timezone
 from typing import Callable, List, Optional
@@ -28,7 +29,7 @@ MAX_ERRORS_SHOWN = 20
 
 CLIENT_COLUMNS = ["id", "name", "email", "phone", "tags", "notes", "active", "created",
                   "screening", "do_not_see", "do_not_see_reason", "references", "screening_notes",
-                  "birthday", "drinks", "food", "handles", "industry", "shown_as", "role"]
+                  "birthday", "drinks", "food", "handles", "industry", "shown_as", "role", "found_via"]
 SCREENING = ("unscreened", "pending", "verified", "declined")
 EXPENSE_COLUMNS = ["id", "date", "description", "amount", "category", "client", "client_email", "notes"]
 
@@ -49,7 +50,7 @@ ALIASES = {
     "date of birth": "birthday", "dob": "birthday", "drink": "drinks", "drink_preferences": "drinks",
     "food_preferences": "food",
     "social": "handles", "social media": "handles", "socials": "handles", "handle": "handles",
-    "work": "industry", "job": "industry", "occupation": "industry", "display_name": "shown_as", "known as": "shown_as",
+    "found via": "found_via", "source": "found_via", "referred by": "found_via", "work": "industry", "job": "industry", "occupation": "industry", "display_name": "shown_as", "known as": "shown_as",
 }
 
 _get_db: Optional[Callable] = None
@@ -238,7 +239,8 @@ def export_clients(request: Request, tz_offset: int = Query(0, ge=-840, le=840))
                          _safe_cell(c["screening_notes"]), c["birthday"] or "",
                          _safe_cell(c["drink_preferences"]), _safe_cell(c["food_preferences"]),
                          _safe_cell(contacts.handles_text(contacts.handles_from_db(c["handles"]))),
-                         _safe_cell(c["industry"]), _safe_cell(c["display_name"]), "co-worker" if c["role"] == "partner" else c["role"]])
+                         _safe_cell(c["industry"]), _safe_cell(c["display_name"]), "co-worker" if c["role"] == "partner" else c["role"],
+                         _safe_cell(c["found_via"])])
     finally:
         db.close()
     return _csv_response(rows, CLIENT_COLUMNS, "clients")
@@ -300,6 +302,8 @@ def _import_clients(db, rows, owner_id):
             fields["handles"] = contacts.handles_json(handles)
         if "industry" in row:
             fields["industry"] = _unformula(row["industry"]) or None
+        if "found_via" in row:
+            fields["found_via"] = marketing.clean_found_via(_unformula(row["found_via"]))
         if "role" in row:
             role = row["role"].strip().lower() or "client"
             role = "partner" if role in ("co-worker", "coworker", "collaborator") else role   # shown as "co-worker", stored as "partner"

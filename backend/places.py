@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 import calendar_sync
 import finance
+import healthtests
 
 router = APIRouter()
 _get_db: Optional[Callable] = None
@@ -64,18 +65,12 @@ RENEWABLE = {Cadence.PER_QUARTER, Cadence.PER_YEAR, Cadence.ONCE}
 RENEW_WINDOW = {Cadence.PER_QUARTER.value: (30, 3), Cadence.PER_YEAR.value: (90, 12)}
 
 
-class TestType(str, Enum):
-    WEEKLY = "weekly"
-    MONTHLY = "monthly"
-    YEARLY = "yearly"
-
-
 class ChargeIn(BaseModel):
     label: str
     amount: Optional[float] = None       # empty until the person knows it
     cadence: Cadence = Cadence.PER_DAY
     category: str = "other"              # an expense category key
-    test_type: Optional[TestType] = None  # set: a house doctor; logged as a health test
+    test_type: Optional[str] = None       # set: a house doctor; logged as a health test of that kind
     renews_on: Optional[date] = None      # a license or work card's expiry (yearly or one-off charges)
 
 
@@ -110,7 +105,9 @@ def _validate(db, owner_id: int, body: ChargeIn) -> ChargeIn:
     if body.amount is not None and not (0 <= body.amount < 1e9):
         raise HTTPException(status_code=400, detail="The amount must be 0 or more")
     body.category = finance.check_category(db, owner_id, body.category)
+    body.test_type = (body.test_type or "").strip() or None
     if body.test_type:
+        healthtests.check(db, owner_id, body.test_type)
         body.category = "medical"   # health tests are always logged under Tests & doctor
     if body.cadence not in RENEWABLE:
         body.renews_on = None
@@ -210,7 +207,7 @@ def create_charge(source_id: int, body: ChargeIn, request: Request):
                                        sort_order, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (owner, source_id, body.label, body.amount, body.cadence.value, body.category,
-              body.test_type.value if body.test_type else None, body.renews_on.isoformat() if body.renews_on else None,
+              body.test_type, body.renews_on.isoformat() if body.renews_on else None,
               order, now, now))
         tasks = _sync_renewal_task(db, cur.lastrowid, owner)
         tests = _sync_stays(db, owner, source_id)
@@ -235,7 +232,7 @@ def update_charge(charge_id: int, body: ChargeIn, request: Request):
                    updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (body.label, body.amount, body.cadence.value, body.category,
-              body.test_type.value if body.test_type else None, body.renews_on.isoformat() if body.renews_on else None,
+              body.test_type, body.renews_on.isoformat() if body.renews_on else None,
               _now(), charge_id, owner))
         tasks = _sync_renewal_task(db, charge_id, owner)
         tests = _sync_stays(db, owner, existing["source_id"])
