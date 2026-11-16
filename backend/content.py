@@ -284,6 +284,7 @@ def make_thumbnail(data: bytes, size: int) -> Optional[bytes]:
 class DemoLibrary(Library):
     SETS = {"2026-10 Red lace": 8, "2026-10 Beach day": 6, "2026-11 Collab with Jade": 5, "2026-11 Office roleplay": 7,
             "Teasers": 4}
+    INSIDE = {"2026-11 Collab with Jade/Behind the scenes": 4, "2026-10 Red lace/Edited for X": 3}   # folders inside sets
     COLORS = {"2026-10 Red lace": (196, 30, 58), "2026-10 Beach day": (20, 140, 180), "2026-11 Collab with Jade": (124, 58, 237),
               "2026-11 Office roleplay": (80, 80, 90), "Teasers": (252, 76, 156)}
 
@@ -292,9 +293,13 @@ class DemoLibrary(Library):
         if path == "":
             return [{"name": s, "path": s, "folder": True, "size": None,
                      "modified": (now - timedelta(days=5 * i)).isoformat(timespec="seconds")} for i, s in enumerate(self.SETS)]
+        if path in self.INSIDE:           # a folder inside a set
+            return [{"name": f"{i + 1:02d}.jpg", "path": f"{path}/{i + 1:02d}.jpg", "folder": False, "size": 1_900_000 + i * 20_011,
+                     "modified": (now - timedelta(days=2)).isoformat(timespec="seconds")} for i in range(self.INSIDE[path])]
         if path not in self.SETS:
             raise LibraryError("That folder isn't there any more")
-        out = []
+        out = [{"name": sub.rsplit("/", 1)[1], "path": sub, "folder": True, "size": None,
+                "modified": (now - timedelta(days=2)).isoformat(timespec="seconds")} for sub in self.INSIDE if sub.rsplit("/", 1)[0] == path]
         for i in range(self.SETS[path]):
             name = f"{i + 1:02d}.mp4" if i == self.SETS[path] - 1 else f"{i + 1:02d}.jpg"
             out.append({"name": name, "path": f"{path}/{name}", "folder": False, "size": 2_400_000 + i * 31_337,
@@ -308,7 +313,7 @@ class DemoLibrary(Library):
         except ImportError:
             return None
         folder, _, name = path.rpartition("/")
-        r, g, b = self.COLORS.get(folder, (150, 150, 150))
+        r, g, b = self.COLORS.get(folder.split("/")[0], (150, 150, 150))
         shade = (int(name[:2]) if name[:2].isdigit() else 1) * 9
         img = Image.new("RGB", (size, size), (min(r + shade, 255), min(g + shade, 255), min(b + shade, 255)))
         draw = ImageDraw.Draw(img)

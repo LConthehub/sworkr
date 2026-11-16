@@ -518,6 +518,17 @@ def _fill(api):
                                          ("Duo with Jade", 60, 900, "Subject to her calendar")):
         _ok(api.post("/api/rates", json={"label": label, "minutes": minutes, "price": price, "notes": notes, "persona_id": scarlett["id"]}))
 
+    # ---------- house rules at the brothel, and a price rule for regulars ----------
+    for s in _ok(api.get("/api/income-sources")):
+        if s["kind"] == "brothel":
+            _ok(api.put(f"/api/income-sources/{s['id']}", json={
+                **{k: s[k] for k in ("name", "kind", "fee_percent", "fee_per_shift", "token_value", "payout_note", "notes", "archived",
+                                     "work_type", "persona_id", "gift_share_percent")},
+                "tip_share_percent": 0, "holds_cash": True, "cash_limit": 20,
+                "cuts": [{"label": "Kelly cut (cab)", "kind": "percent", "value": 20}, {"label": "Kelly cut (limo)", "kind": "percent", "value": 30},
+                         {"label": "Card fee", "kind": "percent", "value": 3, "basis": "mine"}]}))
+    _ok(api.post("/api/rates/tag-rules", json={"tag": "regular", "kind": "percent", "value": 10}))
+
     # ---------- health tests on this person's own schedule ----------
     for kind in _ok(api.get("/api/test-kinds")):
         if kind["key"] == "weekly":      # where she works, the panel is every 14 days

@@ -276,12 +276,14 @@ function PlannerMonth({ campaignId, campaignNames, version, onEdit, onNew }) {
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [posts, setPosts] = useState([]);
   const [ads, setAds] = useState([]);
+  const [shoots, setShoots] = useState([]);
   const grid = monthGrid(month);
   useEffect(() => {
     const params = { start: grid[0].toISOString(), end: new Date(grid[41].getFullYear(), grid[41].getMonth(), grid[41].getDate() + 1).toISOString() };
     if (campaignId) params.campaign_id = campaignId;
     axios.get('/api/posts', { params }).then(({ data }) => setPosts(data)).catch(() => setPosts([]));
     axios.get('/api/listings').then(({ data }) => setAds(data.listings.filter((l) => l.end_date && !l.paused))).catch(() => setAds([]));
+    axios.get('/api/shoots', { params: { show: 'all' } }).then(({ data }) => setShoots(data.filter((x) => x.shoot_date && x.status !== 'cancelled'))).catch(() => setShoots([]));
   }, [month, campaignId, version]);   // eslint-disable-line react-hooks/exhaustive-deps
   const byDay = {};
   for (const p of posts) {
@@ -311,6 +313,11 @@ function PlannerMonth({ campaignId, campaignNames, version, onEdit, onNew }) {
                   <button onClick={() => onNew({ scheduled_at: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 19).toISOString(), ...(campaignId ? { campaign_id: Number(campaignId) } : {}) })}
                     className="text-gray-300 hover:text-sworkr-600 text-sm leading-none px-1" aria-label={`Plan a post on ${key}`}>+</button>
                 </div>
+                {shoots.filter((x) => x.shoot_date === key).map((x) => (
+                  <Link key={`shoot${x.id}`} to={`/content/shoots?shoot=${x.id}`} className="block truncate text-[10px] px-1 py-0.5 mb-0.5 rounded bg-violet-100 text-violet-700" title={`Shoot: ${x.title}`}>
+                    📷 {x.start_time ? `${x.start_time} ` : ''}{x.title}
+                  </Link>
+                ))}
                 {ads.filter((l) => l.end_date === key).map((l) => (
                   <Link key={`ad${l.id}`} to="/content/ads" className="block truncate text-[10px] px-1 py-0.5 mb-0.5 rounded bg-amber-100 text-amber-800" title={`${l.site} ad runs out`}>
                     ⏳ {l.site} ad ends
@@ -328,7 +335,7 @@ function PlannerMonth({ campaignId, campaignNames, version, onEdit, onNew }) {
           })}
         </div>
       </div>
-      <p className="text-xs text-gray-400 mt-2">Green is posted, red is overdue, grey is an idea. Tap a day's + to plan a post on it.</p>
+      <p className="text-xs text-gray-400 mt-2">Green is posted, red is overdue, grey is an idea, purple is a shoot. Tap a day's + to plan a post on it.</p>
     </div>
   );
 }

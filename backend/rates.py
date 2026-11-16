@@ -112,6 +112,104 @@ def delete_rate(rate_id: int, request: Request):
         db.close()
 
 
+# ==================== PRICES BY TAG ====================
+
+class TagRuleIn(BaseModel):
+    tag: str
+    kind: str                             # percent (off), amount (off) or locked (keeps the rate they last paid)
+    value: Optional[float] = None
+
+
+def _tag_rules(db, owner_id: int) -> List[dict]:
+    return [dict(r) for r in db.execute("SELECT id, tag, kind, value FROM tag_rules WHERE owner_id = ? ORDER BY tag", (owner_id,))]
+
+
+@router.get("/api/rates/tag-rules")
+def list_tag_rules(request: Request):
+    db = _get_db()
+    try:
+        return _tag_rules(db, _owner(request))
+    finally:
+        db.close()
+
+
+@router.post("/api/rates/tag-rules")
+def save_tag_rule(body: TagRuleIn, request: Request):
+    """Set (or change) what a tag does to the price. One rule per tag."""
+    tag = body.tag.strip().lower().lstrip("#")[:60]
+    if not tag:
+        raise HTTPException(status_code=400, detail="Which tag?")
+    if body.kind not in ("percent", "amount", "locked"):
+        raise HTTPException(status_code=400, detail="A tag gives a percentage off, an amount off, or a locked-in rate")
+    value = None if body.kind == "locked" else body.value
+    if body.kind != "locked" and (value is None or not (0 <= value < 1e9) or (body.kind == "percent" and value > 100)):
+        raise HTTPException(status_code=400, detail="Say how much off: 0 to 100%, or an amount of 0 or more")
+    owner = _owner(request)
+    db = _get_db()
+    try:
+        db.execute("INSERT INTO tag_rules (owner_id, tag, kind, value, created_at) VALUES (?, ?, ?, ?, ?) "
+                   "ON CONFLICT(owner_id, tag) DO UPDATE SET kind = excluded.kind, value = excluded.value", (owner, tag, body.kind, value, _now()))
+        db.commit()
+        return _tag_rules(db, owner)
+    finally:
+        db.close()
+
+
+@router.delete("/api/rates/tag-rules/{rule_id}", status_code=204)
+def delete_tag_rule(rule_id: int, request: Request):
+    db = _get_db()
+    try:
+        db.execute("DELETE FROM tag_rules WHERE id = ? AND owner_id = ?", (rule_id, _owner(request)))
+        db.commit()
+    finally:
+        db.close()
+
+
+def _client_rule(db, owner_id: int, client_id: int) -> Optional[dict]:
+    """The pricing rule that applies to a client, from their tags. A locked-in rate wins; otherwise the biggest discount."""
+    rules = [dict(r) for r in db.execute("""
+        SELECT r.tag, r.kind, r.value FROM tag_rules r JOIN client_tags t ON LOWER(t.tag_name) = r.tag
+        JOIN clients c ON c.id = t.client_id WHERE r.owner_id = ? AND c.owner_id = ? AND t.client_id = ?
+    """, (owner_id, owner_id, client_id))]
+    if not rules:
+        return None
+    locked = [r for r in rules if r["kind"] == "locked"]
+    return locked[0] if locked else rules[0] if len(rules) == 1 else rules     # several discounts: the caller picks the best for the price
+
+
+@router.get("/api/rates/quote")
+def quote(request: Request, client_id: int, service: str, minutes: Optional[int] = None):
+    """
+    What to charge this client for a service on the rate card, after any rule their tags carry. Says why, so
+    the booking form can show it. No card price for that service: nothing to quote.
+    """
+    owner = _owner(request)
+    db = _get_db()
+    try:
+        card = [r for r in _rows(db, owner) if not r["archived"] and r["label"].casefold() == service.strip().casefold()]
+        match = next((r for r in card if r["minutes"] == minutes), card[0] if card else None)
+        if not match:
+            return {"card_price": None, "price": None, "reason": None}
+        price, reason = match["price"], None
+        rule = _client_rule(db, owner, client_id)
+        if isinstance(rule, list):       # several discount tags: whichever gives the lowest price
+            rule = min(rule, key=lambda r: price * (1 - r["value"] / 100) if r["kind"] == "percent" else price - r["value"])
+        if rule and rule["kind"] == "locked":
+            last = db.execute("""
+                SELECT rate FROM appointments WHERE owner_id = ? AND client_id = ? AND kind = 'client' AND status != 'cancelled' AND rate > 0
+                  AND LOWER(service_type) = LOWER(?) AND (? IS NULL OR duration_minutes = ?) ORDER BY scheduled_date DESC LIMIT 1
+            """, (owner, client_id, service.strip(), match["minutes"], match["minutes"])).fetchone()
+            if last and last["rate"] < price:
+                price, reason = last["rate"], f"Locked-in rate (#{rule['tag']}): what they last paid"
+        elif rule and rule["kind"] == "percent" and rule["value"]:
+            price, reason = round(price * (1 - rule["value"] / 100), 2), f"{rule['value']:g}% off (#{rule['tag']})"
+        elif rule and rule["kind"] == "amount" and rule["value"]:
+            price, reason = round(max(price - rule["value"], 0), 2), f"${rule['value']:g} off (#{rule['tag']})"
+        return {"card_price": match["price"], "price": price, "reason": reason, "minutes": match["minutes"]}
+    finally:
+        db.close()
+
+
 @router.get("/api/rates/deposits")
 def deposits(request: Request):
     """
@@ -161,6 +259,8 @@ def behind(request: Request):
             FROM appointments a JOIN clients c ON c.id = a.client_id
             WHERE a.owner_id = ? AND a.kind = 'client' AND a.status != 'cancelled' AND a.rate > 0
               AND c.is_active = 1 AND c.do_not_see = 0
+              AND NOT EXISTS (SELECT 1 FROM client_tags t JOIN tag_rules r ON r.tag = LOWER(t.tag_name) AND r.owner_id = a.owner_id
+                              WHERE t.client_id = c.id AND r.kind = 'locked')
               AND a.scheduled_date = (SELECT MAX(b.scheduled_date) FROM appointments b
                                       WHERE b.client_id = a.client_id AND b.kind = 'client' AND b.status != 'cancelled' AND b.rate > 0
                                         AND LOWER(b.service_type) = LOWER(a.service_type) AND b.duration_minutes = a.duration_minutes)

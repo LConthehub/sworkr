@@ -127,6 +127,8 @@ export default function Rates() {
         </div>
       </div>
 
+      <TagPricing onChanged={load} />
+
       {editing && (
         <Modal title={editing.id ? 'Edit rate' : 'Add a rate'} onClose={() => setEditing(null)}>
           <RateForm rate={editing} onDone={() => { setEditing(null); load(); }} />
@@ -204,6 +206,68 @@ export function DepositsDue() {
         ))}
       </ul>
       {data.to_collect.length > 5 && <p className="text-xs text-gray-400 mt-1">and {data.to_collect.length - 5} more</p>}
+    </div>
+  );
+}
+
+/** A tag on a contact can change their price: a discount, or a locked-in rate. */
+function TagPricing({ onChanged }) {
+  const [rules, setRules] = useState([]);
+  const [form, setForm] = useState({ tag: '', kind: 'percent', value: '' });
+  const [error, setError] = useState('');
+  useEffect(() => { axios.get('/api/rates/tag-rules').then(({ data }) => setRules(data)).catch(() => {}); }, []);
+  const add = async (e) => {
+    e.preventDefault();
+    try {
+      const { data } = await axios.post('/api/rates/tag-rules', { tag: form.tag, kind: form.kind, value: form.kind === 'locked' || form.value === '' ? null : Number(form.value) });
+      setRules(data);
+      setForm({ tag: '', kind: 'percent', value: '' });
+      setError('');
+      onChanged?.();
+    } catch (err) {
+      setError(errorMessage(err, 'Could not save'));
+    }
+  };
+  const remove = async (rule) => {
+    await axios.delete(`/api/rates/tag-rules/${rule.id}`).catch(() => {});
+    setRules(rules.filter((x) => x.id !== rule.id));
+    onChanged?.();
+  };
+  const describe = (x) => (x.kind === 'locked' ? 'Locked-in rate: keeps paying what they last paid' : x.kind === 'percent' ? `${x.value}% off` : `${money(x.value)} off`);
+  return (
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+      <h3 className="font-semibold text-gray-800">Prices by tag</h3>
+      <p className="text-xs text-gray-500 mb-2">
+        Give a contact tag its own price rule, such as 10% off for #regular, or a locked-in rate for clients you've promised the old price.
+        When you book someone with that tag for a service on your card, the price is worked out for you and says why.
+      </p>
+      {rules.length > 0 && (
+        <ul className="divide-y divide-gray-100 mb-2">
+          {rules.map((x) => (
+            <li key={x.id} className="py-2 flex items-center justify-between gap-3">
+              <span className="text-sm text-gray-800">#{x.tag} <span className="text-gray-500">· {describe(x)}</span></span>
+              <button onClick={() => remove(x)} className="text-xs text-gray-400 hover:text-red-500">Remove</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form onSubmit={add} className="flex flex-wrap items-end gap-2">
+        <label className="text-xs text-gray-500">Tag
+          <input required value={form.tag} onChange={(e) => setForm({ ...form, tag: e.target.value })} placeholder="regular" className={`${inputClass} !w-36`} />
+        </label>
+        <label className="text-xs text-gray-500">Gets
+          <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} className={`${inputClass} !w-48`}>
+            <option value="percent">a percentage off</option><option value="amount">an amount off</option><option value="locked">a locked-in rate</option>
+          </select>
+        </label>
+        {form.kind !== 'locked' && (
+          <label className="text-xs text-gray-500">{form.kind === 'percent' ? 'Percent' : 'Dollars'}
+            <input required type="number" min="0" step="0.01" inputMode="decimal" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className={`${inputClass} !w-24`} />
+          </label>
+        )}
+        <button type="submit" className={quietButtonClass}>Save rule</button>
+      </form>
+      {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
     </div>
   );
 }

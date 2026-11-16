@@ -68,6 +68,19 @@ export default function AppointmentForm({
     }));
     return setCardPrice(String(rate.price));
   };
+  // ...and a client's tags can change it: a discount, or a locked-in rate.
+  const [priceNote, setPriceNote] = useState('');
+  useEffect(() => {
+    setPriceNote('');
+    if (appointment || !form.client_id || !rateCard.some((r) => r.label.toLowerCase() === form.service_type.trim().toLowerCase())) return;
+    axios.get('/api/rates/quote', { params: { client_id: form.client_id, service: form.service_type.trim(), minutes: form.duration_minutes } })
+      .then(({ data }) => {
+        if (!data.reason) return;
+        setPriceNote(`${data.reason}. Card price ${money(data.card_price)}.`);
+        setForm((f) => (f.rate === '' || f.rate === String(data.card_price) ? { ...f, rate: String(data.price) } : f));
+        setCardPrice(String(data.price));
+      }).catch(() => {});
+  }, [form.client_id, form.service_type, form.duration_minutes, rateCard]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [safety, setSafety] = useState(null);
   const [tours, setTours] = useState([]);
   const [testCosts, setTestCosts] = useState({});
@@ -337,6 +350,7 @@ export default function AppointmentForm({
         <Field label="Rate ($)">
           <input type="number" min="0" step="0.01" inputMode="decimal" value={form.rate} onChange={set('rate')} className={inputClass} />
         </Field>
+        {priceNote && <p className="col-span-full text-xs text-violet-700 -mt-1">{priceNote}</p>}
         <Field label="Paid so far ($)">
           <input type="number" min="0" step="0.01" inputMode="decimal" value={form.amount_paid} onChange={set('amount_paid')} placeholder="0" className={inputClass} />
         </Field>

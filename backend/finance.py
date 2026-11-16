@@ -302,7 +302,22 @@ class SourceIn(BaseModel):
     persona_id: Optional[int] = None        # the name you work under there
     gift_share_percent: Optional[float] = None   # the share of a gift's value the place charges you (brothels: often 50)
     tip_share_percent: Optional[float] = None    # the share of your tips the place keeps (a house cut or tip-out)
-    transport_cut_percent: Optional[float] = None  # the Kelly cut: taken off the top when a driver brought the client
+    transport_cut_percent: Optional[float] = None  # (older: one Kelly cut. Use `cuts` instead)
+    cuts: Optional[List["CutIn"]] = None     # the place's deductions; left out: they stay as they are
+    holds_cash: bool = False                 # the office keeps what you earn until payout
+    cash_limit: Optional[float] = None       # how much cash you may keep on you there
+
+
+class CutIn(BaseModel):
+    """One deduction a workplace makes: a Kelly cut for a cab, a different one for a limo, a runner's fee, a card fee…"""
+    label: str
+    kind: str = "percent"                    # percent, or a fixed amount
+    value: float
+    basis: str = "top"                       # top: off the whole amount before the house's share. mine: out of your share
+    auto: bool = False                       # taken every time, rather than ticked when it applies
+
+
+SourceIn.model_rebuild()
 
 
 def _validate_source(s: SourceIn):
@@ -330,20 +345,53 @@ def _source_values(s: SourceIn) -> tuple:
 
 
 def _source_row(r) -> dict:
-    return {**dict(r), "archived": bool(r["archived"])}
+    return {**dict(r), "archived": bool(r["archived"]), "holds_cash": bool(r["holds_cash"]), "cuts": []}
+
+
+def _with_cuts(db, owner_id: int, sources: List[dict]) -> List[dict]:
+    by_id = {s["id"]: s for s in sources}
+    for c in db.execute("SELECT id, source_id, label, kind, value, basis, auto FROM source_cuts WHERE owner_id = ? ORDER BY sort_order, id", (owner_id,)):
+        if c["source_id"] in by_id:
+            by_id[c["source_id"]]["cuts"].append({**dict(c), "auto": bool(c["auto"])})
+    return sources
 
 
 def get_source(db, source_id: int, owner_id: int) -> Optional[dict]:
     r = db.execute("SELECT * FROM income_sources WHERE id = ? AND owner_id = ?", (source_id, owner_id)).fetchone()
-    return _source_row(r) if r else None
+    return _with_cuts(db, owner_id, [_source_row(r)])[0] if r else None
+
+
+def _save_house_rules(db, source_id: int, owner_id: int, body: SourceIn):
+    """The office-holds-cash setting, and (when the request has them) the place's cuts, replaced as a whole."""
+    if body.cash_limit is not None and not (0 <= body.cash_limit < 1e9):
+        raise HTTPException(status_code=400, detail="The cash you can keep must be 0 or more")
+    db.execute("UPDATE income_sources SET holds_cash = ?, cash_limit = ? WHERE id = ? AND owner_id = ?",
+               (int(body.holds_cash), body.cash_limit, source_id, owner_id))
+    if body.cuts is None:
+        return
+    if len(body.cuts) > 20:
+        raise HTTPException(status_code=400, detail="That's a lot of cuts: 20 at most")
+    rows = []
+    for order, c in enumerate(body.cuts):
+        label = _clean(c.label)
+        if not label or len(label) > 60:
+            raise HTTPException(status_code=400, detail="Give each cut a name (up to 60 characters)")
+        if c.kind not in ("percent", "amount") or c.basis not in ("top", "mine"):
+            raise HTTPException(status_code=400, detail="A cut is a percentage or an amount, off the top or out of your share")
+        if not (0 <= c.value < 1e9) or (c.kind == "percent" and c.value > 100):
+            raise HTTPException(status_code=400, detail="A cut is 0 to 100%, or an amount of 0 or more")
+        rows.append((owner_id, source_id, label, c.kind, c.value, c.basis, int(c.auto), order, _now()))
+    db.execute("DELETE FROM source_cuts WHERE source_id = ? AND owner_id = ?", (source_id, owner_id))
+    db.executemany("INSERT INTO source_cuts (owner_id, source_id, label, kind, value, basis, auto, sort_order, created_at) "
+                   "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
 
 
 @router.get("/api/income-sources")
 def list_sources(request: Request):
     db = _db()
     try:
-        return [_source_row(r) for r in db.execute(
-            "SELECT * FROM income_sources WHERE owner_id = ? ORDER BY archived, name COLLATE NOCASE", (_owner(request),))]
+        return _with_cuts(db, _owner(request), [_source_row(r) for r in db.execute(
+            "SELECT * FROM income_sources WHERE owner_id = ? ORDER BY archived, name COLLATE NOCASE", (_owner(request),))])
     finally:
         db.close()
 
@@ -361,6 +409,7 @@ def create_source(body: SourceIn, request: Request):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (*_source_values(body), _owner(request), now, now))
         personas.assign(db, "income_sources", cur.lastrowid, _owner(request), body)
+        _save_house_rules(db, cur.lastrowid, _owner(request), body)
         db.commit()
         return get_source(db, cur.lastrowid, _owner(request))
     finally:
@@ -382,6 +431,7 @@ def update_source(source_id: int, body: SourceIn, request: Request):
             WHERE id = ? AND owner_id = ?
         """, (*_source_values(body), _now(), source_id, owner))
         personas.assign(db, "income_sources", source_id, owner, body)
+        _save_house_rules(db, source_id, owner, body)
         db.commit()
         return get_source(db, source_id, owner)
     finally:
@@ -437,7 +487,8 @@ class IncomeIn(BaseModel):
     currency: str = currencies.DEFAULT
     client_id: Optional[int] = None  # who it came from (an allowance, a gift)
     payment_method: Optional[str] = None   # how it was paid: cash, bank transfer, a payment app…
-    transport_cut: Optional[float] = None  # the part of the fees that was a Kelly cut (a driver brought the client)
+    transport_cut: Optional[float] = None  # (older: the Kelly cut's amount. Use `cuts` instead)
+    cuts: Optional[List[dict]] = None      # the place's cuts taken from this, as [{label, amount}]; they're part of the fees
 
 
 INCOME_SELECT = """
@@ -467,9 +518,29 @@ def _income_values(body: IncomeIn) -> tuple:
             (_clean(body.payment_method) or "")[:40] or None, body.transport_cut or None)
 
 
+def _income_row(r) -> dict:
+    d = dict(r)
+    try:
+        d["cuts"] = json.loads(d.get("cuts") or "[]")
+    except ValueError:
+        d["cuts"] = []
+    return d
+
+
+def _cuts_json(body: IncomeIn) -> Optional[str]:
+    """The cuts taken from an income, tidied: a name and an amount each."""
+    out = []
+    for c in (body.cuts or [])[:20]:
+        label, amount = _clean(str(c.get("label") or "")), c.get("amount")
+        if not label or not isinstance(amount, (int, float)) or not (0 <= amount < 1e9):
+            raise HTTPException(status_code=400, detail="Each cut needs a name and an amount of 0 or more")
+        out.append({"label": label[:60], "amount": round(amount, 2)})
+    return json.dumps(out) if out else None
+
+
 def get_income(db, income_id: int, owner_id: int) -> Optional[dict]:
     r = db.execute(INCOME_SELECT + " WHERE i.id = ? AND i.owner_id = ?", (income_id, owner_id)).fetchone()
-    return dict(r) if r else None
+    return _income_row(r) if r else None
 
 
 def income_between(db, owner_id: int, start_iso: str, end_iso: str, status: Optional[str] = "received") -> List[dict]:
@@ -507,7 +578,7 @@ def list_income(
         params.append(status.value)
     db = _db()
     try:
-        return [dict(r) for r in db.execute(
+        return [_income_row(r) for r in db.execute(
             INCOME_SELECT + f" WHERE {' AND '.join(conditions)} ORDER BY i.date DESC, i.id DESC LIMIT ? OFFSET ?",
             (*params, limit, (page - 1) * limit))]
     finally:
@@ -526,6 +597,7 @@ def create_income(body: IncomeIn, request: Request):
                                 currency, client_id, payment_method, transport_cut, owner_id, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (*_income_values(body), owner, now, now))
+        db.execute("UPDATE income SET cuts = ? WHERE id = ?", (_cuts_json(body), cur.lastrowid))
         db.commit()
         return get_income(db, cur.lastrowid, owner)
     finally:
@@ -546,6 +618,7 @@ def update_income(income_id: int, body: IncomeIn, request: Request):
                    transport_cut = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (*_income_values(body), _now(), income_id, owner))
+        db.execute("UPDATE income SET cuts = ? WHERE id = ?", (_cuts_json(body), income_id))
         db.commit()
         return get_income(db, income_id, owner)
     finally:
@@ -896,6 +969,49 @@ def save_work_profile(body: WorkProfile, request: Request):
     except sqlite3.Error:
         db.rollback()
         raise
+    finally:
+        db.close()
+
+
+# ==================== CASH THE OFFICE IS HOLDING ====================
+
+class PaidOutIn(BaseModel):
+    payment_method: Optional[str] = None
+    paid_on: Optional[date] = None
+
+
+@router.get("/api/held")
+def held_by_the_office(request: Request):
+    """For each workplace: what you've earned there that hasn't been paid out to you yet (income marked "not yet")."""
+    owner = _owner(request)
+    db = _db()
+    try:
+        return [dict(r) for r in db.execute("""
+            SELECT s.id AS source_id, s.name, s.holds_cash, s.cash_limit, COUNT(i.id) AS entries,
+                   ROUND(COALESCE(SUM(i.gross - i.fees), 0), 2) AS held, MIN(i.date) AS since
+            FROM income_sources s JOIN income i ON i.source_id = s.id AND i.status = 'pending'
+            WHERE s.owner_id = ? GROUP BY s.id ORDER BY held DESC
+        """, (owner,))]
+    finally:
+        db.close()
+
+
+@router.post("/api/income-sources/{source_id}/paid-out")
+def paid_out(source_id: int, body: PaidOutIn, request: Request):
+    """The office paid you what it was holding: everything pending at this workplace becomes received."""
+    owner = _owner(request)
+    db = _db()
+    try:
+        if not get_source(db, source_id, owner):
+            raise HTTPException(status_code=404, detail="Not found")
+        total = db.execute("SELECT COUNT(*) AS n, COALESCE(SUM(gross - fees), 0) AS held FROM income WHERE source_id = ? AND owner_id = ? "
+                           "AND status = 'pending'", (source_id, owner)).fetchone()
+        db.execute("UPDATE income SET status = 'received', payout_date = ?, payment_method = COALESCE(?, payment_method), updated_at = ? "
+                   "WHERE source_id = ? AND owner_id = ? AND status = 'pending'",
+                   ((body.paid_on or datetime.now(timezone.utc).date()).isoformat(), (_clean(body.payment_method) or "")[:40] or None,
+                    _now(), source_id, owner))
+        db.commit()
+        return {"entries": total["n"], "paid": round(total["held"], 2)}
     finally:
         db.close()
 

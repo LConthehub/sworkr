@@ -261,7 +261,8 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
                     <p className="font-medium text-sm text-gray-800">{r.description || INCOME_KINDS[r.kind]}</p>
                     <p className="text-xs text-gray-400">
                       {[r.source_name, INCOME_KINDS[r.kind], r.fees > 0 && `${money(r.gross)} − ${money(r.fees)} fees`,
-                        r.partner_names && `split with ${r.partner_names}, yours ${money(r.my_net)}`].filter(Boolean).join(' · ')}
+                        r.partner_names && `split with ${r.partner_names}, yours ${money(r.my_net)}`,
+                        r.payment_method && `paid by ${r.payment_method.toLowerCase()}`].filter(Boolean).join(' · ')}
                     </p>
                   </div>
                   {r.status === 'pending' && (
@@ -277,6 +278,8 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
             </ul>
           )}
         </div>
+
+        <HeldByOffice />
 
         <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
@@ -653,5 +656,46 @@ function ExpenseForm({ expense, clients, tours, year, onSaved }) {
         <button type="submit" disabled={saving} className={buttonClass}>{saving ? 'Saving…' : expense ? 'Save changes' : 'Add expense'}</button>
       </div>
     </form>
+  );
+}
+
+/** What each workplace is holding for you (income not paid out yet), with one tap to say it's been paid. */
+function HeldByOffice() {
+  const [rows, setRows] = useState([]);
+  const load = useCallback(() => axios.get('/api/held').then(({ data }) => setRows(data)).catch(() => setRows([])), []);
+  useEffect(() => {
+    load();
+    window.addEventListener('sworkr:money-changed', load);
+    return () => window.removeEventListener('sworkr:money-changed', load);
+  }, [load]);
+  if (rows.length === 0) return null;
+  const paid = async (r) => {
+    const how = window.prompt(`${r.name} paid you ${money(r.held)}. How? (Cash, check, bank transfer…)`, 'Cash');
+    if (how === null) return;
+    await axios.post(`/api/income-sources/${r.source_id}/paid-out`, { payment_method: how.trim() || null }).catch(() => {});
+    window.dispatchEvent(new Event('sworkr:money-changed'));
+  };
+  return (
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
+      <h2 className="font-semibold text-gray-800">Not paid out to you yet</h2>
+      <p className="text-xs text-gray-500 mb-2">What each place is holding for you: everything you've earned there that's still marked "not yet".</p>
+      <ul className="divide-y divide-gray-100">
+        {rows.map((r) => (
+          <li key={r.source_id} className="py-2 flex flex-wrap items-center justify-between gap-2">
+            <span>
+              <span className="font-medium text-gray-800">{r.name}</span>
+              <span className="block text-xs text-gray-500">
+                {r.entries} entr{r.entries === 1 ? 'y' : 'ies'} since {dayLabel(new Date(r.since), { month: 'short', day: 'numeric' })}
+                {r.cash_limit != null && ` · you can keep ${money(r.cash_limit)} on you`}
+              </span>
+            </span>
+            <span className="flex items-center gap-3">
+              <span className="font-semibold text-gray-800">{money(r.held)}</span>
+              <button onClick={() => paid(r)} className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Paid out</button>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

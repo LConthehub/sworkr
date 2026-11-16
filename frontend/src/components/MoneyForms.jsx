@@ -304,7 +304,9 @@ export function SourceForm({ source, onSaved }) {
     persona_id: source?.persona_id ? String(source.persona_id) : '',
     gift_share_percent: source?.gift_share_percent ?? '',
     tip_share_percent: source?.tip_share_percent ?? '',
-    transport_cut_percent: source?.transport_cut_percent ?? '',
+    cuts: (source?.cuts || []).map((c) => ({ label: c.label, kind: c.kind, value: String(c.value), basis: c.basis, auto: c.auto })),
+    holds_cash: !!source?.holds_cash,
+    cash_limit: source?.cash_limit ?? '',
   });
   const [workTypes, setWorkTypes] = useState([]);
   useEffect(() => {
@@ -344,7 +346,9 @@ export function SourceForm({ source, onSaved }) {
       persona_id: form.persona_id ? Number(form.persona_id) : null,
       gift_share_percent: numberOrNull(form.gift_share_percent),
       tip_share_percent: numberOrNull(form.tip_share_percent),
-      transport_cut_percent: numberOrNull(form.transport_cut_percent),
+      cuts: form.cuts.filter((c) => c.label.trim() && c.value !== '').map((c) => ({ ...c, label: c.label.trim(), value: Number(c.value) })),
+      holds_cash: form.holds_cash,
+      cash_limit: form.holds_cash ? numberOrNull(form.cash_limit) : null,
       currency: 'USD',
     };
     setSaving(true);
@@ -414,12 +418,43 @@ export function SourceForm({ source, onSaved }) {
         <input type="number" min="0" max="100" step="1" inputMode="decimal" value={form.tip_share_percent} onChange={set('tip_share_percent')} placeholder="Leave empty if tips are all yours" className={`${inputClass} max-w-[16rem]`} />
         <span className="block text-xs text-gray-500 mt-1">A house cut or tip-out. Logging a tip from here takes it off for you.</span>
       </Field>
-      {(form.kind === 'brothel' || form.transport_cut_percent !== '') && (
-        <Field label="Kelly cut (%)">
-          <input type="number" min="0" max="100" step="1" inputMode="decimal" value={form.transport_cut_percent} onChange={set('transport_cut_percent')} placeholder="e.g. 20" className={`${inputClass} max-w-[8rem]`} />
-          <span className="block text-xs text-gray-500 mt-1">The extra share taken when a driver brings the client. It comes off the top, before the house's own share. Tick "A driver brought this client" when you add income and it's worked out for you.</span>
-        </Field>
-      )}
+      <fieldset className="rounded-lg border border-gray-200 px-3 pt-2 pb-3 space-y-2">
+        <legend className="px-1 text-xs font-medium text-gray-500">House rules</legend>
+        <p className="text-xs text-gray-500">
+          Anything else this place takes, however it works there: a Kelly cut when a driver brings the client (add one for each rate,
+          such as cab and limo), a runner's fee, a card fee. Each is a percentage or an amount, taken off the top (before their share)
+          or out of your share.
+        </p>
+        {form.cuts.map((c, i) => {
+          const change = (patch) => setForm({ ...form, cuts: form.cuts.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+          return (
+            <div key={i} className="grid grid-cols-12 gap-2 items-center">
+              <input value={c.label} onChange={(e) => change({ label: e.target.value })} placeholder="e.g. Kelly cut (cab)" aria-label="What it's called" className={`${inputClass} col-span-12 sm:col-span-4`} />
+              <input type="number" min="0" step="0.01" inputMode="decimal" value={c.value} onChange={(e) => change({ value: e.target.value })} aria-label="How much" className={`${inputClass} col-span-4 sm:col-span-2`} />
+              <select value={c.kind} onChange={(e) => change({ kind: e.target.value })} aria-label="Percent or dollars" className={`${inputClass} col-span-4 sm:col-span-1 !px-1`}>
+                <option value="percent">%</option><option value="amount">$</option>
+              </select>
+              <select value={c.basis} onChange={(e) => change({ basis: e.target.value })} aria-label="Taken from" className={`${inputClass} col-span-4 sm:col-span-3 !px-1`}>
+                <option value="top">off the top</option><option value="mine">out of my share</option>
+              </select>
+              <label className="col-span-10 sm:col-span-1 flex items-center gap-1 text-xs text-gray-600" title="Taken every time, without ticking it">
+                <input type="checkbox" checked={c.auto} onChange={(e) => change({ auto: e.target.checked })} /> always
+              </label>
+              <button type="button" onClick={() => setForm({ ...form, cuts: form.cuts.filter((_, j) => j !== i) })} className="col-span-2 sm:col-span-1 text-gray-300 hover:text-red-500" aria-label="Remove this cut">✕</button>
+            </div>
+          );
+        })}
+        <button type="button" onClick={() => setForm({ ...form, cuts: [...form.cuts, { label: '', kind: 'percent', value: '', basis: 'top', auto: false }] })} className="text-xs text-sworkr-600 hover:text-sworkr-800">+ Add a cut</button>
+        <label className="flex items-start gap-2 text-sm text-gray-700 pt-1">
+          <input type="checkbox" checked={form.holds_cash} onChange={set('holds_cash')} className="mt-1" />
+          <span>The office holds what I earn until payout <span className="text-xs text-gray-500">(income added here starts as "not paid out yet", and sworkr keeps the running total they owe you)</span></span>
+        </label>
+        {form.holds_cash && (
+          <Field label="Cash I'm allowed to keep on me ($)">
+            <input type="number" min="0" step="1" inputMode="decimal" value={form.cash_limit} onChange={set('cash_limit')} placeholder="e.g. 20" className={`${inputClass} max-w-[8rem]`} />
+          </Field>
+        )}
+      </fieldset>
       <h3 className="text-sm font-semibold text-gray-700 pt-1">Charges you pay them</h3>
       <p className="text-xs text-gray-500 -mt-2">
         Room & board, a house doctor, a license, room hire: anything you pay this place as well. Log each one from the
@@ -483,13 +518,13 @@ export function IncomeForm({ income, sources, defaultDate, onSaved }) {
     tokens: income?.tokens ?? '',
     gross: income ? String(income.gross) : '',
     fees: income ? String(income.fees) : '',
-    status: income?.status || 'received',
+    status: income?.status || (firstSource?.holds_cash ? 'pending' : 'received'),
     payout_date: income?.payout_date || '',
     description: income?.description || '',
     notes: income?.notes || '',
     client_id: income?.client_id ? String(income.client_id) : '',
     payment_method: income?.payment_method || '',
-    driver: !!income?.transport_cut,
+    cuts: income ? (income.cuts || []).map((c) => c.label) : null,   // the cuts ticked (null: the place's "always" ones)
   });
   const [feesTouched, setFeesTouched] = useState(!!income);
   // Gifts and allowances can say who they're from.
@@ -503,21 +538,35 @@ export function IncomeForm({ income, sources, defaultDate, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   const source = sources.find((s) => String(s.id) === form.source_id);
-  const suggestFees = (f) => {
+  // What the place takes from this income: its ticked cuts off the top, then its usual share of what's left, then
+  // any cuts that come out of your share.
+  const houseTake = (f) => {
     const s = sources.find((x) => String(x.id) === f.source_id);
     const gross = Number(f.gross) || 0;
-    if (!s) return '';
-    // A Kelly cut comes off the top; the house's usual share is then taken from what's left.
-    const cut = f.driver && f.kind !== 'gift' && f.kind !== 'tips' ? gross * (s.transport_cut_percent || 0) / 100 : 0;
-    // A gift: the place's share of its value (a brothel usually charges half), not its usual cut.
-    const fees = f.kind === 'gift'
-      ? gross * (s.gift_share_percent || 0) / 100
-      : f.kind === 'tips' && s.tip_share_percent != null ? gross * s.tip_share_percent / 100
-      : cut + (gross - cut) * (s.fee_percent || 0) / 100 + (f.kind === 'shift' ? s.fee_per_shift || 0 : 0);
+    if (!s) return { fees: 0, taken: [] };
+    if (f.kind === 'gift') return { fees: gross * (s.gift_share_percent || 0) / 100, taken: [] };
+    if (f.kind === 'tips' && s.tip_share_percent != null) return { fees: gross * s.tip_share_percent / 100, taken: [] };
+    const ticked = f.cuts ?? (s.cuts || []).filter((c) => c.auto).map((c) => c.label);
+    const active = f.kind === 'tips' ? [] : (s.cuts || []).filter((c) => ticked.includes(c.label));
+    const amount = (c, base) => Math.round((c.kind === 'percent' ? base * c.value / 100 : Math.min(c.value, base)) * 100) / 100;
+    const top = active.filter((c) => c.basis === 'top').map((c) => ({ label: c.label, amount: amount(c, gross) }));
+    const rest = Math.max(gross - top.reduce((sum, c) => sum + c.amount, 0), 0);
+    const house = rest * (s.fee_percent || 0) / 100 + (f.kind === 'shift' ? s.fee_per_shift || 0 : 0);
+    const mine = active.filter((c) => c.basis === 'mine').map((c) => ({ label: c.label, amount: amount(c, Math.max(rest - house, 0)) }));
+    const taken = [...top, ...mine];
+    return { fees: taken.reduce((sum, c) => sum + c.amount, 0) + house, taken };
+  };
+  const suggestFees = (f) => {
+    const { fees } = houseTake(f);
     return fees ? fees.toFixed(2) : '';
   };
   const update = (changes) => setForm((f) => {
     const next = { ...f, ...changes };
+    if ('source_id' in changes && !income) {      // another place: its own rules
+      const place = sources.find((x) => String(x.id) === next.source_id);
+      next.cuts = null;
+      next.status = place?.holds_cash ? 'pending' : 'received';
+    }
     if ('tokens' in changes) {
       const s = sources.find((x) => String(x.id) === next.source_id);
       if (s?.token_value && next.tokens !== '') next.gross = (Number(next.tokens) * s.token_value).toFixed(2);
@@ -552,7 +601,7 @@ export function IncomeForm({ income, sources, defaultDate, onSaved }) {
       currency: 'USD',
       client_id: fromSomeone && form.client_id ? Number(form.client_id) : null,
       payment_method: form.payment_method.trim() || null,
-      transport_cut: form.driver && source?.transport_cut_percent ? Math.round(gross * source.transport_cut_percent) / 100 : null,
+      cuts: houseTake(form).taken,
     };
     setSaving(true);
     try {
@@ -632,11 +681,28 @@ export function IncomeForm({ income, sources, defaultDate, onSaved }) {
             : ' If the place charges you a share of gifts (many brothels charge half), set it on the place and it fills in here.'}
         </p>
       )}
-      {source?.transport_cut_percent > 0 && form.kind !== 'gift' && form.kind !== 'tips' && (
-        <label className="flex items-start gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={form.driver} onChange={(e) => update({ driver: e.target.checked })} className="mt-1" />
-          <span>A driver brought this client <span className="text-xs text-gray-500">(Kelly cut: {source.transport_cut_percent}% off the top{gross > 0 ? `, ${money(gross * source.transport_cut_percent / 100)}` : ''}, then {source.name}'s share of the rest)</span></span>
-        </label>
+      {source?.cuts?.length > 0 && form.kind !== 'gift' && form.kind !== 'tips' && (
+        <fieldset className="rounded-lg border border-gray-200 px-3 pt-2 pb-2">
+          <legend className="px-1 text-xs font-medium text-gray-500">{source.name} also took</legend>
+          {source.cuts.map((c) => {
+            const ticked = (form.cuts ?? source.cuts.filter((x) => x.auto).map((x) => x.label)).includes(c.label);
+            const taken = houseTake(form).taken.find((t) => t.label === c.label);
+            return (
+              <label key={c.label} className="flex items-center gap-2 text-sm text-gray-700 py-0.5">
+                <input type="checkbox" checked={ticked} onChange={(e) => {
+                  const now = form.cuts ?? source.cuts.filter((x) => x.auto).map((x) => x.label);
+                  update({ cuts: e.target.checked ? [...now, c.label] : now.filter((l) => l !== c.label) });
+                }} />
+                <span>{c.label} <span className="text-xs text-gray-500">({c.kind === 'percent' ? `${c.value}%` : money(c.value)} {c.basis === 'top' ? 'off the top' : 'out of your share'}{taken ? `: ${money(taken.amount)}` : ''})</span></span>
+              </label>
+            );
+          })}
+        </fieldset>
+      )}
+      {source?.holds_cash && (
+        <p className="text-xs rounded-lg bg-sky-50 border border-sky-200 text-sky-900 px-3 py-2">
+          {source.name} holds what you earn until payout{source.cash_limit != null ? `, and you can keep ${money(source.cash_limit)} on you` : ''}. Leave this as "Not yet" and it's added to what they owe you.
+        </p>
       )}
       <Field label="How it was paid">
         <input list="income-paid-how" value={form.payment_method} onChange={set('payment_method')} placeholder="Cash, bank transfer, platform payout…" className={inputClass} />

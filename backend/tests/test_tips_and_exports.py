@@ -158,3 +158,38 @@ def test_income_says_how_it_was_paid_and_keeps_a_kelly_cut(api):
     assert [i["payment_method"] for i in ok(api.get("/api/income")) if i["id"] == tip["income_id"]] == ["Cash"]
     assert api.post("/api/income-sources", json={"name": "x", "transport_cut_percent": 101}).status_code == 400
     assert api.post("/api/income", json={"date": "2026-03-01T12:00:00Z", "gross": 10, "transport_cut": -1}).status_code == 400
+
+
+def test_a_workplace_has_its_own_cuts_and_can_hold_your_cash(api):
+    house = ok(api.post("/api/income-sources", json={
+        "name": "The Ranch", "kind": "brothel", "fee_percent": 50, "holds_cash": True, "cash_limit": 20,
+        "cuts": [{"label": "Kelly cut (cab)", "kind": "percent", "value": 20}, {"label": "Kelly cut (limo)", "kind": "percent", "value": 30},
+                 {"label": "Runner", "kind": "amount", "value": 10, "basis": "mine", "auto": True}]}), 201)
+    assert (house["holds_cash"], house["cash_limit"]) == (True, 20)
+    assert [(c["label"], c["kind"], c["value"], c["basis"], c["auto"]) for c in house["cuts"]] == [
+        ("Kelly cut (cab)", "percent", 20, "top", False), ("Kelly cut (limo)", "percent", 30, "top", False), ("Runner", "amount", 10, "mine", True)]
+    listed = next(s for s in ok(api.get("/api/income-sources")) if s["id"] == house["id"])
+    assert len(listed["cuts"]) == 3
+    same = {"name": "The Ranch", "kind": "brothel", "fee_percent": 50, "holds_cash": True, "cash_limit": 20}
+    assert len(ok(api.put(f"/api/income-sources/{house['id']}", json=same))["cuts"]) == 3            # left out: they stay
+    assert [c["label"] for c in ok(api.put(f"/api/income-sources/{house['id']}", json={**same, "cuts": [{"label": "Card fee", "value": 3}]}))["cuts"]] == ["Card fee"]
+    for bad in ({"label": " ", "value": 5}, {"label": "x", "value": 101}, {"label": "x", "value": 5, "kind": "tokens"}, {"label": "x", "value": 5, "basis": "theirs"}):
+        assert api.put(f"/api/income-sources/{house['id']}", json={**same, "cuts": [bad]}).status_code == 400
+
+    # earned and held by the office until payout
+    def earn(gross, fees, cuts=None, status="pending"):
+        return ok(api.post("/api/income", json={"source_id": house["id"], "date": "2026-03-01T12:00:00Z", "kind": "booking", "gross": gross,
+                                                "fees": fees, "status": status, "cuts": cuts}), 201)
+    first = earn(1000, 610, [{"label": "Kelly cut (cab)", "amount": 200}, {"label": "Runner", "amount": 10}])
+    assert first["cuts"] == [{"label": "Kelly cut (cab)", "amount": 200}, {"label": "Runner", "amount": 10}]
+    earn(400, 200)
+    earn(100, 50, status="received")
+    assert api.post("/api/income", json={"date": "2026-03-01T12:00:00Z", "gross": 10, "cuts": [{"label": "x", "amount": -1}]}).status_code == 400
+    [held] = ok(api.get("/api/held"))
+    assert (held["name"], held["entries"], held["held"], held["cash_limit"]) == ("The Ranch", 2, 590, 20)
+    paid = ok(api.post(f"/api/income-sources/{house['id']}/paid-out", json={"payment_method": "Check", "paid_on": "2026-03-08"}))
+    assert paid == {"entries": 2, "paid": 590}
+    assert ok(api.get("/api/held")) == []
+    rows = ok(api.get("/api/income"))
+    assert {(i["status"], i["payment_method"], i["payout_date"]) for i in rows if i["gross"] != 100} == {("received", "Check", "2026-03-08")}
+    assert api.post("/api/income-sources/999999/paid-out", json={}).status_code == 404

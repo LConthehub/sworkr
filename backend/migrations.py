@@ -1321,6 +1321,51 @@ def _m34_paid_how_and_kelly_cut(conn):
                  "CHECK(transport_cut_percent IS NULL OR (transport_cut_percent >= 0 AND transport_cut_percent <= 100))")
 
 
+def _m35_house_rules(conn):
+    """A workplace's own rules. Cuts: any number of named deductions (a Kelly cut for a cab, another for a limo, a
+    runner's fee, a card fee), each a percentage or an amount, taken off the top or from your share. And cash the
+    office holds until payout, with how much you may keep on you. Income remembers which cuts were taken."""
+    conn.execute("""
+        CREATE TABLE source_cuts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            source_id INTEGER NOT NULL REFERENCES income_sources(id) ON DELETE CASCADE,
+            label TEXT NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'percent' CHECK(kind IN ('percent', 'amount')),
+            value REAL NOT NULL CHECK(value >= 0),
+            basis TEXT NOT NULL DEFAULT 'top' CHECK(basis IN ('top', 'mine')),
+            auto INTEGER NOT NULL DEFAULT 0 CHECK(auto IN (0, 1)),
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_source_cuts_source ON source_cuts(source_id)")
+    conn.execute("""
+        INSERT INTO source_cuts (owner_id, source_id, label, kind, value, basis, auto, sort_order, created_at)
+        SELECT owner_id, id, 'Kelly cut', 'percent', transport_cut_percent, 'top', 0, 0, updated_at
+        FROM income_sources WHERE transport_cut_percent > 0
+    """)
+    conn.execute("ALTER TABLE income_sources ADD COLUMN holds_cash INTEGER NOT NULL DEFAULT 0 CHECK(holds_cash IN (0, 1))")
+    conn.execute("ALTER TABLE income_sources ADD COLUMN cash_limit REAL CHECK(cash_limit IS NULL OR cash_limit >= 0)")
+    conn.execute("ALTER TABLE income ADD COLUMN cuts TEXT")
+
+
+def _m36_tag_pricing(conn):
+    """A contact tag can change the price: a percentage off, an amount off, or a locked-in rate (they keep paying
+    what they last paid for a service, whatever the rate card says now)."""
+    conn.execute("""
+        CREATE TABLE tag_rules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            tag TEXT NOT NULL,
+            kind TEXT NOT NULL CHECK(kind IN ('percent', 'amount', 'locked')),
+            value REAL CHECK(value IS NULL OR value >= 0),
+            created_at TEXT NOT NULL,
+            UNIQUE (owner_id, tag)
+        )
+    """)
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1356,6 +1401,8 @@ MIGRATIONS = [
     (32, "co-workers and crew become collaborators", _m32_collaborators, False),
     (33, "tips and the house's share of them", _m33_tips, False),
     (34, "how income was paid, and the Kelly cut", _m34_paid_how_and_kelly_cut, False),
+    (35, "house rules: cuts, and cash the office holds", _m35_house_rules, False),
+    (36, "prices by contact tag", _m36_tag_pricing, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

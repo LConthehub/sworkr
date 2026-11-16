@@ -5,6 +5,7 @@ expenses, search, accounts.
 Run with: docker compose up --build
 """
 
+import json
 import os
 import vault
 import sqlite3
@@ -634,6 +635,30 @@ def _account_settings(db, user_id: int) -> dict:
         "idle_choices": list(auth.IDLE_CHOICES),
         "work_style": get_user_setting(db, user_id, "work_style", WorkStyle.BOTH.value),
     }
+
+
+class DashboardLayout(BaseModel):
+    order: List[str] = []          # card ids, in the order to show them (cards not listed come after)
+    hidden: List[str] = []         # card ids not to show
+
+
+@app.get("/api/dashboard-layout")
+def get_dashboard_layout(user: UserDep, db: DbDep):
+    """How this person has arranged their dashboard. Empty lists: the usual arrangement."""
+    try:
+        saved = json.loads(get_user_setting(db, user["id"], "dashboard_layout") or "{}")
+    except ValueError:
+        saved = {}
+    return {"order": [str(x) for x in saved.get("order", [])][:60], "hidden": [str(x) for x in saved.get("hidden", [])][:60]}
+
+
+@app.put("/api/dashboard-layout")
+def save_dashboard_layout(body: DashboardLayout, user: UserDep, db: DbDep):
+    clean = lambda ids: list(dict.fromkeys(i.strip()[:40] for i in ids if i.strip()))[:60]   # noqa: E731
+    layout = {"order": clean(body.order), "hidden": clean(body.hidden)}
+    set_user_setting(db, user["id"], "dashboard_layout", json.dumps(layout))
+    db.commit()
+    return layout
 
 
 @app.get("/api/account/settings")

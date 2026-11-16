@@ -25,34 +25,81 @@ function greeting(now) {
   return h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
 }
 
-/** The home page: the week ahead, tasks, and unread and important email. */
+// Every card the dashboard can show, in the usual order.
+const CARDS = {
+  week: 'This week', deposits: 'Deposits to collect', tests: 'Health tests due', inquiries: 'Inquiries to answer',
+  shoots: 'Shoots coming up', customs: 'Customs to make', ads: 'Ads running out', posts: 'Posts & ads due', tasks: 'Tasks',
+  email: 'Email', cycle: 'Period tracker', goals: 'Savings goals',
+};
+
+/** The home page: what needs doing, in the order and with the cards this person chose. */
 export default function Dashboard({ user }) {
   const [version, setVersion] = useState(0);
   const [taskModal, setTaskModal] = useState(null); // { task } (task null for a new one)
   const now = new Date();
+  // Which cards to show and in what order: this person's own arrangement, saved with their account.
+  const [order, setOrder] = useState(Object.keys(CARDS));
+  const [hidden, setHidden] = useState([]);
+  const [customizing, setCustomizing] = useState(false);
+  useEffect(() => {
+    axios.get('/api/dashboard-layout').then(({ data }) => {
+      const known = data.order.filter((id) => CARDS[id]);
+      setOrder([...known, ...Object.keys(CARDS).filter((id) => !known.includes(id))]);   // cards added since come last
+      setHidden(data.hidden.filter((id) => CARDS[id]));
+    }).catch(() => {});
+  }, []);
+  const move = (i, by) => setOrder((o) => { const next = [...o]; [next[i], next[i + by]] = [next[i + by], next[i]]; return next; });
+  const saveLayout = async () => { await axios.put('/api/dashboard-layout', { order, hidden }).catch(() => {}); setCustomizing(false); };
+  const bump = () => setVersion((v) => v + 1);
+  const card = (id) => ({
+    week: <WeekAhead version={version} />,
+    deposits: <DepositsDue />,
+    tests: <TestsDue />,
+    inquiries: <InquiriesWaiting />,
+    shoots: <ShootsSoon />,
+    customs: <CustomsDue />,
+    ads: <AdsExpiring />,
+    posts: <PostsDue />,
+    tasks: <TasksPanel version={version} onChanged={bump} onOpen={(task) => setTaskModal({ task })} />,
+    email: <EmailPanel />,
+    cycle: <CycleCard onChanged={bump} />,
+    goals: <GoalsGlance version={version} />,
+  }[id]);
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-white">{greeting(now)}, {user.username}</h1>
-        <p className="text-sm text-white/90">{dayLabel(now, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">{greeting(now)}, {user.username}</h1>
+          <p className="text-sm text-white/90">{dayLabel(now, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+        </div>
+        <button onClick={() => setCustomizing(!customizing)} className="text-sm text-white/90 hover:text-white underline">{customizing ? 'Close' : 'Customize'}</button>
       </div>
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 items-start">
-        <div className="space-y-4">
-          <WeekAhead version={version} />
-          <DepositsDue />
-          <TestsDue />
-          <InquiriesWaiting />
-          <ShootsSoon />
-          <CustomsDue />
-          <AdsExpiring />
-          <PostsDue />
-          <TasksPanel version={version} onChanged={() => setVersion((v) => v + 1)} onOpen={(task) => setTaskModal({ task })} />
+      {customizing && (
+        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
+          <h2 className="font-semibold text-gray-800">Customize your dashboard</h2>
+          <p className="text-xs text-gray-500 mb-2">Untick what you don't want, and move the rest into the order you like. Some cards only appear when there's something to show.</p>
+          <ul className="divide-y divide-gray-100">
+            {order.map((id, i) => (
+              <li key={id} className="py-1.5 flex items-center gap-3">
+                <label className="flex-1 flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={!hidden.includes(id)} onChange={(e) => setHidden(e.target.checked ? hidden.filter((x) => x !== id) : [...hidden, id])} />
+                  {CARDS[id]}
+                </label>
+                <button onClick={() => move(i, -1)} disabled={i === 0} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600 disabled:opacity-30" aria-label={`Move ${CARDS[id]} up`}>↑</button>
+                <button onClick={() => move(i, 1)} disabled={i === order.length - 1} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600 disabled:opacity-30" aria-label={`Move ${CARDS[id]} down`}>↓</button>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button onClick={saveLayout} className="px-4 py-2 rounded-lg text-sm bg-sworkr-500 text-white hover:bg-sworkr-600">Save</button>
+            <button onClick={() => { setOrder(Object.keys(CARDS)); setHidden([]); }} className="px-4 py-2 rounded-lg text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">Back to the usual</button>
+          </div>
         </div>
-        <div className="space-y-4">
-          <EmailPanel />
-          <CycleCard onChanged={() => setVersion((v) => v + 1)} />
-          <GoalsGlance version={version} />
-        </div>
+      )}
+      <div className="lg:columns-2 gap-4">
+        {order.filter((id) => !hidden.includes(id)).map((id) => (
+          <div key={id} className="mb-4 break-inside-avoid empty:hidden">{card(id)}</div>
+        ))}
       </div>
       {taskModal && (
         <Modal title={taskModal.task ? 'Edit task' : 'New task'} onClose={() => setTaskModal(null)}>

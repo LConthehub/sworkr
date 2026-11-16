@@ -117,3 +117,42 @@ def test_people_only_see_their_own(api, admin):
     assert len(ok(api.get("/api/rates"))) == 1
     for path in ("/api/rates", "/api/rates/deposits", "/api/rates/behind"):
         assert TestClient(main.app).get(path).status_code == 401
+
+
+def test_a_tag_can_change_the_price(api):
+    ok(api.post("/api/rates", json={"label": "Dinner date", "minutes": 120, "price": 800}), 201)
+    regular, promised, both, plain = (person(api, "Regular", tags=["Regular"]), person(api, "Promised", tags=["og"]),
+                                      person(api, "Both", tags=["regular", "vip"]), person(api, "Plain"))
+    assert [(r["tag"], r["kind"], r["value"]) for r in ok(api.post("/api/rates/tag-rules", json={"tag": " #Regular ", "kind": "percent", "value": 10}))] == [("regular", "percent", 10)]
+    ok(api.post("/api/rates/tag-rules", json={"tag": "vip", "kind": "amount", "value": 150}))
+    rules = ok(api.post("/api/rates/tag-rules", json={"tag": "og", "kind": "locked", "value": 99}))
+    assert [(r["tag"], r["kind"], r["value"]) for r in rules] == [("og", "locked", None), ("regular", "percent", 10), ("vip", "amount", 150)]
+
+    def quote(c, service="dinner date", minutes=120):
+        return ok(api.get("/api/rates/quote", params={"client_id": c["id"], "service": service, "minutes": minutes}))
+
+    assert (quote(plain)["price"], quote(plain)["reason"]) == (800, None)
+    assert (quote(regular)["price"], quote(regular)["reason"]) == (720, "10% off (#regular)")
+    assert (quote(both)["price"], quote(both)["reason"]) == (650, "$150 off (#vip)")                 # the better of the two
+    assert quote(promised)["price"] == 800                                                          # nothing to lock in yet
+    book(api, promised["id"], -30, "Dinner date", 120, 600, status="completed")
+    q = quote(promised)
+    assert (q["card_price"], q["price"]) == (800, 600) and q["reason"].startswith("Locked-in rate (#og)")
+    assert quote(plain, service="Not on the card")["price"] is None
+
+    book(api, plain["id"], -10, "Dinner date", 120, 700, status="completed")
+    assert [r["client_name"] for r in ok(api.get("/api/rates/behind"))] == ["Plain"]                 # a locked-in client isn't "behind"
+
+    assert api.post("/api/rates/tag-rules", json={"tag": " ", "kind": "percent", "value": 5}).status_code == 400
+    assert api.post("/api/rates/tag-rules", json={"tag": "x", "kind": "percent", "value": 150}).status_code == 400
+    assert api.post("/api/rates/tag-rules", json={"tag": "x", "kind": "free"}).status_code == 400
+    ok(api.delete(f"/api/rates/tag-rules/{rules[0]['id']}"), 204)
+    assert len(ok(api.get("/api/rates/tag-rules"))) == 2
+
+
+def test_the_dashboard_layout_is_saved_per_person(api, admin):
+    assert ok(api.get("/api/dashboard-layout")) == {"order": [], "hidden": []}
+    saved = ok(api.put("/api/dashboard-layout", json={"order": ["tasks", "week", "tasks", " "], "hidden": ["email"]}))
+    assert saved == {"order": ["tasks", "week"], "hidden": ["email"]} == ok(api.get("/api/dashboard-layout"))
+    assert ok(new_user(admin).get("/api/dashboard-layout")) == {"order": [], "hidden": []}
+    assert TestClient(main.app).get("/api/dashboard-layout").status_code == 401
