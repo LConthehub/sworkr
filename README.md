@@ -146,6 +146,12 @@ The SQLite database is at `$DATA_DIR/sworkr.db`. Under Docker that is the named 
 
 > Running `docker compose down -v` **deletes** that volume and all your data.
 
+**Your data.** *Settings → Data & users → Your data* downloads everything of yours as a zip of readable
+JSON files (saved passwords left out), and can erase everything of yours: every record is deleted and
+overwritten in the database file, other devices are signed out, and your login stays so you can start
+again. Erasing can't reach backup files already written or bookings already sent to a Nextcloud calendar;
+delete those yourself.
+
 **Saved passwords.** The few secrets sworkr must be able to read back (app passwords for the calendar,
 mailbox and content library, the automatic-backup passphrase, the authenticator-app secret) are encrypted
 with a key kept in its own file, `$KEY_DIR/settings.key` (under Docker, the volume `sworkr_keys`), not in
