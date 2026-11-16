@@ -164,9 +164,17 @@ computer; turn on disk encryption (BitLocker, FileVault) for that.
 
 - *Download backup* gives you one encrypted `.swbak` file. Without its passphrase nobody can read it.
 - *Automatic daily backups* writes one every day into the `backups/` folder here and keeps the
-  newest 14. That folder is on the same disk, so copy the files somewhere else now and then.
+  newest 14. That folder is on the same disk as sworkr.
+- *Copies off this computer* also sends each automatic backup to a folder on a Nextcloud or any other
+  WebDAV server, so a theft, a fire or a dead disk doesn't take the backups with it. The file is
+  encrypted before it leaves; that server can't read it. Use an app password, not your real one.
+- *Restore test*: about every 30 days sworkr opens the newest backup with the saved passphrase and
+  checks it, and the page shows the result. *Test the newest backup now* does it on the spot.
+- *Restore a backup* replaces everything in sworkr with a backup file you choose. It asks for the
+  backup's passphrase, your password and a typed word; the current database is kept as a copy first,
+  and everyone is signed out afterwards. Files up to about 7 MB; for bigger ones use the command below.
 
-Restore one (this replaces what's in sworkr; the current database is kept as a copy first):
+Restore one from a terminal (this replaces what's in sworkr; the current database is kept as a copy first):
 
 ```bash
 docker compose exec api python manage.py restore-backup /backups/sworkr-2026-01-31-120000.swbak

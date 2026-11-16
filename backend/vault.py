@@ -28,7 +28,8 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 log = logging.getLogger("sworkr.vault")
 
 # Settings whose value is a secret. Everything else in the settings tables is stored as it is.
-SECRET_KEYS = frozenset({"cal_password", "content_password", "mail_password", "backup_passphrase", "totp_secret"})
+SECRET_KEYS = frozenset({"cal_password", "content_password", "mail_password", "backup_passphrase", "totp_secret",
+                         "offsite_password"})
 
 PREFIX = "sealed:v1:"
 KEY_FILE = "settings.key"

@@ -24,8 +24,10 @@ A new copy contains a few made-up clients and bookings so you can look around. R
 ## Do these three things on day one
 
 1. **Turn on backups.** *Account → Data & users → Backups*: choose a passphrase and tick automatic daily
-   backups. Files land in the `backups` folder here. Copy them to a USB stick or cloud drive now and then;
-   without the passphrase nobody can read them, and neither can you, so write it down.
+   backups. Files land in the `backups` folder here. Without the passphrase nobody can read them, and
+   neither can you, so write it down. That folder is on this computer, so also get copies off it: fill in
+   *Copies off this computer* on the same page if you have a Nextcloud (or other WebDAV) account, or copy
+   the files to a USB stick now and then. To get everything back later, use *Restore a backup* there.
 2. **Turn on two-step sign-in.** *Account → Security & privacy → Two-step sign-in*, with an authenticator
    app. Save the recovery codes it gives you on paper.
 3. **Encrypt your computer's disk** (BitLocker on Windows, FileVault on a Mac) and use a locked user

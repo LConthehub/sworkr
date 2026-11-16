@@ -786,8 +786,164 @@ function Backups() {
           </p>
         </div>
         <Notice message={message} />
+        <OffsiteBackups autoOn={status.auto_enabled} />
       </div>
     </Section>
+  );
+}
+
+function OffsiteBackups({ autoOn }) {
+  const [status, setStatus] = useState(null);
+  const [form, setForm] = useState({ url: '', username: '', password: '' });
+  const [busy, setBusy] = useState('');
+  const [message, setMessage] = useState(null);
+  const apply = (data) => {
+    setStatus(data);
+    setForm({ url: data.url || '', username: data.username || '', password: '' });
+  };
+  useEffect(() => { axios.get('/api/backup/offsite').then(({ data }) => apply(data)).catch(() => {}); }, [autoOn]);
+
+  const run = async (what, action) => {
+    setBusy(what);
+    setMessage(null);
+    try {
+      await action();
+    } catch (err) {
+      setMessage({ error: errorMessage(err, "That didn't work") });
+    } finally {
+      setBusy('');
+    }
+  };
+  const save = (e) => {
+    e.preventDefault();
+    run('save', async () => {
+      const { data } = await axios.put('/api/backup/offsite', { enabled: true, ...form });
+      apply(data);
+      setMessage(data.last_error
+        ? { error: `Saved, but the copy failed: ${data.last_error}` }
+        : { ok: data.last_file ? `Off-site copies are on. ${data.last_file} is there now.` : 'Off-site copies are on. The next automatic backup will be sent there.' });
+    });
+  };
+  const turnOff = () => run('off', async () => {
+    const { data } = await axios.put('/api/backup/offsite', { enabled: false });
+    apply(data);
+    setMessage({ ok: 'Off-site copies are off. Files already sent stay where they are.' });
+  });
+  const test = () => run('test', async () => {
+    const { data } = await axios.post('/api/backup/verify');
+    setStatus(data);
+    setMessage(data.result.ok
+      ? { ok: `${data.result.file} opened and checked out fine.` }
+      : { error: `${data.result.file} could not be restored: ${data.result.error}` });
+  });
+
+  if (!status) return null;
+  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+  return (
+    <>
+      <form onSubmit={save} className="border-t border-gray-100 pt-4 space-y-2">
+        <p className="text-sm font-medium text-gray-700">
+          Copies off this computer: {status.enabled ? <span className="text-emerald-700">on</span> : <span className="text-gray-500">off</span>}
+        </p>
+        <p className="text-xs text-gray-500">
+          Each automatic backup is also sent to a folder on your Nextcloud (or any WebDAV server), so a fire, a theft or a dead disk doesn't take the backups with it.
+          The file is encrypted before it leaves: that server can't read it.
+          {status.last_at && <> Last sent {new Date(status.last_at).toLocaleString()}.</>}
+        </p>
+        {status.last_error && <p className="text-xs text-red-600">Last problem: {status.last_error}</p>}
+        <Field label="Folder address (WebDAV)">
+          <input type="url" required placeholder="https://cloud.example.com/remote.php/dav/files/you/sworkr-backups" value={form.url} onChange={set('url')} className={inputClass} />
+        </Field>
+        <Field label="Username">
+          <input type="text" required autoComplete="off" value={form.username} onChange={set('username')} className={inputClass} />
+        </Field>
+        <Field label={status.has_password ? 'App password (leave empty to keep the saved one)' : 'App password (make one in Nextcloud: Settings, Security)'}>
+          <input type="password" required={!status.has_password} autoComplete="new-password" value={form.password} onChange={set('password')} className={inputClass} />
+        </Field>
+        <div className="flex flex-wrap gap-2">
+          <button type="submit" disabled={!!busy} className={buttonClass}>{busy === 'save' ? 'Trying the folder…' : status.enabled ? 'Update' : 'Turn on'}</button>
+          {status.enabled && <button type="button" disabled={!!busy} onClick={turnOff} className={quietButtonClass}>Turn off</button>}
+        </div>
+        {!autoOn && <p className="text-xs text-amber-700">Automatic daily backups are off, so there is nothing to send yet. Turn them on above.</p>}
+      </form>
+
+      <div className="border-t border-gray-100 pt-4 space-y-2">
+        <p className="text-sm font-medium text-gray-700">Restore test</p>
+        <p className="text-xs text-gray-500">
+          About every {status.verify_every_days} days sworkr opens the newest backup with the saved passphrase and checks it, so you know it would really restore.
+          {status.verified_at
+            ? <> Last tested {new Date(status.verified_at).toLocaleString()}{status.verified_file && <> ({status.verified_file})</>}: {status.verify_error ? 'it failed.' : 'it was fine.'}</>
+            : <> Not tested yet.</>}
+        </p>
+        {status.verify_error && <p className="text-xs text-red-600">Problem: {status.verify_error}</p>}
+        <button type="button" disabled={!!busy || !autoOn} onClick={test} className={quietButtonClass}>{busy === 'test' ? 'Testing…' : 'Test the newest backup now'}</button>
+      </div>
+      <Notice message={message} />
+      <RestoreBackup />
+    </>
+  );
+}
+
+function RestoreBackup() {
+  const [open, setOpen] = useState(false);
+  const [file, setFile] = useState(null);
+  const [form, setForm] = useState({ passphrase: '', password: '', confirm: '' });
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState(null);
+  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+
+  const restore = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setMessage(null);
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let binary = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      await axios.post('/api/backup/restore', { file: btoa(binary), ...form });
+      window.location.assign('/');   // everyone is signed out: sign in again with the account from the backup
+    } catch (err) {
+      setMessage({ error: err.response?.status === 413
+        ? 'That backup is too big to restore from this page. Use the command in the README instead.'
+        : errorMessage(err, 'Nothing was restored') });
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="border-t border-gray-100 pt-4 space-y-2">
+      <p className="text-sm font-medium text-gray-700">Restore a backup</p>
+      <p className="text-xs text-gray-500">
+        Replaces everything in sworkr, for every account, with what is in a backup file. What is here now is kept as a copy next to the database, in case you need to go back.
+      </p>
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} className="text-sm text-red-600 hover:text-red-800 underline">Restore a backup…</button>
+      ) : (
+        <form onSubmit={restore} className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3">
+          <Field label="Backup file (.swbak)">
+            <input type="file" required accept=".swbak" onChange={(e) => setFile(e.target.files[0] || null)} className="block w-full text-sm" />
+          </Field>
+          <Field label="The passphrase that backup was made with">
+            <input type="password" required autoComplete="off" value={form.passphrase} onChange={set('passphrase')} className={inputClass} />
+          </Field>
+          <Field label="Your sworkr password">
+            <input type="password" required autoComplete="current-password" value={form.password} onChange={set('password')} className={inputClass} />
+          </Field>
+          <Field label="Type RESTORE to confirm">
+            <input type="text" required autoComplete="off" autoCapitalize="characters" value={form.confirm} onChange={set('confirm')} className={inputClass} />
+          </Field>
+          <p className="text-xs text-red-800">Afterwards everyone is signed out. Sign in with the username and password that were in use when the backup was made.</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="submit" disabled={busy || !file || form.confirm.trim() !== 'RESTORE'}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+              {busy ? 'Restoring…' : 'Replace everything with this backup'}
+            </button>
+            <button type="button" disabled={busy} onClick={() => setOpen(false)} className={quietButtonClass}>Cancel</button>
+          </div>
+          <Notice message={message} />
+        </form>
+      )}
+    </div>
   );
 }
 

@@ -20,6 +20,7 @@ from pydantic import BaseModel, PrivateAttr
 
 import access
 import privacy
+import offsite
 import auth
 import backup
 import calendar_sync
@@ -286,6 +287,7 @@ DbDep = Annotated[sqlite3.Connection, Depends(db_conn)]
 auth.setup(get_db)
 access.setup(get_db)
 privacy.setup(get_db)
+offsite.setup(get_db)
 
 
 def current_user(request: Request) -> dict:
@@ -2136,6 +2138,7 @@ app.include_router(taxes.router)
 app.include_router(signin.router)
 app.include_router(access.router)
 app.include_router(privacy.router)
+app.include_router(offsite.router)
 app.include_router(arrangements.router)
 app.include_router(calendar_dates.router)
 

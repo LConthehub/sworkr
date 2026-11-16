@@ -167,6 +167,8 @@ def run_auto_backup(force: bool = False) -> Optional[str]:
                 os.remove(os.path.join(BACKUP_DIR, old["name"]))
             _set(db, "backup_last_at", _now_iso())
             _set(db, "backup_last_error", None)
+            import offsite
+            offsite.send(db, name, blob)   # a copy off this computer, if one is set up; records its own errors
             return name
         except Exception as e:  # keep the worker alive whatever happens
             log.warning("Automatic backup failed: %s", e)
@@ -176,10 +178,20 @@ def run_auto_backup(force: bool = False) -> Optional[str]:
         db.close()
 
 
+def _restore_test_if_due():
+    import offsite
+    db = _get_db()
+    try:
+        offsite.verify_if_due(db)
+    finally:
+        db.close()
+
+
 def _worker():
     while True:
         try:
             run_auto_backup()
+            _restore_test_if_due()
         except Exception as e:
             log.warning("Backup worker: %s", e)
         time.sleep(CHECK_EVERY)
@@ -274,3 +286,66 @@ def save_auto_backup(body: AutoBackup, request: Request):
         return _status(db)
     finally:
         db.close()
+
+
+RESTORE_WORD = "RESTORE"
+
+
+class Restore(BaseModel):
+    file: str            # the .swbak file, base64
+    passphrase: str
+    password: str        # the admin's current password: a signed-in browser left open isn't enough for this
+    confirm: str
+
+
+@router.post("/restore")
+def restore_backup(body: Restore, request: Request):
+    """Replace everything in sworkr with the contents of a backup file. The current database is kept as a copy first."""
+    import base64
+    import binascii
+
+    import auth
+    import demo
+    import migrations
+    import vault
+    _require_admin(request)
+    if demo.ENABLED:
+        raise HTTPException(status_code=403, detail="This is turned off in the demo")
+    if body.confirm.strip() != RESTORE_WORD:
+        raise HTTPException(status_code=400, detail=f"Type {RESTORE_WORD} to confirm")
+    try:
+        blob = base64.b64decode(body.file, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(status_code=400, detail="That file didn't arrive in one piece. Try again.")
+    db = _get_db()
+    try:
+        if not auth.check_login(db, request.state.user["username"], body.password):
+            raise HTTPException(status_code=403, detail="That password isn't right")
+        try:
+            decrypt(blob, body.passphrase)   # check the passphrase and the file before touching anything
+        except BackupError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        db_path = db.execute("PRAGMA database_list").fetchone()[2]
+        keep = os.path.join(os.path.dirname(db_path), f"sworkr.before-restore-{datetime.now().strftime('%Y%m%d-%H%M%S')}.db")
+        copy = sqlite3.connect(keep)
+        try:
+            db.backup(copy)
+        finally:
+            copy.close()
+    finally:
+        db.close()
+    try:
+        restore_into(db_path, blob, body.passphrase)
+    except BackupError as e:
+        raise HTTPException(status_code=400, detail=f"{e}. Nothing was changed.")
+    version = migrations.run(db_path)        # an older backup is upgraded to the current layout
+    db = _get_db()
+    try:
+        vault.seal_existing(db)
+        db.execute("DELETE FROM sessions")   # the backup's sign-ins are stale, and this browser's is no longer in it
+        db.commit()
+    finally:
+        db.close()
+    log.warning("The database was restored from a backup by %s; the previous one is kept as %s",
+                request.state.user["username"], os.path.basename(keep))
+    return {"restored": True, "version": version, "kept_as": os.path.basename(keep)}
