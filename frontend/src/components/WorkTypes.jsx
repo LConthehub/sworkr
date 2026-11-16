@@ -3,7 +3,7 @@ import axios from 'axios';
 import Modal, { errorMessage, buttonClass, quietButtonClass } from './Modal';
 import { reloadCategories } from '../api';
 
-/** The kinds of work as checkboxes. Saving adds each kind's starter categories and places you earn. */
+/** The kinds of work as checkboxes. Saving adds each kind's starter categories and workplaces and platforms. */
 export function WorkTypesPicker({ onSaved, onSkip, saveLabel = 'Save' }) {
   const [profile, setProfile] = useState(null);
   const [chosen, setChosen] = useState([]);
@@ -46,7 +46,7 @@ export function WorkTypesPicker({ onSaved, onSkip, saveLabel = 'Save' }) {
         ))}
       </div>
       <p className="text-xs text-gray-500">
-        Each one adds starter expense categories and places you earn, which you can rename, change or hide on the
+        Each one adds starter expense categories and workplaces and platforms, which you can rename, change or hide on the
         Money page. Nothing is removed if you untick one later.
       </p>
       {message && (
@@ -60,15 +60,25 @@ export function WorkTypesPicker({ onSaved, onSkip, saveLabel = 'Save' }) {
   );
 }
 
-/** Asked once, after the first login, until the person answers or skips. */
-export function WorkTypesFirstRun() {
+/**
+ * Asked once, after the first login, until the person answers or skips.
+ * In the demo it's shown once each time someone opens it in a browser tab, so the first-run can be tried.
+ */
+export function WorkTypesFirstRun({ demo = false }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
+    if (demo) {
+      let seen = false;
+      try { seen = sessionStorage.getItem('sworkr-demo-first-run') === '1'; sessionStorage.setItem('sworkr-demo-first-run', '1'); } catch { /* private window */ }
+      setOpen(!seen);
+      return;
+    }
     axios.get('/api/work-profile').then(({ data }) => setOpen(data.work_types === null)).catch(() => {});
-  }, []);
+  }, [demo]);
   if (!open) return null;
   return (
     <Modal title="How do you work?" onClose={() => setOpen(false)}>
+      {demo && <p className="text-xs rounded-lg bg-amber-50 border border-amber-200 text-amber-900 px-3 py-2 mb-3">This is what a new person sees the first time they log in. In the demo it's already answered; change it if you like, it resets overnight.</p>}
       <p className="text-sm text-gray-600 mb-3">Tick everything that applies. sworkr sets itself up to match, and you can change it any time on the Account page.</p>
       <WorkTypesPicker saveLabel="Set up sworkr" onSaved={() => setTimeout(() => setOpen(false), 1200)} onSkip={() => setOpen(false)} />
     </Modal>

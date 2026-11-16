@@ -58,8 +58,7 @@ export default function ClientCard({ client, onClick }) {
       )}
 
       <div className="mt-3 flex flex-wrap gap-2">
-        {client.role === 'partner' && <span className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">Co-worker</span>}
-        {client.role === 'crew' && <span className="px-2 py-0.5 bg-sky-100 text-sky-700 rounded-full text-xs font-medium">Crew</span>}
+        {client.role === 'partner' && <span className="px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">Collaborator</span>}
         {(!client.role || client.role === 'client') && <ScreeningBadge client={client} />}
         {!client.is_active && (
           <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">Inactive</span>

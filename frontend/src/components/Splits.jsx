@@ -40,7 +40,7 @@ export function useSplit(recordType, recordId) {
 }
 
 /**
- * "Split with partners": which co-workers share this, how much each gets (a percentage or an amount), and who
+ * "Split with partners": which collaborators share this, how much each gets (a percentage or an amount), and who
  * handled the money. `kind` is booking, content or costs: it picks which share an agreement fills in.
  */
 export function SplitEditor({ split, onChange, base, kind = 'booking', handledLabel = 'Who was paid' }) {
@@ -59,7 +59,7 @@ export function SplitEditor({ split, onChange, base, kind = 'booking', handledLa
     return (
       <button type="button" onClick={() => onChange({ handled_by: null, agreement_id: null, parties: [{ partner_id: '', share_type: 'percent', share_value: '50' }] })}
         className="text-sm text-sworkr-600 hover:text-sworkr-800">
-        + Split with a co-worker
+        + Split with a collaborator
       </button>
     );
   }
@@ -87,7 +87,7 @@ export function SplitEditor({ split, onChange, base, kind = 'booking', handledLa
 
   return (
     <fieldset className="rounded-lg border border-sworkr-200 bg-sworkr-50/40 px-3 pt-2 pb-3 space-y-2">
-      <legend className="px-1 text-xs font-medium text-sworkr-600">Split with co-workers (private: only you see this)</legend>
+      <legend className="px-1 text-xs font-medium text-sworkr-600">Split with collaborators (private: only you see this)</legend>
       {agreements.length > 0 && (
         <Field label="Use an agreement">
           <select value={split.agreement_id || ''} onChange={(e) => useAgreement(e.target.value)} className={inputClass}>
@@ -98,8 +98,8 @@ export function SplitEditor({ split, onChange, base, kind = 'booking', handledLa
       )}
       {split.parties.map((p, i) => (
         <div key={i} className="grid grid-cols-[1fr_5.5rem_4.5rem_auto] sm:grid-cols-[1fr_6rem_4.5rem_5rem_auto] items-center gap-2">
-          <select value={p.partner_id} onChange={(e) => setParty(i, { partner_id: e.target.value })} className={inputClass} aria-label="Co-worker">
-            <option value="">Choose a co-worker…</option>
+          <select value={p.partner_id} onChange={(e) => setParty(i, { partner_id: e.target.value })} className={inputClass} aria-label="Collaborator">
+            <option value="">Choose a collaborator…</option>
             {listed.map((c) => <option key={c.id} value={c.id}>{c.display_name}</option>)}
             {others.length > 0 && <optgroup label="Other contacts">{others.map((c) => <option key={c.id} value={c.id}>{c.display_name}</option>)}</optgroup>}
           </select>
@@ -110,12 +110,12 @@ export function SplitEditor({ split, onChange, base, kind = 'booking', handledLa
             <option value="amount">$</option>
           </select>
           <span className="hidden sm:block text-xs text-gray-500 text-right">{money(amounts[i])}</span>
-          <button type="button" onClick={() => set({ parties: split.parties.filter((_, j) => j !== i) })} className="text-gray-300 hover:text-red-500 px-1" aria-label="Remove this co-worker">✕</button>
+          <button type="button" onClick={() => set({ parties: split.parties.filter((_, j) => j !== i) })} className="text-gray-300 hover:text-red-500 px-1" aria-label="Remove this collaborator">✕</button>
         </div>
       ))}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button type="button" onClick={() => set({ parties: [...split.parties, { partner_id: '', share_type: 'percent', share_value: '' }] })} className="text-xs text-sworkr-600 hover:text-sworkr-800">
-          + Another co-worker
+          + Another collaborator
         </button>
         <button type="button" onClick={() => onChange({ handled_by: null, agreement_id: null, parties: [] })} className="text-xs text-gray-500 hover:text-red-600">
           Don't split
@@ -127,7 +127,7 @@ export function SplitEditor({ split, onChange, base, kind = 'booking', handledLa
             <option value="">Me</option>
             {named.map((p) => {
               const c = partners.find((x) => String(x.id) === String(p.partner_id));
-              return <option key={p.partner_id} value={p.partner_id}>{c?.display_name || 'Co-worker'}</option>;
+              return <option key={p.partner_id} value={p.partner_id}>{c?.display_name || 'Collaborator'}</option>;
             })}
           </select>
         </Field>
@@ -138,7 +138,7 @@ export function SplitEditor({ split, onChange, base, kind = 'booking', handledLa
       </p>
       {scaledDown && (
         <p className="text-xs text-red-600" role="alert">
-          The co-workers' shares add up to {money(askedSum)}, more than the {money(total)} {kind === 'costs' ? 'paid' : 'received'}.
+          The collaborators' shares add up to {money(askedSum)}, more than the {money(total)} {kind === 'costs' ? 'paid' : 'received'}.
           Each share has been scaled down to fit, so you get nothing. Lower a share if that isn't right.
         </p>
       )}

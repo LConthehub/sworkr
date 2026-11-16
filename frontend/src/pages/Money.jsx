@@ -280,7 +280,7 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
 
         <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-gray-800">Places you earn</h2>
+            <h2 className="font-semibold text-gray-800">Workplaces & platforms</h2>
             <button onClick={() => setModal({ source: null })} className="text-sm text-sworkr-600 hover:text-sworkr-800">+ Add</button>
           </div>
           {sources.length === 0 ? (
@@ -433,7 +433,7 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
         </Modal>
       )}
       {modal?.source !== undefined && (
-        <Modal title={modal.source ? `Edit ${modal.source.name}` : 'New place you earn'} onClose={() => setModal(null)}>
+        <Modal title={modal.source ? `Edit ${modal.source.name}` : 'New workplace or platform'} onClose={() => setModal(null)}>
           <SourceForm source={modal.source} onSaved={() => { setModal(null); loadSources(); load(); }} />
         </Modal>
       )}

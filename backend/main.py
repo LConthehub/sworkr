@@ -116,7 +116,7 @@ class ClientIn(BaseModel):
     handles: List[contacts.Handle] = []     # social media handles
     display_handle: Optional[int] = None    # show them by this handle (its position in `handles`)
     industry: Optional[str] = None          # the line of work they're in
-    role: str = "client"                    # client, partner (another worker), crew (photographer, driver…) or other
+    role: str = "client"                    # client, partner (a collaborator: another worker, a photographer, a driver…) or other
     couple_with: Optional[int] = None       # the other half of a couple (another contact)
     contact_phone: Optional[str] = None
     email: Optional[str] = None
@@ -237,6 +237,8 @@ class Appointment(AppointmentIn):
     alert_sent_at: Optional[datetime] = None
     series_id: Optional[str] = None
     my_amount_paid: Optional[float] = None   # what's yours after partners' shares
+    tip: Optional[float] = None              # a tip that came with it (kept as income of the kind "tips")
+    tip_source_id: Optional[int] = None      # the workplace that takes a share of that tip, if one does
     partner_names: Optional[str] = None
     cancel_reason: Optional[str] = None      # client | late | no_show | me (cancelled ones)
     cancellation_fee: Optional[float] = None # what the client owes for a late cancellation or no-show
@@ -411,6 +413,8 @@ APPOINTMENT_SELECT = """
     SELECT a.*, c.display_name || IFNULL(' & ' || c2.display_name, '') AS client_name,
            MAX(IFNULL(c.do_not_see, 0), IFNULL(c2.do_not_see, 0)) AS client_do_not_see,
            (SELECT x.tour_id FROM expenses x WHERE x.appointment_id = a.id LIMIT 1) AS tour_id,
+           (SELECT SUM(i.gross) FROM income i WHERE i.appointment_id = a.id AND i.kind = 'tips') AS tip,
+           (SELECT i.source_id FROM income i WHERE i.appointment_id = a.id AND i.kind = 'tips' LIMIT 1) AS tip_source_id,
            a.amount_paid - """ + collab.partner_share_sql('appointment', 'a.amount_paid', 'a.id') + """ AS my_amount_paid,
            """ + collab.partner_names_sql('appointment', 'a.id') + """ AS partner_names
     FROM appointments a LEFT JOIN clients c ON a.client_id = c.id LEFT JOIN clients c2 ON a.second_client_id = c2.id
@@ -719,10 +723,10 @@ def delete_user(user_id: int, admin: AdminDep, db: DbDep):
 
 def _validate_client(client: ClientIn):
     client.name = clean(client.name)
-    if client.role in ("co-worker", "coworker", "collaborator"):
-        client.role = "partner"          # shown as "co-worker", stored as "partner"
+    if client.role in ("co-worker", "coworker", "collaborator", "crew"):
+        client.role = "partner"          # shown as "collaborator", stored as "partner"
     if client.role not in collab.ROLES:
-        raise HTTPException(status_code=400, detail="Role must be client, co-worker, crew or other")
+        raise HTTPException(status_code=400, detail="Role must be client, collaborator or other")
     client._handles = contacts.clean_handles(client.handles)
     client._display = contacts.display_name(client.name, client._handles, client.display_handle)
     if client.display_handle is not None and not (0 <= client.display_handle < len(client._handles)):
@@ -771,7 +775,7 @@ def list_clients(
     tag_filter: Optional[str] = None,
     screening: Optional[ScreeningStatus] = None,
     do_not_see: Optional[int] = Query(None, ge=0, le=1),
-    role: Optional[str] = Query(None, description="client, partner, crew or other"),
+    role: Optional[str] = Query(None, description="client, partner (collaborators) or other"),
     persona_id: Optional[int] = Query(None, description="only contacts who know you by this persona (0: by none)"),
     sort: str = Query("recent", description="recent or name"),
     page: int = Query(1, ge=1),

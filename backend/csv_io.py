@@ -239,7 +239,7 @@ def export_clients(request: Request, tz_offset: int = Query(0, ge=-840, le=840))
                          _safe_cell(c["screening_notes"]), c["birthday"] or "",
                          _safe_cell(c["drink_preferences"]), _safe_cell(c["food_preferences"]),
                          _safe_cell(contacts.handles_text(contacts.handles_from_db(c["handles"]))),
-                         _safe_cell(c["industry"]), _safe_cell(c["display_name"]), "co-worker" if c["role"] == "partner" else c["role"],
+                         _safe_cell(c["industry"]), _safe_cell(c["display_name"]), "collaborator" if c["role"] in ("partner", "crew") else c["role"],
                          _safe_cell(c["found_via"])])
     finally:
         db.close()
@@ -306,9 +306,9 @@ def _import_clients(db, rows, owner_id):
             fields["found_via"] = marketing.clean_found_via(_unformula(row["found_via"]))
         if "role" in row:
             role = row["role"].strip().lower() or "client"
-            role = "partner" if role in ("co-worker", "coworker", "collaborator") else role   # shown as "co-worker", stored as "partner"
-            if role not in ("client", "partner", "crew", "other"):
-                errors.append(f"Line {line}: role '{row['role']}' must be client, co-worker, crew or other")
+            role = "partner" if role in ("co-worker", "coworker", "collaborator", "crew") else role   # shown as "collaborator", stored as "partner"
+            if role not in ("client", "partner", "other"):
+                errors.append(f"Line {line}: role '{row['role']}' must be client, collaborator or other")
             fields["role"] = role
         if "email" in row:
             fields["email"] = email

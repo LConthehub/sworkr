@@ -34,7 +34,7 @@ const GROUPS = [
       {
         id: 'personas', title: 'Personas', words: 'stage name working name alias persona',
         render: () => (
-          <Section title="Personas (optional)" hint="If you work under more than one name, add each here. Contacts, places you earn and posts can then say which name they're under, and Money can compare them. Skip it if you use one name.">
+          <Section title="Personas (optional)" hint="If you work under more than one name, add each here. Contacts, workplaces and platforms and posts can then say which name they're under, and Money can compare them. Skip it if you use one name.">
             <PersonaSettings />
           </Section>
         ),
@@ -454,7 +454,7 @@ const WORK_STYLES = [
 
 function WorkTypes() {
   return (
-    <Section title="Kinds of work" hint="Tick everything you do. Each adds starter expense categories and places you earn.">
+    <Section title="Kinds of work" hint="Tick everything you do. Each adds starter expense categories and workplaces and platforms.">
       <WorkTypesPicker />
     </Section>
   );

@@ -21,12 +21,13 @@ import { clearCaches } from './api';
 const navClass = ({ isActive }) =>
   `transition-colors ${isActive ? 'text-white font-semibold' : 'text-white/80 hover:text-white'}`;
 const tabClass = ({ isActive }) =>
-  `flex-1 py-2.5 text-center text-xs font-medium ${isActive ? 'text-sworkr-600' : 'text-gray-500'}`;
+  `whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium ${isActive ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'}`;
 
 const PAGES = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/calendar', label: 'Calendar' },
   { to: '/contacts', label: 'Contacts' },
+  { to: '/inquiries', label: 'Inquiries' },
   { to: '/content', label: 'Content' },
   { to: '/money', label: 'Money' },
 ];
@@ -132,7 +133,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen pb-16 sm:pb-0">
+      <div className="min-h-screen">
         <nav className="print:hidden bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
             {/* Pages on the left, search in the middle, settings on the right (like Nextcloud). */}
@@ -166,6 +167,10 @@ function App() {
                 </NavLink>
               </div>
             </div>
+            {/* On a phone the pages are a row under the header that scrolls sideways. */}
+            <div className="sm:hidden flex gap-1 overflow-x-auto pb-2 -mx-1 px-1" aria-label="Pages">
+              {PAGES.map((p) => <NavLink key={p.to} to={p.to} end={p.end} className={tabClass}>{p.label}</NavLink>)}
+            </div>
           </div>
         </nav>
 
@@ -197,13 +202,8 @@ function App() {
           </Routes>
         </main>
 
-        {/* On a phone the pages are along the bottom, within thumb reach. */}
-        <nav className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 flex" aria-label="Pages">
-          {PAGES.map((p) => <NavLink key={p.to} to={p.to} end={p.end} className={tabClass}>{p.label}</NavLink>)}
-        </nav>
-
         <Reminders />
-        {!auth.demo && <WorkTypesFirstRun />}
+        <WorkTypesFirstRun demo={auth.demo} />
       </div>
     </BrowserRouter>
   );

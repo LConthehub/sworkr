@@ -12,8 +12,7 @@ const LIMIT = 21;
 const FILTERS = [
   { id: 'all', label: 'All', params: {} },
   { id: 'clients', label: 'Clients', params: { role: 'client' } },
-  { id: 'partners', label: 'Co-workers', params: { role: 'partner' } },
-  { id: 'crew', label: 'Crew', params: { role: 'crew' } },
+  { id: 'partners', label: 'Collaborators', params: { role: 'partner' } },
   { id: 'active', label: 'Active', params: { is_active: 1 } },
   { id: 'inactive', label: 'Inactive', params: { is_active: 0 } },
   { id: 'unverified', label: 'Not verified', params: { screening: 'unscreened' } },

@@ -303,6 +303,7 @@ export function SourceForm({ source, onSaved }) {
     work_type: source?.work_type || '',
     persona_id: source?.persona_id ? String(source.persona_id) : '',
     gift_share_percent: source?.gift_share_percent ?? '',
+    tip_share_percent: source?.tip_share_percent ?? '',
   });
   const [workTypes, setWorkTypes] = useState([]);
   useEffect(() => {
@@ -341,6 +342,7 @@ export function SourceForm({ source, onSaved }) {
       work_type: form.work_type || null,
       persona_id: form.persona_id ? Number(form.persona_id) : null,
       gift_share_percent: numberOrNull(form.gift_share_percent),
+      tip_share_percent: numberOrNull(form.tip_share_percent),
       currency: 'USD',
     };
     setSaving(true);
@@ -406,6 +408,10 @@ export function SourceForm({ source, onSaved }) {
           <span className="block text-xs text-gray-500 mt-1">Many brothels charge half a gift's value. Logging a gift from here fills that in as the house share.</span>
         </Field>
       )}
+      <Field label="Their share of your tips (%)">
+        <input type="number" min="0" max="100" step="1" inputMode="decimal" value={form.tip_share_percent} onChange={set('tip_share_percent')} placeholder="Leave empty if tips are all yours" className={`${inputClass} max-w-[16rem]`} />
+        <span className="block text-xs text-gray-500 mt-1">A house cut or tip-out. Logging a tip from here takes it off for you.</span>
+      </Field>
       <h3 className="text-sm font-semibold text-gray-700 pt-1">Charges you pay them</h3>
       <p className="text-xs text-gray-500 -mt-2">
         Room & board, a house doctor, a license, room hire: anything you pay this place as well. Log each one from the
@@ -458,7 +464,7 @@ export function sourceFees(s) {
 
 /**
  * Add or edit income that isn't a calendar booking: a payout, tips, a sale, a shift.
- * The fees fill in from the place you earn (its share, plus its fee per shift for a shift) until you change them.
+ * The fees fill in from the workplace or platform (its share, plus its fee per shift for a shift) until you change them.
  */
 export function IncomeForm({ income, sources, defaultDate, onSaved }) {
   const firstSource = sources.find((s) => !s.archived);
@@ -494,6 +500,7 @@ export function IncomeForm({ income, sources, defaultDate, onSaved }) {
     // A gift: the place's share of its value (a brothel usually charges half), not its usual cut.
     const fees = f.kind === 'gift'
       ? gross * (s.gift_share_percent || 0) / 100
+      : f.kind === 'tips' && s.tip_share_percent != null ? gross * s.tip_share_percent / 100
       : gross * (s.fee_percent || 0) / 100 + (f.kind === 'shift' ? s.fee_per_shift || 0 : 0);
     return fees ? fees.toFixed(2) : '';
   };

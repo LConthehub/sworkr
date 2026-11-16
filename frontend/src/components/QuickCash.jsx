@@ -12,7 +12,9 @@ const writeQueue = (q) => { try { localStorage.setItem(QUEUE_KEY, JSON.stringify
 const unreachable = (err) => !err.response || err.response.status >= 500 || err.response.status === 401;
 
 async function send(entry) {
-  if (entry.direction === 'in') {
+  if (entry.direction === 'tip') {
+    await axios.post('/api/tips', { amount: entry.amount, source_id: entry.source || null, date: entry.at, note: entry.note || null });
+  } else if (entry.direction === 'in') {
     await axios.post('/api/income', {
       date: entry.at, gross: entry.amount, fees: 0, kind: 'booking', status: 'received',
       description: entry.note || 'Cash', notes: 'Quick cash log',
@@ -60,6 +62,11 @@ export default function QuickCash({ userId }) {
   const [direction, setDirection] = useState('in');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+  const [tipPlaces, setTipPlaces] = useState([]);   // workplaces that keep a share of tips
+  const [tipPlace, setTipPlace] = useState(() => { try { return localStorage.getItem('sworkr:tip-place') || ''; } catch { return ''; } });
+  useEffect(() => {
+    if (open) axios.get('/api/income-sources').then(({ data }) => setTipPlaces(data.filter((s) => s.tip_share_percent != null && !s.archived))).catch(() => {});
+  }, [open]);
   const [message, setMessage] = useState('');
   const countMine = useCallback(() => readQueue().filter((e) => e.user === userId).length, [userId]);
   const [waiting, setWaiting] = useState(countMine);
@@ -82,12 +89,14 @@ export default function QuickCash({ userId }) {
     const value = Number(amount);
     if (!(value > 0)) return;
     const entry = { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, user: userId, direction, amount: Math.round(value * 100) / 100, note: note.trim(), at: new Date().toISOString() };
+    if (direction === 'tip' && tipPlace && tipPlaces.some((s) => String(s.id) === tipPlace)) entry.source = Number(tipPlace);
+    try { localStorage.setItem('sworkr:tip-place', tipPlace); } catch { /* storage unavailable */ }
     setOpen(false);
     setAmount('');
     setNote('');
     try {
       await send(entry);
-      setMessage(`${direction === 'in' ? 'Added' : 'Spent'} ${money(entry.amount)}.`);
+      setMessage(`${direction === 'out' ? 'Spent' : direction === 'tip' ? 'Tip added:' : 'Added'} ${money(entry.amount)}.`);
     } catch (err) {
       if (!unreachable(err)) { setMessage(err.response.data?.detail || "Couldn't save it"); return; }
       writeQueue([...readQueue(), entry]);
@@ -101,7 +110,7 @@ export default function QuickCash({ userId }) {
       <button
         type="button"
         onClick={() => { setOpen(true); setTimeout(() => amountRef.current?.focus(), 50); }}
-        className="print:hidden fixed z-40 right-4 bottom-20 sm:bottom-6 h-14 px-5 rounded-full bg-sworkr-600 text-white text-lg font-bold shadow-xl hover:bg-sworkr-700"
+        className="print:hidden fixed z-40 right-4 bottom-6 h-14 px-5 rounded-full bg-sworkr-600 text-white text-lg font-bold shadow-xl hover:bg-sworkr-700"
         aria-label="Log cash quickly"
         title="Log cash in or out"
       >
@@ -109,16 +118,16 @@ export default function QuickCash({ userId }) {
         {waiting > 0 && <span className="ml-1 text-xs font-medium bg-white text-sworkr-700 rounded-full px-1.5" title="Waiting to be added">{waiting}</span>}
       </button>
       {message && (
-        <p role="status" className="fixed z-40 right-4 bottom-36 sm:bottom-24 max-w-xs rounded-xl bg-gray-900/90 text-white text-sm px-3 py-2 shadow-lg">{message}</p>
+        <p role="status" className="fixed z-40 right-4 bottom-24 max-w-xs rounded-xl bg-gray-900/90 text-white text-sm px-3 py-2 shadow-lg">{message}</p>
       )}
       {open && (
         <Modal title="Quick cash" onClose={() => setOpen(false)}>
           <form onSubmit={save} className="space-y-3">
-            <div className="grid grid-cols-2 gap-2" role="group" aria-label="In or out">
-              {[['in', 'Money in'], ['out', 'Money out']].map(([v, l]) => (
+            <div className="grid grid-cols-3 gap-2" role="group" aria-label="In, a tip, or out">
+              {[['in', 'Money in'], ['tip', 'Tip'], ['out', 'Money out']].map(([v, l]) => (
                 <button key={v} type="button" onClick={() => setDirection(v)} aria-pressed={direction === v}
                   className={`py-3 rounded-xl text-sm font-semibold border ${direction === v
-                    ? (v === 'in' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-red-600 text-white border-red-600')
+                    ? (v === 'out' ? 'bg-red-600 text-white border-red-600' : 'bg-emerald-600 text-white border-emerald-600')
                     : 'bg-white text-gray-700 border-gray-200'}`}>
                   {l}
                 </button>
@@ -127,9 +136,15 @@ export default function QuickCash({ userId }) {
             <input ref={amountRef} required type="number" min="0.01" step="0.01" inputMode="decimal" value={amount}
               onChange={(e) => setAmount(e.target.value)} placeholder="$0" aria-label="Amount" className={`${inputClass} text-2xl text-center`} />
             <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="What for (optional)" aria-label="What for" className={inputClass} />
+            {direction === 'tip' && tipPlaces.length > 0 && (
+              <select value={tipPlace} onChange={(e) => setTipPlace(e.target.value)} aria-label="Tip shared with" className={inputClass}>
+                <option value="">It's all mine</option>
+                {tipPlaces.map((s) => <option key={s.id} value={s.id}>{s.name} keeps {s.tip_share_percent}%</option>)}
+              </select>
+            )}
             <button type="submit" disabled={!(Number(amount) > 0)} className={`${buttonClass} w-full py-3`}>Save</button>
             <p className="text-xs text-gray-500">
-              {direction === 'in' ? 'Added to income as a booking paid outside the calendar.' : 'Added to expenses under Other, to sort later.'} Works offline too.
+              {direction === 'in' ? 'Added to income as a booking paid outside the calendar.' : direction === 'tip' ? "Added to income as a tip. To tie a tip to a booking, add it on the booking instead." : 'Added to expenses under Other, to sort later.'} Works offline too.
             </p>
           </form>
         </Modal>

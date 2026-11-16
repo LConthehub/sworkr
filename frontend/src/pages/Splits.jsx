@@ -33,7 +33,7 @@ export default function Splits() {
       setAgreements(a.data);
       setError('');
     } catch (err) {
-      if (err?.response?.status !== 401) setError(errorMessage(err, "Couldn't load your co-workers."));
+      if (err?.response?.status !== 401) setError(errorMessage(err, "Couldn't load your collaborators."));
     }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -44,15 +44,15 @@ export default function Splits() {
     <div className="space-y-4">
       <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
-          <h2 className="text-xl font-bold text-gray-800">Splits with co-workers</h2>
-          <button onClick={() => setModal('partner')} className="px-4 py-2 rounded-full text-sm font-medium bg-sworkr-500 text-white hover:bg-sworkr-600">+ Add a co-worker</button>
+          <h2 className="text-xl font-bold text-gray-800">Splits with collaborators</h2>
+          <button onClick={() => setModal('partner')} className="px-4 py-2 rounded-full text-sm font-medium bg-sworkr-500 text-white hover:bg-sworkr-600">+ Add a collaborator</button>
         </div>
         <p className="text-sm text-gray-500 mb-4">
-          Split a booking, income or cost from its form ("Split with a co-worker"). sworkr keeps track of who owes whom.
-          This is private: only you see it, and co-workers aren't told anything.
+          Split a booking, income or cost from its form ("Split with a collaborator"). sworkr keeps track of who owes whom.
+          This is private: only you see it, and collaborators aren't told anything.
         </p>
         {partners.length === 0 ? (
-          <p className="text-sm text-gray-400 py-6 text-center">No co-workers yet. Add another worker you do duos, parties or content with.</p>
+          <p className="text-sm text-gray-400 py-6 text-center">No collaborators yet. Add another worker you do duos, parties or content with.</p>
         ) : (
           <ul className="divide-y divide-gray-100">
             {partners.map((p) => {
@@ -100,7 +100,7 @@ export default function Splits() {
       </div>
 
       {modal === 'partner' && (
-        <Modal title="New co-worker" onClose={() => setModal(null)}>
+        <Modal title="New collaborator" onClose={() => setModal(null)}>
           <ClientForm initial={{ role: 'partner' }} onSaved={() => { setModal(null); load(); }} />
         </Modal>
       )}
@@ -246,12 +246,12 @@ function AgreementForm({ agreement, partners, onSaved }) {
       <Field label="Name *">
         <input required autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Jade & me" className={inputClass} />
       </Field>
-      <p className="text-xs text-gray-500">Each co-worker's share, in percent. Whatever's left is yours.</p>
+      <p className="text-xs text-gray-500">Each collaborator's share, in percent. Whatever's left is yours.</p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-gray-500">
-              <th className="pb-1 font-medium">Co-worker</th>
+              <th className="pb-1 font-medium">Collaborator</th>
               <th className="pb-1 font-medium">Bookings %</th>
               <th className="pb-1 font-medium">Content %</th>
               <th className="pb-1 font-medium">Costs %</th>
@@ -262,7 +262,7 @@ function AgreementForm({ agreement, partners, onSaved }) {
             {parties.map((p, i) => (
               <tr key={i}>
                 <td className="pr-2 py-1">
-                  <select value={p.partner_id} onChange={(e) => setParty(i, 'partner_id', e.target.value)} className={inputClass} aria-label="Co-worker">
+                  <select value={p.partner_id} onChange={(e) => setParty(i, 'partner_id', e.target.value)} className={inputClass} aria-label="Collaborator">
                     <option value="">Choose…</option>
                     {partners.map((x) => <option key={x.id} value={x.id}>{x.display_name}</option>)}
                   </select>
@@ -286,7 +286,7 @@ function AgreementForm({ agreement, partners, onSaved }) {
         </table>
       </div>
       <button type="button" onClick={() => setParties([...parties, { partner_id: '', booking_pct: 0, content_pct: 0, costs_pct: 0 }])} className="text-xs text-sworkr-600 hover:text-sworkr-800">
-        + Another co-worker (for a trio or a party)
+        + Another collaborator (for a trio or a party)
       </button>
       <Field label="Notes">
         <textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="When and how you agreed it, who pays for what…" className={inputClass} />

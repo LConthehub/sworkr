@@ -138,7 +138,7 @@ def _values(db, owner_id: int, body: OrderIn, before: Optional[dict] = None) -> 
             "SELECT 1 FROM clients WHERE id = ? AND owner_id = ?", (body.client_id, owner_id)).fetchone():
         raise HTTPException(status_code=400, detail="That contact doesn't exist")
     if body.source_id is not None and not finance.get_source(db, body.source_id, owner_id):
-        raise HTTPException(status_code=400, detail="That place you earn doesn't exist")
+        raise HTTPException(status_code=400, detail="That workplace or platform doesn't exist")
     delivered_at = before["delivered_at"] if before else None
     if body.status == "delivered" and not delivered_at:
         delivered_at = _now()

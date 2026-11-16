@@ -1299,6 +1299,19 @@ def _m31_rates(conn):
     conn.execute("CREATE INDEX idx_rates_owner ON rates(owner_id)")
 
 
+def _m32_collaborators(conn):
+    """Co-workers and crew are one group now: collaborators. Crew keep a note of what they were."""
+    conn.execute("UPDATE clients SET industry = COALESCE(NULLIF(TRIM(industry), ''), 'Crew'), role = 'partner' WHERE role = 'crew'")
+
+
+def _m33_tips(conn):
+    """Tips: a workplace can keep a share of them, and a tip can belong to a booking."""
+    conn.execute("ALTER TABLE income_sources ADD COLUMN tip_share_percent REAL "
+                 "CHECK(tip_share_percent IS NULL OR (tip_share_percent >= 0 AND tip_share_percent <= 100))")
+    conn.execute("ALTER TABLE income ADD COLUMN appointment_id INTEGER REFERENCES appointments(id) ON DELETE SET NULL")
+    conn.execute("CREATE INDEX idx_income_appointment ON income(appointment_id)")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1331,6 +1344,8 @@ MIGRATIONS = [
     (29, "health tests on your own schedule", _m29_test_kinds, True),
     (30, "content shoot planning", _m30_shoots, False),
     (31, "rate card", _m31_rates, False),
+    (32, "co-workers and crew become collaborators", _m32_collaborators, False),
+    (33, "tips and the house's share of them", _m33_tips, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

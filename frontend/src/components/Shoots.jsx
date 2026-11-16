@@ -354,7 +354,7 @@ function PersonForm({ shootId, person, onDone }) {
     <form onSubmit={submit} className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {contacts.length > 0 && (
-          <Field label="One of your co-workers or crew">
+          <Field label="One of your collaborators">
             <select value={form.contact_id} onChange={set('contact_id')} className={inputClass}>
               <option value="">Someone else</option>
               {contacts.map((c) => <option key={c.id} value={c.id}>{c.display_name}</option>)}

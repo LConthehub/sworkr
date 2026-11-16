@@ -1,6 +1,6 @@
 """
 Personas: the names you work under. Many people use a different name for each kind of work or each
-platform, so a contact (who knows you by that name), a place you earn (an account under that name) and a
+platform, so a contact (who knows you by that name), a workplace or platform (an account under that name) and a
 post can each say which persona it's for. Earnings can then be compared by persona.
 """
 

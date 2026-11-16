@@ -48,7 +48,10 @@ export default function TaxSummary({ year, setYear }) {
           <h2 className="text-lg font-bold text-gray-800">{year} for taxes</h2>
           <button onClick={() => setYear(year + 1)} disabled={year >= thisYear} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600 disabled:opacity-30 print:hidden" aria-label="Next year">→</button>
         </div>
-        <button onClick={() => window.print()} className={`${quietButtonClass} print:hidden`}>Print or save as PDF</button>
+        <span className="flex flex-wrap gap-2 print:hidden">
+          <a href={`/api/tax-summary/csv?year=${year}&tz_offset=${new Date().getTimezoneOffset()}`} className={quietButtonClass}>Download as CSV</a>
+          <button onClick={() => window.print()} className={quietButtonClass}>Print or save as PDF</button>
+        </span>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

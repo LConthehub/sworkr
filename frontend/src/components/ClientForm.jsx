@@ -108,7 +108,7 @@ export default function ClientForm({ client, initial, onSaved, onDeleted }) {
   return (
     <form onSubmit={submit} className="space-y-3">
       <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Who they are">
-        {[['client', 'Client'], ['partner', 'Co-worker (another worker)'], ['crew', 'Photographer or crew'], ['other', 'Other']].map(([value, label]) => (
+        {[['client', 'Client'], ['partner', 'Collaborator (another worker, photographer, driver…)'], ['other', 'Other']].map(([value, label]) => (
           <button key={value} type="button" role="radio" aria-checked={form.role === value} onClick={() => setForm({ ...form, role: value })}
             className={`px-3 py-1 rounded-full text-xs border ${form.role === value ? 'bg-sworkr-500 text-white border-sworkr-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
             {label}
@@ -165,8 +165,8 @@ export default function ClientForm({ client, initial, onSaved, onDeleted }) {
 
       <PersonaSelect value={form.persona_id} onChange={set('persona_id')} />
       {form.role === 'client' && <FoundViaField value={form.found_via} onChange={set('found_via')} />}
-      <Field label="Industry (what they do for work)">
-        <input list="industries" value={form.industry} onChange={set('industry')} placeholder="e.g. Finance, Tech, Law" className={inputClass} />
+      <Field label={form.role === 'partner' ? 'What they do with you' : 'Industry (what they do for work)'}>
+        <input list="industries" value={form.industry} onChange={set('industry')} placeholder={form.role === 'partner' ? 'e.g. Duo partner, photographer, driver, makeup' : 'e.g. Finance, Tech, Law'} className={inputClass} />
         <datalist id="industries">{INDUSTRIES.map((x) => <option key={x} value={x} />)}</datalist>
       </Field>
       <BadDateWarning phone={form.contact_phone} email={form.email} handles={handles.map((h) => h.handle)} />

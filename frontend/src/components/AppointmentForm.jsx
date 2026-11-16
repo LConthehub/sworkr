@@ -41,6 +41,8 @@ export default function AppointmentForm({
     status: appointment?.status || 'scheduled',
     notes: appointment?.notes || '',
     rate: appointment?.rate != null ? String(appointment.rate) : '',
+    tip: appointment?.tip ? String(appointment.tip) : '',
+    tip_source_id: appointment?.tip_source_id ? String(appointment.tip_source_id) : '',
     amount_paid: appointment?.amount_paid ? String(appointment.amount_paid) : '',
     payment_method: appointment?.payment_method || '',
     location_type: appointment?.location_type || '',
@@ -52,6 +54,7 @@ export default function AppointmentForm({
   const [clients, setClients] = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
   const [rateCard, setRateCard] = useState([]);
+  const [tipPlaces, setTipPlaces] = useState([]);   // workplaces that keep a share of tips
   // Choosing a service that's on the rate card fills in its length and price (the price only if it's still empty or was filled this way).
   const [cardPrice, setCardPrice] = useState(null);
   const pickService = (e) => {
@@ -89,6 +92,7 @@ export default function AppointmentForm({
     fetchAll('/api/clients', { sort: 'name' }, 200).then(setClients).catch(() => {});
     axios.get('/api/appointments/service-types').then(({ data }) => setServiceTypes(data)).catch(() => {});
     axios.get('/api/rates').then(({ data }) => setRateCard(data.filter((r) => !r.archived))).catch(() => {});
+    axios.get('/api/income-sources').then(({ data }) => setTipPlaces(data.filter((s) => s.tip_share_percent != null && !s.archived))).catch(() => {});
     axios.get('/api/safety').then(({ data }) => setSafety(data)).catch(() => {});
     axios.get('/api/tours', { params: { kind: 'tour' } }).then(({ data }) => setTours(data)).catch(() => {});
     axios.get('/api/appointments/test-costs').then(({ data }) => setTestCosts(data)).catch(() => {});
@@ -174,6 +178,11 @@ export default function AppointmentForm({
       if (result.warnings) setWarnings(result.warnings);
       else {
         if (!isTest) await saveSplit(result.data.id);
+        const tip = Number(form.tip) || 0;
+        if (!isTest && (tip !== (appointment?.tip || 0) || (tip > 0 && form.tip_source_id !== String(appointment?.tip_source_id || '')))) {
+          await axios.post('/api/tips', { amount: tip, appointment_id: result.data.id, source_id: form.tip_source_id ? Number(form.tip_source_id) : null });
+          window.dispatchEvent(new Event('sworkr:money-changed'));
+        }
         onSaved(result.data);
       }
     } catch (err) {
@@ -337,6 +346,17 @@ export default function AppointmentForm({
             {['Cash', 'Bank transfer', 'Card', 'Cash App', 'Venmo', 'PayPal', 'Crypto', 'Gift card'].map((m) => <option key={m} value={m} />)}
           </datalist>
         </Field>
+        <Field label="Tip ($)">
+          <input type="number" min="0" step="0.01" inputMode="decimal" value={form.tip} onChange={set('tip')} placeholder="On top of the rate" className={inputClass} />
+        </Field>
+        {tipPlaces.length > 0 && Number(form.tip) > 0 && (
+          <Field label="Tip shared with">
+            <select value={form.tip_source_id} onChange={set('tip_source_id')} className={inputClass}>
+              <option value="">Nobody: it's all mine</option>
+              {tipPlaces.map((s) => <option key={s.id} value={s.id}>{s.name} (keeps {s.tip_share_percent}%)</option>)}
+            </select>
+          </Field>
+        )}
       </div>
       {rate !== null && rate > 0 && paid < rate && (
         <div className="flex flex-wrap gap-3">

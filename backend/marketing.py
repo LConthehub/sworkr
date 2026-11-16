@@ -73,7 +73,7 @@ def expense_is_for(label: str, expense: dict) -> bool:
 def found_via(request: Request, start: datetime = Query(...), end: datetime = Query(...)):
     """
     For each way clients found you: how many clients, how many were added in this period, the bookings and
-    money from them in this period (your share, after co-workers' splits), what you spent on it, and what's
+    money from them in this period (your share, after collaborators' splits), what you spent on it, and what's
     left. Clients with nothing recorded are one group, so it's clear how much is still unknown.
     """
     if end <= start:
@@ -159,7 +159,7 @@ def busy_times(request: Request, start: datetime = Query(...), end: datetime = Q
     - grid: for each weekday (0 = Sunday) and hour of the day, how many bookings started then and what they paid.
     - weekdays: the same, per weekday.
     - services: for each kind of booking, the bookings, the hours, what you kept, and what that is per hour.
-    Times are the person's local time. Money is their share, after co-workers' splits.
+    Times are the person's local time. Money is their share, after collaborators' splits.
     """
     if end <= start:
         raise HTTPException(status_code=400, detail="The end must be after the start")

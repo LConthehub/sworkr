@@ -120,6 +120,35 @@ def tax_summary(request: Request, year: int = Query(..., ge=2000, le=2100),
         db.close()
 
 
+@router.get("/csv")
+def tax_summary_csv(request: Request, year: int = Query(..., ge=2000, le=2100), tz_offset: int = Query(0, ge=-840, le=840)):
+    """The year's figures as a spreadsheet file: income by kind, expenses by category, mileage, payments made."""
+    import csv_io
+    data = tax_summary(request, year, tz_offset, None)
+    rows = []
+    for i in data["income"]:
+        rows.append(["Income", i["label"], f"{i['entries']} entries", i["gross"]])
+        if i["fees"]:
+            rows.append(["Fees kept by workplaces and platforms", i["label"], "", -i["fees"]])
+    for group in data["expenses"]:
+        for line in group["lines"]:
+            rows.append(["Expenses", group["label"], line["label"], -line["total"]])
+    rows.append(["Totals", "Income before fees", "", data["gross_income"]])
+    rows.append(["Totals", "Fees", "", -data["fees"]])
+    rows.append(["Totals", "Expenses", "", -data["total_expenses"]])
+    rows.append(["Totals", "Profit", "", data["profit"]])
+    if data["pending"]:
+        rows.append(["Not counted", "Earned but not paid out yet", "", data["pending"]])
+    miles = data["mileage"]
+    if miles.get("miles"):
+        rows.append(["Mileage", "Business miles", f"{miles['miles']} miles" + (f" at {miles['rate']} a mile" if miles.get("rate") else ""),
+                     miles.get("deduction") if miles.get("deduction") is not None else ""])
+    for p in data["estimated_payments"]:
+        rows.append(["Estimated tax paid", p["authority"], f"{p['payments']} payments", p["total"]])
+    cells = [[csv_io._safe_cell(c) if isinstance(c, str) else c for c in row] for row in rows]
+    return csv_io._csv_response(cells, ["section", "item", "detail", "amount"], f"tax-summary-{year}")
+
+
 # ==================== US QUARTERLY ESTIMATED TAX ====================
 # The IRS's four payment periods aren't calendar quarters: Jan-Mar, Apr-May, Jun-Aug, Sep-Dec, due on 15 April,
 # 15 June, 15 September and 15 January. A due date on a weekend moves to the Monday (a public holiday can

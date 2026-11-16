@@ -221,7 +221,7 @@ export default function Earnings() {
   );
 }
 
-/** Income from each type of work (or each place you earn), with its share of the total. */
+/** Income from each type of work (or each workplace or platform), with its share of the total. */
 function SourceCompare({ data, byWork, year }) {
   if (!data) return null;
   if (data.rows.length === 0) {
@@ -232,8 +232,8 @@ function SourceCompare({ data, byWork, year }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-500">
-        What you kept from each {byWork ? 'type of work' : 'place you earn'} in {year}, after the venue's or platform's fees.
-        {byWork && ' Bookings on the calendar count as in-person work. Set the type of work for each place you earn on the Income & expenses tab.'}
+        What you kept from each {byWork ? 'type of work' : 'workplace or platform'} in {year}, after the venue's or platform's fees.
+        {byWork && ' Bookings on the calendar count as in-person work. Set the type of work for each workplace or platform on the Income & expenses tab.'}
       </p>
       <ul className="space-y-2">
         {data.rows.map((r) => (

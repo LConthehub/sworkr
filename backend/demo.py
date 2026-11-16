@@ -216,7 +216,7 @@ def _fill(api):
 
     _ok(api.put("/api/safety", json={"contact_name": "Best friend", "contact_email": "friend@example.com", "grace_minutes": 60}))
 
-    # ---------- how I work, places you earn, other income ----------
+    # ---------- how I work, workplaces and platforms, other income ----------
     _ok(api.put("/api/work-profile", json={"work_types": ["independent", "content", "dancer", "brothel", "sugar"]}))
     categories = {c["label"]: c["key"] for c in _ok(api.get("/api/expense-categories"))}
     sources = {s["name"]: s for s in _ok(api.get("/api/income-sources"))}
@@ -279,9 +279,9 @@ def _fill(api):
     jade = _ok(api.post("/api/clients", json={
         "name": "Jade", "role": "partner", "industry": "Escort & content creator",
         "handles": [{"platform": "Instagram", "handle": "jade.after.dark"}, {"platform": "OnlyFans", "handle": "jadeafterdark"}],
-        "bio": "Duo co-worker for bookings and collab content. Splits 50/50 on bookings, 60/40 to whoever posts."}))
+        "bio": "Duo collaborator for bookings and collab content. Splits 50/50 on bookings, 60/40 to whoever posts."}))
     ruby = _ok(api.post("/api/clients", json={"name": "Ruby", "role": "partner", "bio": "Joins for parties at the Velvet Room"}))
-    _ok(api.post("/api/clients", json={"name": "Alex (photographer)", "role": "crew", "email": "alex.photo@example.com",
+    _ok(api.post("/api/clients", json={"name": "Alex", "role": "partner", "industry": "Photographer", "email": "alex.photo@example.com",
                                        "bio": "Shoots our content sets. $250 a half day."}))
     duo = _ok(api.post("/api/agreements", json={"name": "Jade & me", "notes": "Agreed over coffee, Oct 2026", "parties": [
         {"partner_id": jade["id"], "booking_pct": 50, "content_pct": 40, "costs_pct": 50}]}))

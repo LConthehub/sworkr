@@ -187,16 +187,16 @@ def save_split(record_type: str, record_id: int, body: SplitIn, request: Request
             raise HTTPException(status_code=404, detail="Not found")
         ids = [p.partner_id for p in body.parties]
         if len(ids) != len(set(ids)):
-            raise HTTPException(status_code=400, detail="Each co-worker can only be listed once")
+            raise HTTPException(status_code=400, detail="Each collaborator can only be listed once")
         if _owned_contacts(db, owner, ids) != set(ids):
-            raise HTTPException(status_code=400, detail="That co-worker doesn't exist")
+            raise HTTPException(status_code=400, detail="That collaborator doesn't exist")
         for p in body.parties:
             if p.share_type not in ("percent", "amount") or not (0 <= p.share_value < float("inf")):
                 raise HTTPException(status_code=400, detail="Each share is a percentage or an amount of 0 or more")
         if sum(p.share_value for p in body.parties if p.share_type == "percent") > 100.0001:
-            raise HTTPException(status_code=400, detail="The co-workers' percentages add up to more than 100%")
+            raise HTTPException(status_code=400, detail="The collaborators' percentages add up to more than 100%")
         if body.handled_by is not None and body.handled_by not in ids:
-            raise HTTPException(status_code=400, detail="Whoever handled the money must be one of the co-workers (or you)")
+            raise HTTPException(status_code=400, detail="Whoever handled the money must be one of the collaborators (or you)")
         if body.agreement_id is not None and not db.execute(
                 "SELECT 1 FROM split_agreements WHERE id = ? AND owner_id = ?", (body.agreement_id, owner)).fetchone():
             raise HTTPException(status_code=400, detail="That agreement doesn't exist")
@@ -244,14 +244,14 @@ def _check_agreement(db, owner_id: int, body: AgreementIn):
     if not (body.name or "").strip():
         raise HTTPException(status_code=400, detail="Give the agreement a name")
     if not body.parties:
-        raise HTTPException(status_code=400, detail="Add at least one co-worker")
+        raise HTTPException(status_code=400, detail="Add at least one collaborator")
     ids = [p.partner_id for p in body.parties]
     if len(ids) != len(set(ids)) or _owned_contacts(db, owner_id, ids) != set(ids):
-        raise HTTPException(status_code=400, detail="Each co-worker must exist and be listed once")
+        raise HTTPException(status_code=400, detail="Each collaborator must exist and be listed once")
     for k in ("booking_pct", "content_pct", "costs_pct"):
         values = [getattr(p, k) for p in body.parties]
         if any(not 0 <= v <= 100 for v in values) or sum(values) > 100.0001:
-            raise HTTPException(status_code=400, detail="Co-workers' shares must be 0–100% and add up to 100% at most")
+            raise HTTPException(status_code=400, detail="Collaborators' shares must be 0–100% and add up to 100% at most")
 
 
 def _save_parties(db, agreement_id: int, parties: List[AgreementParty]):
@@ -351,11 +351,11 @@ def ledger(db, owner_id: int, partner_id: int) -> dict:
         if kind == "expense":
             effect = theirs if handled is None else (-mine if handled == partner_id else 0)
             why = ("You paid; their share" if handled is None else "They paid; your share" if handled == partner_id
-                   else "Paid by another co-worker")
+                   else "Paid by another collaborator")
         else:
             effect = -theirs if handled is None else (mine if handled == partner_id else 0)
             why = ("You were paid; their share" if handled is None else "They were paid; your share" if handled == partner_id
-                   else "Paid to another co-worker")
+                   else "Paid to another collaborator")
         when = record.get("scheduled_date") or record.get("date")
         entries.append({"type": kind, "id": head["record_id"], "date": when, "description": _describe(db, kind, record),
                         "total": round(base, 2), "their_share": round(theirs, 2), "your_share": round(mine, 2),
@@ -397,7 +397,7 @@ def partner_ledger(partner_id: int, request: Request):
     try:
         partner = db.execute("SELECT id, display_name FROM clients WHERE id = ? AND owner_id = ?", (partner_id, owner)).fetchone()
         if not partner:
-            raise HTTPException(status_code=404, detail="Co-worker not found")
+            raise HTTPException(status_code=404, detail="Collaborator not found")
         return {"partner": dict(partner), **ledger(db, owner, partner_id)}
     finally:
         db.close()
@@ -420,7 +420,7 @@ def add_settlement(partner_id: int, body: SettlementIn, request: Request):
     db = _get_db()
     try:
         if not db.execute("SELECT 1 FROM clients WHERE id = ? AND owner_id = ?", (partner_id, owner)).fetchone():
-            raise HTTPException(status_code=404, detail="Co-worker not found")
+            raise HTTPException(status_code=404, detail="Collaborator not found")
         db.execute("INSERT INTO settlements (owner_id, partner_id, date, amount, direction, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
                    (owner, partner_id, (body.date or date.today()).isoformat(), round(body.amount, 2), body.direction,
                     (body.note or "").strip() or None, _now()))

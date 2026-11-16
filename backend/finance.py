@@ -301,6 +301,7 @@ class SourceIn(BaseModel):
     work_type: Optional[str] = None         # which kind of work it's for (a key of presets.json), for comparing
     persona_id: Optional[int] = None        # the name you work under there
     gift_share_percent: Optional[float] = None   # the share of a gift's value the place charges you (brothels: often 50)
+    tip_share_percent: Optional[float] = None    # the share of your tips the place keeps (a house cut or tip-out)
 
 
 def _validate_source(s: SourceIn):
@@ -310,6 +311,8 @@ def _validate_source(s: SourceIn):
         raise HTTPException(status_code=400, detail="The platform's share must be between 0 and 100%")
     if s.gift_share_percent is not None and not (0 <= s.gift_share_percent <= 100):
         raise HTTPException(status_code=400, detail="The share of gifts must be between 0 and 100%")
+    if s.tip_share_percent is not None and not (0 <= s.tip_share_percent <= 100):
+        raise HTTPException(status_code=400, detail="The share of tips must be between 0 and 100%")
     if not (_amount_ok(s.fee_per_shift) and _amount_ok(s.token_value)):
         raise HTTPException(status_code=400, detail="Fees and token values must be 0 or more")
     s.currency = currencies.check(s.currency)
@@ -320,7 +323,7 @@ def _validate_source(s: SourceIn):
 
 def _source_values(s: SourceIn) -> tuple:
     return (s.name.strip(), s.kind.value, s.fee_percent, s.fee_per_shift, s.token_value, _clean(s.payout_note),
-            _clean(s.notes), s.currency, int(s.archived), s.work_type, s.gift_share_percent)
+            _clean(s.notes), s.currency, int(s.archived), s.work_type, s.gift_share_percent, s.tip_share_percent)
 
 
 def _source_row(r) -> dict:
@@ -350,8 +353,9 @@ def create_source(body: SourceIn, request: Request):
         now = _now()
         cur = db.execute("""
             INSERT INTO income_sources (name, kind, fee_percent, fee_per_shift, token_value, payout_note, notes,
-                                        currency, archived, work_type, gift_share_percent, owner_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                        currency, archived, work_type, gift_share_percent, tip_share_percent,
+                                        owner_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (*_source_values(body), _owner(request), now, now))
         personas.assign(db, "income_sources", cur.lastrowid, _owner(request), body)
         db.commit()
@@ -371,7 +375,7 @@ def update_source(source_id: int, body: SourceIn, request: Request):
         db.execute("""
             UPDATE income_sources SET name = ?, kind = ?, fee_percent = ?, fee_per_shift = ?, token_value = ?,
                    payout_note = ?, notes = ?, currency = ?, archived = ?, work_type = ?, gift_share_percent = ?,
-                   updated_at = ?
+                   tip_share_percent = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (*_source_values(body), _now(), source_id, owner))
         personas.assign(db, "income_sources", source_id, owner, body)
@@ -448,7 +452,7 @@ def _validate_income(db, body: IncomeIn, owner_id: int):
                                                      (body.client_id, owner_id)).fetchone():
         raise HTTPException(status_code=400, detail="That contact doesn't exist")
     if body.source_id is not None and not get_source(db, body.source_id, owner_id):
-        raise HTTPException(status_code=400, detail="That place you earn doesn't exist")
+        raise HTTPException(status_code=400, detail="That workplace or platform doesn't exist")
 
 
 def _income_values(body: IncomeIn) -> tuple:
@@ -822,7 +826,7 @@ def _work_types(db, owner_id: int) -> Optional[List[str]]:
 
 
 def apply_presets(db, owner_id: int, work_types: List[str]) -> dict:
-    """Add the categories and places you earn for these kinds of work. Anything already there is skipped."""
+    """Add the categories and workplaces and platforms for these kinds of work. Anything already there is skipped."""
     ensure_categories(db, owner_id)
     added = {"categories": [], "sources": []}
     for work_type in work_types:
@@ -889,6 +893,61 @@ def save_work_profile(body: WorkProfile, request: Request):
         db.close()
 
 
+# ==================== TIPS ====================
+
+class TipIn(BaseModel):
+    amount: float                         # 0 with a booking: take that booking's tip away
+    source_id: Optional[int] = None       # the workplace it was earned at, if it keeps a share
+    appointment_id: Optional[int] = None  # the booking it came with
+    date: Optional[datetime] = None
+    note: Optional[str] = None
+
+
+@router.post("/api/tips")
+def log_tip(body: TipIn, request: Request):
+    """
+    A tip, on its own or with a booking. It's income of the kind "tips". When it was earned at a workplace that
+    keeps a share of tips, that share is worked out here and saved as the fee, so what you kept is right
+    everywhere. A booking has one tip: sending another replaces it, and 0 removes it.
+    """
+    owner = _owner(request)
+    if not (0 <= body.amount < 1e9) or (body.amount == 0 and body.appointment_id is None):
+        raise HTTPException(status_code=400, detail="The tip must be more than 0")
+    db = _db()
+    try:
+        source = None
+        if body.source_id is not None:
+            source = get_source(db, body.source_id, owner)
+            if not source:
+                raise HTTPException(status_code=400, detail="That workplace or platform doesn't exist")
+        booking = None
+        if body.appointment_id is not None:
+            booking = db.execute("""
+                SELECT a.id, a.client_id, a.scheduled_date, c.display_name FROM appointments a LEFT JOIN clients c ON c.id = a.client_id
+                WHERE a.id = ? AND a.owner_id = ? AND a.kind = 'client'
+            """, (body.appointment_id, owner)).fetchone()
+            if not booking:
+                raise HTTPException(status_code=404, detail="Booking not found")
+            db.execute("DELETE FROM income WHERE appointment_id = ? AND kind = 'tips' AND owner_id = ?", (body.appointment_id, owner))
+        amount = round(body.amount, 2)
+        share = round(amount * ((source or {}).get("tip_share_percent") or 0) / 100, 2)
+        income_id = None
+        if amount > 0:
+            when = _utc_iso(body.date) if body.date else (booking["scheduled_date"] if booking else _now())
+            what = _clean(body.note) or ("Tip from " + booking["display_name"] if booking and booking["display_name"] else "Tip")
+            cur = db.execute("""
+                INSERT INTO income (source_id, date, description, kind, gross, fees, status, currency, client_id, appointment_id,
+                                    owner_id, created_at, updated_at)
+                VALUES (?, ?, ?, 'tips', ?, ?, 'received', ?, ?, ?, ?, ?, ?)
+            """, (body.source_id, when, what, amount, share, (source or {}).get("currency") or currencies.DEFAULT,
+                  booking["client_id"] if booking else None, body.appointment_id, owner, _now(), _now()))
+            income_id = cur.lastrowid
+        db.commit()
+        return {"tip": amount, "house_share": share, "kept": round(amount - share, 2), "income_id": income_id}
+    finally:
+        db.close()
+
+
 # ==================== COMPARING KINDS OF WORK ====================
 
 BOOKINGS_GROUP = "bookings"
@@ -900,10 +959,10 @@ def compare_sources(
     request: Request,
     start: datetime = Query(...),
     end: datetime = Query(...),
-    group: str = Query("work_type", description="work_type (kind of work), source (place you earn) or persona"),
+    group: str = Query("work_type", description="work_type (kind of work), source (workplace or platform) or persona"),
 ):
     """
-    What each kind of work (or each place you earn) brought in between start and end: before fees, fees, what
+    What each kind of work (or each workplace or platform) brought in between start and end: before fees, fees, what
     you kept, and its share. Bookings on the calendar are their own group ("In-person bookings"). Income that
     isn't from a place, or from a place without a kind of work, is "Other". Only money already received counts;
     pending payouts are shown separately.

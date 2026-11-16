@@ -50,7 +50,7 @@ export default function FoundViaCompare({ year }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-500">
-        What clients paid you in {year}, by how they found you (your share, after co-workers' splits), next to what you spent on each.
+        What clients paid you in {year}, by how they found you (your share, after collaborators' splits), next to what you spent on each.
       </p>
       <ul className="space-y-2">
         {data.rows.map((r) => (
