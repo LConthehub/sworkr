@@ -1,15 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import ClientList from './pages/ClientList';
-import ClientDetail from './pages/ClientDetail';
-import AppointmentCalendar from './pages/AppointmentCalendar';
-import MoneyHub from './pages/MoneyHub';
 import Dashboard from './pages/Dashboard';
-import Content from './pages/Content';
-import Account from './pages/Account';
 import Login from './pages/Login';
-import Inquiries, { GoneQuiet } from './pages/Inquiries';
 import SearchBar from './components/SearchBar';
 import CheckInBanner from './components/CheckInBanner';
 import QuickCash from './components/QuickCash';
@@ -49,6 +42,16 @@ function useIdleLogout(idleMinutes, logout) {
     };
   }, [idleMinutes, logout]);
 }
+
+// The dashboard comes with the app; every other page is fetched the first time it's opened.
+const ClientList = lazy(() => import('./pages/ClientList'));
+const ClientDetail = lazy(() => import('./pages/ClientDetail'));
+const AppointmentCalendar = lazy(() => import('./pages/AppointmentCalendar'));
+const MoneyHub = lazy(() => import('./pages/MoneyHub'));
+const Content = lazy(() => import('./pages/Content'));
+const Account = lazy(() => import('./pages/Account'));
+const Inquiries = lazy(() => import('./pages/Inquiries'));
+const GoneQuiet = lazy(() => import('./pages/Inquiries').then((m) => ({ default: m.GoneQuiet })));
 
 function App() {
   // user: undefined = still checking, null = logged out
@@ -177,6 +180,7 @@ function App() {
           {auth.demo && <DemoBanner />}
           <CheckInBanner />
           <QuickCash userId={auth.user.id} />
+          <Suspense fallback={<p className="text-white/80 text-sm py-10 text-center" role="status">Loading…</p>}>
           <Routes>
             <Route path="/" element={<Dashboard user={auth.user} />} />
             <Route path="/calendar" element={<AppointmentCalendar />} />
@@ -201,6 +205,7 @@ function App() {
             <Route path="/appointments" element={<Navigate to="/calendar" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </main>
 
         <Reminders />

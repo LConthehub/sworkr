@@ -78,6 +78,7 @@ class PaymentIn(BaseModel):
     amount: float
     paid_on: Optional[datetime] = None
     fees: Optional[float] = None          # left out: worked out from the place's fee
+    payment_method: Optional[str] = None  # cash, a payment app, the platform…
     log_income: bool = True
 
 
@@ -247,10 +248,11 @@ def take_payment(order_id: int, body: PaymentIn, request: Request):
             fees = body.fees if body.fees is not None else amount * (source.get("fee_percent") or 0) / 100 if source else 0
             db.execute("""
                 INSERT INTO income (source_id, date, description, kind, gross, fees, status, currency, client_id, custom_order_id,
-                                    owner_id, created_at, updated_at)
-                VALUES (?, ?, ?, 'sale', ?, ?, 'received', ?, ?, ?, ?, ?, ?)
+                                    payment_method, owner_id, created_at, updated_at)
+                VALUES (?, ?, ?, 'sale', ?, ?, 'received', ?, ?, ?, ?, ?, ?, ?)
             """, (order["source_id"], _iso(body.paid_on) or _now(), f"Custom: {order['title']} ({order['buyer']})", amount,
-                  round(min(fees, amount), 2), (source or {}).get("currency") or "USD", order["client_id"], order_id, owner, _now(), _now()))
+                  round(min(fees, amount), 2), (source or {}).get("currency") or "USD", order["client_id"], order_id,
+                  (_clean(body.payment_method, 40) or None), owner, _now(), _now()))
         db.commit()
         return _get(db, order_id, owner)
     finally:

@@ -1,7 +1,7 @@
 # Sworkr: start here
 
-Sworkr is a private manager for independent work: clients and screening, a calendar, money, taxes and a
-safety check-in. This copy runs on your own computer. Nothing is sent anywhere, and nobody else has an
+Sworkr is a private manager for independent work: clients, screening and inquiries, a calendar, money, rates and
+taxes, content and ad planning, custom orders, health tests on your own schedule, and a safety check-in. This copy runs on your own computer. Nothing is sent anywhere, and nobody else has an
 account on it, including whoever gave you this copy.
 
 ## Set it up (about 10 minutes, once)
@@ -42,6 +42,24 @@ A new copy contains a few made-up clients and bookings so you can look around. R
   to reach it from a phone; ask for help setting that up safely first (it needs https and passkeys).
 - *Account → Security & privacy → Discreet mode* gives the browser tab a plain name and a panic switch
   (press Esc three times).
+
+## What's where
+
+- **Dashboard**: what needs doing today. *Customize* (top right) hides cards and changes their order.
+- **Calendar**: bookings, tours, time off and health tests. A booking can carry a tip.
+- **Contacts**: clients and collaborators, the people who've inquired and how far each got, and regulars who've gone quiet.
+- **Content**: your library, planning (posts and shoots), promoting (campaigns, ads, your platforms) and custom orders.
+- **Money**: income and expenses, comparisons, your rate card and deposits, goals, splits and taxes (with a CSV download).
+  Each workplace has its own house rules: its share, any cuts it takes, and whether the office holds your cash.
+- **The + $ button** on every page logs cash in, a tip, or cash out in two taps.
+- **Account**: how you work, health tests, security, reminders, connections (email, calendar, content folder) and your data.
+
+## On a phone
+
+Sworkr works in a phone's browser and can sit on the home screen like an app, with no app store involved:
+open it in Safari (iPhone) or Chrome (Android), then *Share → Add to Home Screen*. You can rename it there.
+It only works on a phone once your copy is reachable from that phone safely: see the note under
+*Using it day to day* before doing that.
 
 ## Updating to a newer copy
 

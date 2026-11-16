@@ -192,14 +192,14 @@ export default function Customs() {
 }
 
 function PayForm({ order, onDone }) {
-  const [form, setForm] = useState({ amount: order.owed || order.price || '', paid_on: toDateInput(new Date()), log_income: true });
+  const [form, setForm] = useState({ amount: order.owed || order.price || '', paid_on: toDateInput(new Date()), log_income: true, payment_method: '' });
   const [error, setError] = useState('');
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   const submit = async (e) => {
     e.preventDefault();
     try {
       await axios.post(`/api/customs/${order.id}/payment`, {
-        amount: Number(form.amount), log_income: form.log_income,
+        amount: Number(form.amount), log_income: form.log_income, payment_method: form.payment_method.trim() || null,
         paid_on: form.paid_on === toDateInput(new Date()) ? null : fromDateInput(form.paid_on).toISOString(),
       });
       onDone();
@@ -216,6 +216,10 @@ function PayForm({ order, onDone }) {
         <Field label="Amount ($) *"><input required autoFocus type="number" min="0.01" step="0.01" inputMode="decimal" value={form.amount} onChange={set('amount')} className={inputClass} /></Field>
         <Field label="Paid on"><input type="date" value={form.paid_on} onChange={set('paid_on')} className={inputClass} /></Field>
       </div>
+      <Field label="How it was paid">
+        <input list="custom-paid-how" value={form.payment_method} onChange={set('payment_method')} placeholder="Platform, Cash App, cash…" className={inputClass} />
+        <datalist id="custom-paid-how">{['Platform payout', 'Cash App', 'Venmo', 'PayPal', 'Bank transfer', 'Crypto', 'Gift card', 'Cash'].map((m) => <option key={m} value={m} />)}</datalist>
+      </Field>
       <label className="flex items-center gap-2 text-sm text-gray-700">
         <input type="checkbox" checked={form.log_income} onChange={set('log_income')} />
         Add it to my income{order.source_name ? ` (${order.source_name}, with its fee taken off)` : ''}
