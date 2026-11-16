@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useLocation, useParams } from 'react-router-dom';
 import axios from 'axios';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -49,9 +49,16 @@ const ClientDetail = lazy(() => import('./pages/ClientDetail'));
 const AppointmentCalendar = lazy(() => import('./pages/AppointmentCalendar'));
 const MoneyHub = lazy(() => import('./pages/MoneyHub'));
 const Content = lazy(() => import('./pages/Content'));
+const PlanningPage = lazy(() => import('./pages/PlanningPage'));
 const Account = lazy(() => import('./pages/Account'));
 const Inquiries = lazy(() => import('./pages/Inquiries'));
 const GoneQuiet = lazy(() => import('./pages/Inquiries').then((m) => ({ default: m.GoneQuiet })));
+
+/** Shoots moved under the calendar: an old link keeps working, with its shoot. */
+function ShootsRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/calendar/shoots${search}`} replace />;
+}
 
 function App() {
   // user: undefined = still checking, null = logged out
@@ -136,7 +143,7 @@ function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen">
-        <nav className="print:hidden bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-40">
+        <nav className="print:hidden bg-sworkr-700 border-b border-sworkr-800 shadow-sm">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
             {/* Pages on the left, search in the middle, settings on the right (like Nextcloud). */}
             <div className="grid grid-cols-[auto_1fr_auto] items-center h-14 sm:h-16 gap-3 sm:gap-6">
@@ -164,8 +171,8 @@ function App() {
                   </button>
                 )}
                 <NavLink to="/account" className={({ isActive }) => `${navClass({ isActive })} text-sm whitespace-nowrap`} title="Your account and settings">
-                  <span className="hidden md:inline">{auth.user.username}'s settings</span>
-                  <span className="md:hidden" aria-label={`${auth.user.username}'s settings`}>⚙</span>
+                  <span className="hidden md:inline">Settings</span>
+                  <span className="md:hidden" aria-label="Settings">⚙</span>
                 </NavLink>
               </div>
             </div>
@@ -184,6 +191,10 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard user={auth.user} />} />
             <Route path="/calendar" element={<AppointmentCalendar />} />
+            <Route path="/calendar/:tab" element={<PlanningPage />} />
+            <Route path="/content/planner" element={<Navigate to="/calendar/posts" replace />} />
+            <Route path="/content/plan" element={<Navigate to="/calendar/posts" replace />} />
+            <Route path="/content/shoots" element={<ShootsRedirect />} />
             <Route path="/contacts" element={<ClientList />} />
             <Route path="/contacts/:id" element={<ClientDetail />} />
             <Route path="/clients" element={<Navigate to="/contacts" replace />} />

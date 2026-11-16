@@ -19,6 +19,7 @@ export default function DocumentsSettings() {
   const [data, setData] = useState(null);
   const [places, setPlaces] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [renewing, setRenewing] = useState(null);
   const load = useCallback(() => {
     axios.get('/api/documents').then(({ data: d }) => setData(d)).catch(() => setData({ documents: [], from_places: [] }));
   }, []);
@@ -29,6 +30,7 @@ export default function DocumentsSettings() {
 
   if (!data) return <p className="text-sm text-gray-400">Loading…</p>;
   if (editing) return <DocumentForm doc={editing} places={places} onDone={() => { setEditing(null); load(); }} />;
+  if (renewing) return <RenewForm doc={renewing} onDone={() => { setRenewing(null); load(); }} onCancel={() => setRenewing(null)} />;
   const rows = [
     ...data.documents.map((d) => ({ ...d, key: `d${d.id}` })),
     ...data.from_places.map((c) => ({ ...c, key: `c${c.charge_id}`, fromPlace: true })),
@@ -51,15 +53,21 @@ export default function DocumentsSettings() {
               <span className={`text-xs ${tone(r.days_left)}`}>{left(r.days_left)}</span>
               {r.fromPlace
                 ? <span className="text-xs text-gray-400 w-10" title="Change it on the place, on the Money page">Place</span>
-                : <button type="button" onClick={() => setEditing(r)} className="text-xs text-sworkr-600 hover:text-sworkr-800 w-10">Edit</button>}
+                : (
+                  <span className="flex items-center gap-2">
+                    {r.expires_on && <button type="button" onClick={() => setRenewing(r)} className="text-xs text-emerald-700 hover:text-emerald-900">Renewed</button>}
+                    <button type="button" onClick={() => setEditing(r)} className="text-xs text-sworkr-600 hover:text-sworkr-800">Edit</button>
+                  </span>
+                )}
             </li>
           ))}
         </ul>
       )}
       <button type="button" onClick={() => setEditing(BLANK)} className={quietButtonClass}>+ Add a document</button>
       <p className="text-xs text-gray-500">
-        Renewal dates you set on a place's charges (a license paid to a brothel) show here too. sworkr keeps only names
-        and dates: there's no place for ID or license numbers, on purpose.
+        A license or work card is paid to the government or licensing office, not to a workplace: add it here, and when you renew it,
+        tap Renewed to move the date on and log what you paid under Fees & licenses. Renewal dates on a place's own yearly charges show here too.
+        sworkr keeps only names and dates: there's no place for ID or license numbers, on purpose.
       </p>
     </div>
   );
@@ -129,6 +137,42 @@ function DocumentForm({ doc, places, onDone }) {
         <button type="submit" className={buttonClass}>{doc.id ? 'Save' : 'Add'}</button>
         <button type="button" onClick={onDone} className={quietButtonClass}>Cancel</button>
         {doc.id && <button type="button" onClick={remove} className="ml-auto text-sm text-red-500 hover:text-red-700">Delete</button>}
+      </div>
+    </form>
+  );
+}
+
+/** A license, card or ID was renewed: the new date, and (if it cost anything) what you paid and who to. */
+function RenewForm({ doc, onDone, onCancel }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [form, setForm] = useState({ expires_on: '', paid: '', paid_to: '', paid_on: today });
+  const [error, setError] = useState('');
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const submit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`/api/documents/${doc.id}/renewed`, {
+        expires_on: form.expires_on, paid: form.paid === '' ? null : Number(form.paid), paid_to: form.paid_to.trim() || null, paid_on: form.paid_on || null,
+      });
+      onDone();
+    } catch (err) {
+      setError(errorMessage(err, 'Could not save the renewal'));
+    }
+  };
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <p className="text-sm text-gray-700">Renewed: <b>{doc.name}</b> (it was due {doc.expires_on}).</p>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Field label="Runs out on *"><input required autoFocus type="date" value={form.expires_on} onChange={set('expires_on')} className={inputClass} /></Field>
+        <Field label="What you paid ($)"><input type="number" min="0" step="0.01" inputMode="decimal" value={form.paid} onChange={set('paid')} placeholder="Leave empty if nothing" className={inputClass} /></Field>
+        <Field label="Paid to"><input value={form.paid_to} onChange={set('paid_to')} placeholder="e.g. the county, the state board" className={inputClass} /></Field>
+        <Field label="Paid on"><input type="date" value={form.paid_on} onChange={set('paid_on')} className={inputClass} /></Field>
+      </div>
+      <p className="text-xs text-gray-500">What you paid is added to your expenses under Fees &amp; licenses, so it's in your tax summary.</p>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="flex gap-2">
+        <button type="submit" className={buttonClass}>Save renewal</button>
+        <button type="button" onClick={onCancel} className={quietButtonClass}>Cancel</button>
       </div>
     </form>
   );

@@ -121,3 +121,36 @@ footer p { margin: .3rem 0; }
 }
 
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* ---------- docs ---------- */
+.doc-layout { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 2.5rem; padding: 2rem clamp(1rem, 5vw, 4rem) 4rem; max-width: 76rem; margin: 0 auto; }
+.doc-layout aside { position: sticky; top: 4.5rem; align-self: start; }
+.side-title { margin: 0 0 .6rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+.doc-layout aside ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; }
+.doc-layout aside a { display: block; padding: .4rem .7rem; border-radius: .5rem; color: var(--ink); text-decoration: none; font-size: .95rem; }
+.doc-layout aside a:hover { background: var(--blush); }
+.doc-layout aside a[aria-current="page"] { background: var(--plum); color: #fff; font-weight: 600; }
+.doc { max-width: 46rem; }
+.doc h1 { font-size: clamp(1.8rem, 4vw, 2.5rem); letter-spacing: -.02em; color: var(--night); margin: 0 0 1rem; }
+.doc h2 { font-size: 1.35rem; color: var(--plum); margin: 2.2rem 0 .6rem; letter-spacing: -.01em; }
+.doc p, .doc li { font-size: 1.02rem; }
+.doc li { margin: .3rem 0; }
+.doc code { background: var(--blush); border: 1px solid var(--line); padding: .05rem .35rem; border-radius: .35rem; font-size: .9em; word-break: break-word; }
+.doc kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: .3rem; padding: 0 .35rem; font-size: .85em; background: #fff; color: var(--ink); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .9rem; margin-top: 1.5rem; }
+.cards a { display: grid; gap: .3rem; padding: 1rem 1.1rem; border: 1px solid var(--line); border-radius: .9rem; text-decoration: none; color: var(--ink); background: #fff; }
+.cards a:hover { border-color: var(--plum); box-shadow: 0 6px 18px rgba(167, 49, 120, .12); }
+.cards b { color: var(--plum); }
+.cards span { font-size: .92rem; color: var(--muted); }
+@media (max-width: 800px) {
+  .doc-layout { grid-template-columns: 1fr; gap: 1rem; }
+  .doc-layout aside { position: static; }
+  .doc-layout aside ul { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; padding-bottom: .4rem; }
+}
+@media (prefers-color-scheme: dark) {
+  .doc h1 { color: #fff; }
+  .doc h2 { color: #ff8cc4; }
+  .doc code, .doc kbd { background: #2c2030; color: #f2e7ee; }
+  .cards a { background: #221a26; }
+  .doc-layout aside a { color: var(--ink); }
+}

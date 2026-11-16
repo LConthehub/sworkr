@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Modal from '../components/Modal';
 import AppointmentForm from '../components/AppointmentForm';
 import TourForm from '../components/TourForm';
 import { TaskForm, TaskItem, TasksPanel } from '../components/Tasks';
 import { fetchAll } from '../api';
+import { PostForm, PostRow } from './Content';
+import { ShootForm } from '../components/Shoots';
+import { CalendarSwitch, LayerToggles, PlannedChip, PlannedRow, useLayers, usePlanned } from '../components/PlannedItems';
 import { CYCLE_LABELS, CycleDot, useCycleDays } from '../components/Cycle';
 import {
   addDays, colorFor, dayLabel, endOf, formatDuration, formatTime, LOCATION_LABELS, money, monthGrid,
@@ -95,6 +98,23 @@ export default function AppointmentCalendar() {
   }, [shownView, cursor]);
   const rangeStart = days[0].getTime();
   const rangeEnd = addDays(days[days.length - 1], 1).getTime();
+
+  // Planning on the same days: posts to put up, shoots, the day an ad runs out. Each kind can be switched off.
+  const navigate = useNavigate();
+  const [layers, toggleLayer] = useLayers();
+  const [planVersion, setPlanVersion] = useState(0);
+  const planned = usePlanned(rangeStart, rangeEnd, layers, planVersion);
+  const plannedChanged = () => setPlanVersion((v) => v + 1);
+  const openPlanned = (item) => {
+    if (item.type === 'post') setModal({ post: item.raw });
+    else if (item.type === 'shoot') navigate(`/calendar/shoots?shoot=${item.raw.id}`);
+    else navigate('/content/campaigns');
+  };
+  const openNewPost = (when) => {
+    const d = new Date(when);
+    d.setHours(19, 0, 0, 0);
+    setModal({ post: { scheduled_at: d.toISOString() } });
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -220,12 +240,16 @@ export default function AppointmentCalendar() {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-white">Calendar</h1>
+        <CalendarSwitch current="calendar" />
+      </div>
       <div className="bg-white rounded-2xl shadow-lg p-3 sm:p-5">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-1 sm:gap-2">
             <button onClick={() => step(-1)} className="w-9 h-9 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Earlier">←</button>
-            <h1 className="text-base sm:text-xl font-bold text-gray-800 sm:min-w-52 text-center">{title}</h1>
+            <h2 className="text-base sm:text-xl font-bold text-gray-800 sm:min-w-52 text-center">{title}</h2>
             <button onClick={() => step(1)} className="w-9 h-9 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Later">→</button>
             <button onClick={() => setCursor(startOfDay(today))} className="ml-1 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Today</button>
             {loading && <span className="w-4 h-4 animate-spin border-2 rounded-full border-sworkr-500/20 border-t-sworkr-500" role="status" aria-label="Loading" />}
@@ -262,6 +286,8 @@ export default function AppointmentCalendar() {
                       ...(workStyle === 'full_time' ? [] : [['✈ Tour', () => openNewPeriod('tour', newMenuDay)]]),
                       ['Time off', () => openNewPeriod('time_off', newMenuDay)],
                       ['☐ Task', () => openTask(null, newMenuDay)],
+                      ['📣 Post', () => openNewPost(newMenuDay)],
+                      ['📷 Shoot', () => setModal({ shoot: { shoot_date: toKey(newMenuDay) } })],
                     ].map(([label, go]) => (
                       <button key={label} role="menuitem" onClick={() => { setMenuOpen(false); go(); }} className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50">
                         {label}
@@ -280,13 +306,15 @@ export default function AppointmentCalendar() {
           <MonthView
             days={days} cursor={cursor} today={today} narrow={narrow} onDay={onDay} periods={periods}
             onSelect={setCursor} onNew={openNew} onOpen={actions.open} tasksOn={tasksOn} cycle={cycle} markersOn={markersOn}
+            plannedOn={planned.onDay} onOpenPlanned={openPlanned}
           />
         )}
         {(shownView === 'week' || shownView === 'day') && (
-          <TimeGrid days={days} today={today} onDay={onDay} periods={periods} cycle={cycle} onNew={openNew} onOpen={actions.open} onOpenPeriod={openPeriod} onPickDay={(d) => { setCursor(d); setView('day'); }} />
+          <TimeGrid days={days} today={today} onDay={onDay} periods={periods} cycle={cycle} onNew={openNew} onOpen={actions.open} onOpenPeriod={openPeriod} onPickDay={(d) => { setCursor(d); setView('day'); }} plannedOn={planned.onDay} onOpenPlanned={openPlanned} />
         )}
         {shownView === 'list' && (
-          <ListView days={days} today={today} startingOn={startingOn} periods={periods} cycle={cycle} actions={actions} onNew={openNew} onOpenPeriod={openPeriod} />
+          <ListView days={days} today={today} startingOn={startingOn} periods={periods} cycle={cycle} actions={actions} onNew={openNew} onOpenPeriod={openPeriod}
+            plannedOn={planned.onDay} onEditPost={(p) => setModal({ post: p })} onPlannedChanged={plannedChanged} />
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-2 mt-3 text-xs text-gray-500">
@@ -294,6 +322,7 @@ export default function AppointmentCalendar() {
             {totals.count} appointment{totals.count === 1 ? '' : 's'}
             {totals.booked > 0 && <> · {money(totals.booked)} booked · {money(totals.paid)} received</>}
           </span>
+          <LayerToggles layers={layers} onToggle={toggleLayer} />
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
             Show cancelled
@@ -311,6 +340,7 @@ export default function AppointmentCalendar() {
             </h2>
             <span className="flex gap-3">
               <button onClick={() => openTask(null, cursor)} className="text-sm text-sworkr-600 hover:text-sworkr-800">+ Task</button>
+              <button onClick={() => openNewPost(cursor)} className="text-sm text-sworkr-600 hover:text-sworkr-800">+ Post</button>
               <button onClick={() => openNew(cursor)} className="text-sm text-sworkr-600 hover:text-sworkr-800">+ Add</button>
             </span>
           </div>
@@ -348,6 +378,16 @@ export default function AppointmentCalendar() {
               {onDay(cursor).map((a) => <AppointmentItem key={a.id} appointment={a} actions={actions} />)}
             </ul>
           )}
+          {planned.onDay(cursor).length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-gray-400 mb-1">Planned</h3>
+              <ul className="divide-y divide-gray-100">
+                {planned.onDay(cursor).map((p) => (p.type === 'post'
+                  ? <PostRow key={p.key} post={p.raw} onEdit={(x) => setModal({ post: x })} onChanged={plannedChanged} />
+                  : <PlannedRow key={p.key} item={p} />))}
+              </ul>
+            </div>
+          )}
           {tasksOn(cursor).length > 0 && (
             <div className="mt-4">
               <h3 className="text-xs font-medium uppercase tracking-wide text-gray-400 mb-1">Tasks due</h3>
@@ -381,7 +421,17 @@ export default function AppointmentCalendar() {
           />
         </Modal>
       )}
-      {modal && !modal.period && !modal.newPeriod && !('task' in modal) && (
+      {modal?.post && (
+        <Modal title={modal.post.id ? 'Edit post' : 'Plan a post'} onClose={() => setModal(null)} wide>
+          <PostForm post={modal.post} onDone={() => { setModal(null); plannedChanged(); }} />
+        </Modal>
+      )}
+      {modal?.shoot && (
+        <Modal title="Plan a shoot" onClose={() => setModal(null)} wide>
+          <ShootForm shoot={modal.shoot} onDone={(saved) => { setModal(null); plannedChanged(); if (saved?.id) navigate(`/calendar/shoots?shoot=${saved.id}`); }} />
+        </Modal>
+      )}
+      {modal && !modal.period && !modal.newPeriod && !modal.post && !modal.shoot && !('task' in modal) && (
         <Modal
           title={modal.appointment
             ? (modal.appointment.kind === 'test' ? 'Edit health test' : 'Edit appointment')
@@ -417,7 +467,7 @@ function MarkerDots({ markers }) {
   );
 }
 
-function MonthView({ days, cursor, today, narrow, onDay, periods, onSelect, onNew, onOpen, tasksOn, cycle, markersOn = () => [] }) {
+function MonthView({ days, cursor, today, narrow, onDay, periods, onSelect, onNew, onOpen, tasksOn, cycle, markersOn = () => [], plannedOn = () => [], onOpenPlanned }) {
   return (
     <>
       <div className="grid grid-cols-7 text-xs font-medium text-gray-400 mb-1">
@@ -472,6 +522,7 @@ function MonthView({ days, cursor, today, narrow, onDay, periods, onSelect, onNe
                     <span key={a.id} className="w-1.5 h-1.5 rounded-full" style={{ background: apptColor(a), opacity: a.status === 'cancelled' ? 0.4 : 1 }} />
                   ))}
                   {items.length > 4 && <span className="text-[9px] leading-none text-gray-400">+</span>}
+                  {plannedOn(day).slice(0, 4).map((p) => <span key={p.key} className="w-1.5 h-1.5 rounded-sm" style={{ background: p.color }} />)}
                 </div>
               ) : (
                 <div className="space-y-0.5 mt-1">
@@ -489,6 +540,8 @@ function MonthView({ days, cursor, today, narrow, onDay, periods, onSelect, onNe
                     </button>
                   ))}
                   {items.length > 3 && <p className="text-[11px] text-gray-400 px-1">+{items.length - 3} more</p>}
+                  {plannedOn(day).slice(0, 2).map((p) => <PlannedChip key={p.key} item={p} onOpen={onOpenPlanned} />)}
+                  {plannedOn(day).length > 2 && <p className="text-[11px] text-gray-400 px-1">+{plannedOn(day).length - 2} planned</p>}
                   {due.length > 0 && (
                     <p className={`text-[11px] px-1 truncate ${openDue ? 'text-gray-600' : 'text-gray-300 line-through'}`} title={due.map((t) => t.title).join(', ')}>
                       ☐ {due.length === 1 ? due[0].title : `${due.length} tasks`}
@@ -530,7 +583,7 @@ function layout(blocks) {
   return sorted;
 }
 
-function TimeGrid({ days, today, onDay, periods, cycle, onNew, onOpen, onOpenPeriod, onPickDay }) {
+function TimeGrid({ days, today, onDay, periods, cycle, onNew, onOpen, onOpenPeriod, onPickDay, plannedOn = () => [], onOpenPlanned }) {
   const scroller = useRef(null);
   const [now, setNow] = useState(() => new Date());
 
@@ -569,6 +622,16 @@ function TimeGrid({ days, today, onDay, periods, cycle, onNew, onOpen, onOpenPer
           </button>
         ))}
       </div>
+      {days.some((d) => plannedOn(d).length) && (
+        <div className="flex border-b border-gray-100">
+          <div className="w-12 shrink-0 px-1 py-1 text-[10px] text-gray-400">Plans</div>
+          {days.map((day) => (
+            <div key={day.toISOString()} className="flex-1 min-w-0 px-0.5 py-0.5 space-y-0.5">
+              {plannedOn(day).map((p) => <PlannedChip key={p.key} item={p} onOpen={onOpenPlanned} />)}
+            </div>
+          ))}
+        </div>
+      )}
       {periods.some((p) => days.some((d) => periodsOn([p], d).length)) && (
         <div className="flex border-b border-gray-100">
           <div className="w-12 shrink-0" />
@@ -659,11 +722,11 @@ function TimeGrid({ days, today, onDay, periods, cycle, onNew, onOpen, onOpenPer
 
 // ==================== LIST ====================
 
-function ListView({ days, today, startingOn, periods, cycle, actions, onNew, onOpenPeriod }) {
+function ListView({ days, today, startingOn, periods, cycle, actions, onNew, onOpenPeriod, plannedOn = () => [], onEditPost, onPlannedChanged }) {
   const withItems = days
-    .map((day) => ({ day, items: startingOn(day), ...dayPeriods(periods, day) }))
-    .filter((d) => d.items.length || sameDay(d.day, today) || d.tour?.start_date === toKey(d.day) || d.off?.start_date === toKey(d.day));
-  if (!withItems.some((d) => d.items.length)) {
+    .map((day) => ({ day, items: startingOn(day), plans: plannedOn(day), ...dayPeriods(periods, day) }))
+    .filter((d) => d.items.length || d.plans.length || sameDay(d.day, today) || d.tour?.start_date === toKey(d.day) || d.off?.start_date === toKey(d.day));
+  if (!withItems.some((d) => d.items.length || d.plans.length)) {
     return (
       <div className="text-center py-10">
         <p className="text-gray-400 text-sm">Nothing booked in these {days.length} days.</p>
@@ -673,7 +736,7 @@ function ListView({ days, today, startingOn, periods, cycle, actions, onNew, onO
   }
   return (
     <div className="space-y-4">
-      {withItems.map(({ day, items, tour, off }) => (
+      {withItems.map(({ day, items, plans, tour, off }) => (
         <section key={day.toISOString()}>
           <h2 className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
             {sameDay(day, today) && <span className="px-2 py-0.5 rounded-full bg-sworkr-500 text-white text-[11px]">Today</span>}
@@ -691,10 +754,17 @@ function ListView({ days, today, startingOn, periods, cycle, actions, onNew, onO
             )}
           </h2>
           {items.length === 0 ? (
-            <p className="text-sm text-gray-400">Nothing booked</p>
+            !plans.length && <p className="text-sm text-gray-400">Nothing booked</p>
           ) : (
             <ul className="grid gap-2 md:grid-cols-2">
               {items.map((a) => <AppointmentItem key={a.id} appointment={a} actions={actions} />)}
+            </ul>
+          )}
+          {plans.length > 0 && (
+            <ul className="divide-y divide-gray-100 mt-1">
+              {plans.map((p) => (p.type === 'post'
+                ? <PostRow key={p.key} post={p.raw} onEdit={onEditPost} onChanged={onPlannedChanged} />
+                : <PlannedRow key={p.key} item={p} />))}
             </ul>
           )}
         </section>

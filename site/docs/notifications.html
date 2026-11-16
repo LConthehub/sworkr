@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notifications · Sworkr docs</title>
+  <meta name="robots" content="index,follow" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#a73178" />
+  <link rel="icon" type="image/png" href="/icon.png" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="docs">
+  <header class="top">
+    <a class="brand" href="/"><span class="mark">SW</span> Sworkr</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/docs/">Docs</a>
+      <a class="pill" href="https://demo.sworkr.com">Try the demo</a>
+    </nav>
+  </header>
+  <div class="doc-layout">
+    <aside>
+      <p class="side-title">Documentation</p>
+      <ul>
+      <li><a href="/docs/index.html">Start here</a></li>
+      <li><a href="/docs/getting-started.html">Get started</a></li>
+      <li><a href="/docs/privacy-and-backups.html">Privacy &amp; backups</a></li>
+      <li><a href="/docs/phone.html">On your phone</a></li>
+      <li><a href="/docs/people.html">Clients &amp; inquiries</a></li>
+      <li><a href="/docs/money.html">Money &amp; houses</a></li>
+      <li><a href="/docs/content.html">Content &amp; planning</a></li>
+      <li><a href="/docs/health-and-safety.html">Health &amp; safety</a></li>
+      <li><a href="/docs/notifications.html" aria-current="page">Notifications</a></li>
+      <li><a href="/docs/troubleshooting.html">If something goes wrong</a></li>
+      </ul>
+    </aside>
+    <main class="doc">
+      <h1>Notifications</h1>
+
+<p>Sworkr can send a message to your phone when it isn't open, using <strong>ntfy</strong>, a free app for iPhone and Android. Nothing is sent unless you turn it on. Set it up under <em>Account → Reminders → Phone notifications</em>.</p>
+
+<h2>What you get</h2>
+<ul>
+  <li>A <strong>heads-up before a booking or health test</strong>: 15 minutes to 4 hours before, as you choose. "A booking starts at 7:00 PM".</li>
+  <li>A <strong>daily summary</strong> at the hour you choose: counts such as "2 bookings today, 1 deposit to collect, 1 post to put up". It's only sent on days there's something to say.</li>
+</ul>
+<p>Each is sent once. The browser reminders under <em>Reminders</em> still work separately, but only while Sworkr is open.</p>
+
+<h2>Set it up</h2>
+<ol>
+  <li>Install the <strong>ntfy</strong> app on your phone.</li>
+  <li>In Sworkr, tap <em>Make one</em> next to Topic. It picks a long random name. Turn notifications on and save.</li>
+  <li>In the ntfy app, tap <strong>+</strong> and subscribe to the same topic. Then press <em>Send a test</em> in Sworkr.</li>
+</ol>
+
+<h2>Keep it private</h2>
+<ul>
+  <li>The message passes through the ntfy server. On the public one (ntfy.sh), <strong>anyone who knows your topic can read it</strong>. That's why Sworkr insists on a long random topic there. Never share it.</li>
+  <li>The wording is generic by default. Ticking <em>Name clients in the messages</em> puts names in them, so keep it off on the public server.</li>
+  <li>For real privacy, <a href="https://docs.ntfy.sh/install/">run your own ntfy server</a>, or use one a friend runs, and put its address in. An access token for your server is stored sealed and is never sent to a different server.</li>
+  <li>Sworkr only sends from your own computer, so it has to be on (and awake) at the time.</li>
+</ul>
+
+    </main>
+  </div>
+  <footer>
+    <p><span class="mark small">SW</span> Sworkr. Software for independent workers, kept on your own computer.</p>
+    <p class="fine">Sworkr is a record-keeping tool. It doesn't advertise, arrange or take part in anyone's work, and it isn't tax or legal advice.</p>
+  </footer>
+</body>
+</html>

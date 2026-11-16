@@ -42,7 +42,7 @@ A new database starts with a few example clients, appointments and expenses. Rem
 | Page | Route | What it does |
 |---|---|---|
 | Dashboard | `/` | This week's bookings, tasks, unread email and savings goals at a glance |
-| Calendar | `/calendar` | Month, week, day and list views. Add, edit, repeat, complete or cancel appointments, tours and time off |
+| Calendar | `/calendar` | Month, week, day and list views. Add, edit, repeat, complete or cancel appointments, tours and time off. Posts, shoots and the day an ad runs out sit on the same days (each kind can be hidden); `/calendar/posts` and `/calendar/shoots` hold the full lists |
 | Contacts | `/contacts` | Clients, collaborators and crew, with screening status, how each one found you and a "do not see" flag. CSV import/export |
 | Inquiries | `/inquiries` | Everyone who got in touch, moved from new to replied, screening, deposit and booked (or lost, with why). Shows where inquiries drop out and which ad sites send people who book |
 | Gone quiet | `/regulars` | Regulars who haven't booked for a while and have nothing booked ahead, biggest spenders first |

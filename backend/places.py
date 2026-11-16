@@ -4,9 +4,9 @@ of your pay (that's the place's fee_percent / fee_per_shift, in finance.py).
 
 A charge has a cadence (per booking, shift, day, week, month, year, per stay, or once) and an expense
 category. Logging one adds an expense; a charge with a test_type (a house doctor) is logged as a health test
-instead, so it shows in your test history too. A yearly or one-off charge can have a renewal date (a license
-or work card): sworkr keeps a reminder task for it two weeks before, and logging a yearly one moves the date
-on a year.
+instead, so it shows in your test history too. A yearly or one-off charge can have a renewal date (a membership,
+a yearly fee): sworkr keeps a reminder task for it two weeks before, and logging a yearly one moves the date
+on a year. (Licenses and work cards are paid to the government, not the house: they're documents, see documents.py.)
 
 Stays (tours linked to a place) log the per-day, per-week and per-stay charges by themselves; see main.py.
 """
@@ -71,7 +71,7 @@ class ChargeIn(BaseModel):
     cadence: Cadence = Cadence.PER_DAY
     category: str = "other"              # an expense category key
     test_type: Optional[str] = None       # set: a house doctor; logged as a health test of that kind
-    renews_on: Optional[date] = None      # a license or work card's expiry (yearly or one-off charges)
+    renews_on: Optional[date] = None      # when a yearly or one-off charge comes round again
 
 
 class LogIn(BaseModel):

@@ -5,8 +5,11 @@ insurance. sworkr keeps one reminder task for each, some days before it runs out
 Only what's needed to remember a renewal is kept: a name, dates and notes. There's deliberately no field for
 an ID or license number; keep those in the document itself, not here.
 
-The list also shows the renewal dates set on places' charges (a license paid to a brothel), so everything that
-runs out is in one place, without entering it twice.
+A license or work card is paid to the government or a licensing office, not to a workplace, so it lives here. Renewing
+one moves its date and, if it cost something, logs that as an ordinary expense under Fees & licenses.
+
+The list also shows the renewal dates set on a place's own yearly charges, so everything that runs out is in one
+place, without entering it twice.
 """
 
 import datetime as dt
@@ -18,6 +21,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 import calendar_sync
+import finance
 
 router = APIRouter(prefix="/api/documents")
 _get_db: Optional[Callable] = None
@@ -178,6 +182,46 @@ def update_document(doc_id: int, body: DocumentIn, request: Request):
                    source_id = ?, persona_id = ?, notes = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (*_values(body), _now(), doc_id, owner))
+        tasks = _sync_task(db, doc_id, owner)
+        db.commit()
+        _after(owner, tasks)
+        return _get(db, doc_id, owner)
+    finally:
+        db.close()
+
+
+class RenewedIn(BaseModel):
+    expires_on: dt.date                 # the new date it runs out
+    paid: Optional[float] = None        # what the renewal cost
+    paid_to: Optional[str] = None       # who was paid: the county, the state board
+    paid_on: Optional[dt.date] = None   # left out: today
+
+
+@router.post("/{doc_id}/renewed")
+def renewed(doc_id: int, body: RenewedIn, request: Request):
+    """It was renewed: the new expiry date (and its reminder), and what it cost, as an expense."""
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        d = _get(db, doc_id, owner)
+        if not d:
+            raise HTTPException(status_code=404, detail="Not found")
+        paid_on = body.paid_on or date.today()
+        if body.expires_on <= paid_on:
+            raise HTTPException(status_code=400, detail="The new date has to be after the day you renewed it")
+        if body.paid is not None and not (0 <= body.paid < 1e9):
+            raise HTTPException(status_code=400, detail="What you paid must be 0 or more")
+        db.execute("UPDATE documents SET issued_on = ?, expires_on = ?, updated_at = ? WHERE id = ? AND owner_id = ?",
+                   (paid_on.isoformat(), body.expires_on.isoformat(), _now(), doc_id, owner))
+        if body.paid:
+            lookup = finance.category_lookup(db, owner)
+            category = lookup.get("licenses & permits") or lookup.get("fees & licenses > licenses & permits") or "fees"
+            to = (body.paid_to or "").strip()[:80]
+            db.execute("""
+                INSERT INTO expenses (description, amount, category, date, notes, owner_id, created_at, currency)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'USD')
+            """, (f"{d['name']} renewal", round(body.paid, 2), category, f"{paid_on.isoformat()}T12:00:00+00:00",
+                  f"Paid to {to}" if to else None, owner, _now()))
         tasks = _sync_task(db, doc_id, owner)
         db.commit()
         _after(owner, tasks)

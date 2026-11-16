@@ -50,6 +50,7 @@ import places
 import rates
 import demo
 import mail
+import ntfy
 import marketing
 import migrations
 import safety
@@ -2174,6 +2175,7 @@ app.include_router(listings.router)
 app.include_router(customs.router)
 app.include_router(healthtests.router)
 app.include_router(shoots.router)
+app.include_router(ntfy.router)
 app.include_router(rates.router)
 
 init_db()
@@ -2202,6 +2204,7 @@ listings.setup(get_db)
 customs.setup(get_db)
 healthtests.setup(get_db)
 shoots.setup(get_db)
+ntfy.setup(get_db)
 rates.setup(get_db)
 csv_io.setup(get_db, after_client_import=lambda ids: [calendar_sync.queue_client(i) for i in ids])
 # BACKGROUND_JOBS=0 (the tests) keeps the background threads from starting.
@@ -2209,6 +2212,7 @@ _background = os.environ.get("BACKGROUND_JOBS", os.environ.get("CALENDAR_SYNC", 
 calendar_sync.start(get_db, background=_background)
 backup.start(get_db, background=_background)
 safety.start(get_db, background=_background)
+ntfy.start(get_db, background=_background)
 demo.start(app, get_db)   # does nothing unless DEMO_MODE=1
 
 # The desktop app serves the pages itself (Docker uses nginx for that). Registered last, so /api comes first.

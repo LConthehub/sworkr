@@ -232,7 +232,7 @@ function ShootPlan({ id, onBack, onOpen }) {
             <div className="flex items-center justify-between gap-3 mb-1">
               <h3 className="font-semibold text-gray-800">{list.title}</h3>
               {list.kind === 'marketing' && (shoot.campaign_id
-                ? <Link to={`/content/planner?campaign=${shoot.campaign_id}`} className={quietButtonClass}>Its posts →</Link>
+                ? <Link to={`/calendar/posts?campaign=${shoot.campaign_id}`} className={quietButtonClass}>Its posts →</Link>
                 : <button onClick={() => run(axios.post(`/api/shoots/${shoot.id}/campaign`))} className={quietButtonClass}>Start a campaign for it</button>)}
             </div>
             <p className="text-xs text-gray-500 mb-2">{list.hint}</p>
@@ -388,7 +388,7 @@ function PersonForm({ shootId, person, onDone }) {
   );
 }
 
-function ShootForm({ shoot, onDone }) {
+export function ShootForm({ shoot, onDone }) {
   const [form, setForm] = useState({
     title: shoot.title || '', status: shoot.status || 'planning', shoot_date: shoot.shoot_date || '', start_time: shoot.start_time || '',
     hours: shoot.hours ?? '', concept: shoot.concept || '', location_name: shoot.location_name || '', location_address: shoot.location_address || '',
@@ -476,12 +476,12 @@ export function ShootsSoon() {
     <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-gray-800">Shoots coming up</h2>
-        <Link to="/content/shoots" className="text-sm text-sworkr-600 hover:text-sworkr-800">Shoots →</Link>
+        <Link to="/calendar/shoots" className="text-sm text-sworkr-600 hover:text-sworkr-800">Shoots →</Link>
       </div>
       <ul className="divide-y divide-gray-100">
         {shoots.map((s) => (
           <li key={s.id} className="py-2">
-            <Link to={`/content/shoots?shoot=${s.id}`} className="block">
+            <Link to={`/calendar/shoots?shoot=${s.id}`} className="block">
               <span className="font-medium text-gray-800">{s.title}</span>
               <span className="text-xs text-gray-500"> · {whenText(s)} ({countdown(s.summary.days_left)})</span>
               {s.summary.warnings.length > 0 && <span className="block text-xs text-amber-700">{s.summary.warnings.join(' · ')}</span>}

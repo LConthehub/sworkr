@@ -86,7 +86,7 @@ export function Campaigns({ version, onPlan }) {
               <div className="flex flex-wrap gap-2 mt-3">
                 <button onClick={() => onPlan({ campaign_id: c.id, set_path: c.set_path || null })} className={buttonClass}>+ Post</button>
                 {c.tour_id && <button onClick={() => suggest(c)} className={quietButtonClass} title="Adds the usual run of tour posts as ideas">Suggest tour posts</button>}
-                <Link to={`/content/planner?campaign=${c.id}`} className={quietButtonClass}>See its posts</Link>
+                <Link to={`/calendar/posts?campaign=${c.id}`} className={quietButtonClass}>See its posts</Link>
               </div>
             </li>
           ))}

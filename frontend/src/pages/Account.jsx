@@ -14,6 +14,7 @@ import { Field, inputClass, errorMessage, buttonClass, quietButtonClass, Section
 import CalendarSync from '../components/CalendarSync';
 import EmailSettings from '../components/EmailSettings';
 import PhoneAccess from '../components/PhoneAccess';
+import NtfySettings from '../components/NtfySettings';
 import ContentSettings from '../components/ContentSettings';
 import { CycleSettings } from '../components/Cycle';
 import { notificationsSupported, reminderSettings, saveReminderSettings } from '../components/Reminders';
@@ -100,6 +101,10 @@ const GROUPS = [
     id: 'notifications', label: 'Reminders', icon: 'bell',
     sections: [
       { id: 'reminders', title: 'Reminders', words: 'notifications discreet', render: () => <ReminderSettings /> },
+      {
+        id: 'ntfy', title: 'Phone notifications', words: 'ntfy push notification phone alert reminder morning summary',
+        render: () => <Section title="Phone notifications (ntfy)" hint="A message on your phone before a booking, and a summary each morning."><NtfySettings /></Section>,
+      },
     ],
   },
   {
@@ -239,7 +244,7 @@ export default function Account({ user, onLogout, onIdleChange }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-white">{user.username}'s settings</h1>
+          <h1 className="text-xl font-bold text-white">Settings</h1>
           <p className="text-sm text-white/90">Logged in as <span className="font-semibold">{user.username}</span>{user.is_admin && ' (admin)'}</p>
         </div>
         <button onClick={onLogout} className="px-4 py-2 rounded-lg bg-white/20 text-white hover:bg-white/30 text-sm">Log out</button>

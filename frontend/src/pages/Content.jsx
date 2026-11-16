@@ -6,8 +6,7 @@ import { PersonaSelect } from '../components/Personas';
 import { Campaigns, Toolkit, useCampaigns, usePlaces, useSnippets } from '../components/Promo';
 import Listings from '../components/Listings';
 import Customs from '../components/Customs';
-import Shoots from '../components/Shoots';
-import { dayLabel, formatTime, fromDateTimeInputs, money, monthGrid, repeatDates, toDateInput, toTimeInput } from '../colors';
+import { dayLabel, formatTime, fromDateTimeInputs, money, repeatDates, toDateInput, toTimeInput } from '../colors';
 
 /** Suggestions only: any platform, ad site or your own website can be typed in. */
 export const PLATFORM_GROUPS = {
@@ -28,8 +27,8 @@ const thumbUrl = (path, size = 256) => `/api/content/thumbnail?path=${encodeURIC
 const whenText = (iso) => (iso ? `${dayLabel(new Date(iso), { weekday: 'short', month: 'short', day: 'numeric' })}, ${formatTime(new Date(iso))}` : 'No time set');
 
 // Four sections. Each address still works; several lead to the same section.
-const SECTIONS = [['library', '/content', 'Library'], ['plan', '/content/planner', 'Plan'], ['promote', '/content/campaigns', 'Promote'], ['customs', '/content/customs', 'Customs']];
-const SECTION_OF = { planner: 'plan', plan: 'plan', shoots: 'plan', campaigns: 'promote', promote: 'promote', ads: 'promote', toolkit: 'promote', customs: 'customs' };
+const SECTIONS = [['library', '/content', 'Library'], ['promote', '/content/campaigns', 'Promote'], ['customs', '/content/customs', 'Customs']];
+const SECTION_OF = { campaigns: 'promote', promote: 'promote', ads: 'promote', toolkit: 'promote', customs: 'customs' };
 
 /** The two halves of a section, as a small switch under the main tabs. */
 function Switch({ label, options }) {
@@ -42,7 +41,7 @@ function Switch({ label, options }) {
   );
 }
 
-/** Content: your library, planning (posts and shoots), promoting (campaigns, ads, platforms) and custom orders. */
+/** Content: your library, promoting (campaigns, ads, your platforms) and custom orders. Planning lives on the calendar. */
 export default function Content() {
   const { tab = 'library' } = useParams();
   const [modal, setModal] = useState(null); // { post } (post may be a draft with files)
@@ -63,15 +62,10 @@ export default function Content() {
           ))}
         </nav>
       </div>
-      {section === 'plan' && (
-        <Switch label="Plan" options={[['/content/planner', 'Posts', tab !== 'shoots'], ['/content/shoots', 'Shoots', tab === 'shoots']]} />
-      )}
       {section === 'promote' && (
         <Switch label="Promote" options={[['/content/campaigns', 'Campaigns & ads', tab !== 'toolkit'], ['/content/toolkit', 'Platforms & saved text', tab === 'toolkit']]} />
       )}
-      {tab === 'shoots' ? <Shoots />
-        : section === 'plan' ? <Planner version={version} onEdit={(p) => setModal({ post: p })} onNew={plan} />
-          : tab === 'toolkit' ? <Toolkit platforms={PLATFORMS} />
+      {tab === 'toolkit' ? <Toolkit platforms={PLATFORMS} />
             : section === 'promote' ? (
               <>
                 <Campaigns version={version} onPlan={plan} />
@@ -118,7 +112,7 @@ function Library({ onPlan, version }) {
         <p className="text-sm text-gray-600 mt-1">
           Point sworkr at the folder you keep your photos and videos in, for ads, socials and fan sites: Nextcloud, a Synology
           or other NAS, or a folder mounted into sworkr. Each subfolder becomes a set. sworkr only reads it, and never copies your content.
-          You can plan posts and ad renewals in the Post planner without connecting a folder.
+          You can plan posts and ad renewals on the calendar without connecting a folder.
         </p>
         <Link to="/account/connections#content" className={`${buttonClass} inline-block mt-3`}>Connect a folder</Link>
       </div>
@@ -204,7 +198,7 @@ function Library({ onPlan, version }) {
 
 // ==================== PLANNER ====================
 
-function Planner({ version, onEdit, onNew }) {
+export function Planner({ version, onEdit, onNew }) {
   const [filter, setFilter] = useState('open');
   const [posts, setPosts] = useState(null);
   const [notice, setNotice] = useState('');
@@ -213,7 +207,6 @@ function Planner({ version, onEdit, onNew }) {
   const campaignId = search.get('campaign') || '';
   const campaignNames = Object.fromEntries(campaigns.map((c) => [c.id, c.name]));
   const load = useCallback(() => {
-    if (filter === 'month') return;      // the month view loads its own days
     const params = { ...(filter === 'all' ? {} : { status: filter }), ...(campaignId ? { campaign_id: campaignId } : {}) };
     axios.get('/api/posts', { params }).then(({ data }) => setPosts(data)).catch(() => setPosts([]));
   }, [filter, campaignId]);
@@ -231,7 +224,7 @@ function Planner({ version, onEdit, onNew }) {
     <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm" role="group" aria-label="Show">
-          {[['open', 'To do'], ['posted', 'Posted'], ['all', 'All'], ['month', 'Month']].map(([id, label]) => (
+          {[['open', 'To do'], ['posted', 'Posted'], ['all', 'All']].map(([id, label]) => (
             <button key={id} onClick={() => setFilter(id)} aria-pressed={filter === id} className={`px-3 py-1.5 ${filter === id ? 'bg-sworkr-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{label}</button>
           ))}
         </div>
@@ -249,9 +242,7 @@ function Planner({ version, onEdit, onNew }) {
         allow apps to): it reminds you when one is due (turn on Reminders in settings), you copy the text and post it, then mark it as posted.
       </p>
       {notice && <p className="text-sm text-emerald-700 mb-2">{notice}</p>}
-      {filter === 'month' ? (
-        <PlannerMonth campaignId={campaignId} campaignNames={campaignNames} version={version} onEdit={onEdit} onNew={onNew} />
-      ) : !posts ? null : posts.length === 0 ? (
+      {!posts ? null : posts.length === 0 ? (
         <p className="text-sm text-gray-400 py-8 text-center">{filter === 'open' ? 'Nothing planned. Plan a post or an ad renewal from a set in your library, or start a new one.' : 'Nothing here yet.'}</p>
       ) : (
         <div className="space-y-4">
@@ -267,75 +258,6 @@ function Planner({ version, onEdit, onNew }) {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-/** The planner as a month: posts on their days, and the day each ad runs out. */
-function PlannerMonth({ campaignId, campaignNames, version, onEdit, onNew }) {
-  const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-  const [posts, setPosts] = useState([]);
-  const [ads, setAds] = useState([]);
-  const [shoots, setShoots] = useState([]);
-  const grid = monthGrid(month);
-  useEffect(() => {
-    const params = { start: grid[0].toISOString(), end: new Date(grid[41].getFullYear(), grid[41].getMonth(), grid[41].getDate() + 1).toISOString() };
-    if (campaignId) params.campaign_id = campaignId;
-    axios.get('/api/posts', { params }).then(({ data }) => setPosts(data)).catch(() => setPosts([]));
-    axios.get('/api/listings').then(({ data }) => setAds(data.listings.filter((l) => l.end_date && !l.paused))).catch(() => setAds([]));
-    axios.get('/api/shoots', { params: { show: 'all' } }).then(({ data }) => setShoots(data.filter((x) => x.shoot_date && x.status !== 'cancelled'))).catch(() => setShoots([]));
-  }, [month, campaignId, version]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const byDay = {};
-  for (const p of posts) {
-    const when = p.posted_at || p.scheduled_at;
-    if (when && p.status !== 'skipped') (byDay[toDateInput(new Date(when))] ||= []).push(p);
-  }
-  const today = toDateInput(new Date());
-  const step = (n) => setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1));
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-2">
-        <button onClick={() => step(-1)} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Previous month">←</button>
-        <span className="font-semibold text-gray-700 w-40 text-center">{month.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</span>
-        <button onClick={() => step(1)} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Next month">→</button>
-        <button onClick={() => setMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} className="text-xs text-sworkr-600 hover:text-sworkr-800">Today</button>
-      </div>
-      <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-        <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden min-w-[640px]">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <div key={d} className="bg-gray-50 text-xs font-medium text-gray-500 px-2 py-1">{d}</div>)}
-          {grid.map((d) => {
-            const key = toDateInput(d);
-            const inMonth = d.getMonth() === month.getMonth();
-            return (
-              <div key={key} className={`min-h-[5.5rem] p-1 ${inMonth ? 'bg-white' : 'bg-gray-50'}`}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs w-5 h-5 flex items-center justify-center rounded-full ${key === today ? 'bg-sworkr-500 text-white' : inMonth ? 'text-gray-600' : 'text-gray-300'}`}>{d.getDate()}</span>
-                  <button onClick={() => onNew({ scheduled_at: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 19).toISOString(), ...(campaignId ? { campaign_id: Number(campaignId) } : {}) })}
-                    className="text-gray-300 hover:text-sworkr-600 text-sm leading-none px-1" aria-label={`Plan a post on ${key}`}>+</button>
-                </div>
-                {shoots.filter((x) => x.shoot_date === key).map((x) => (
-                  <Link key={`shoot${x.id}`} to={`/content/shoots?shoot=${x.id}`} className="block truncate text-[10px] px-1 py-0.5 mb-0.5 rounded bg-violet-100 text-violet-700" title={`Shoot: ${x.title}`}>
-                    📷 {x.start_time ? `${x.start_time} ` : ''}{x.title}
-                  </Link>
-                ))}
-                {ads.filter((l) => l.end_date === key).map((l) => (
-                  <Link key={`ad${l.id}`} to="/content/ads" className="block truncate text-[10px] px-1 py-0.5 mb-0.5 rounded bg-amber-100 text-amber-800" title={`${l.site} ad runs out`}>
-                    ⏳ {l.site} ad ends
-                  </Link>
-                ))}
-                {(byDay[key] || []).map((p) => (
-                  <button key={p.id} onClick={() => onEdit(p)} title={`${p.platform}${p.place ? ` ${p.place}` : ''} · ${STATUS[p.status].label}${campaignNames[p.campaign_id] ? ` · ${campaignNames[p.campaign_id]}` : ''}${p.caption ? `\n${p.caption}` : ''}`}
-                    className={`block w-full truncate text-left text-[10px] px-1 py-0.5 mb-0.5 rounded ${p.status === 'posted' ? 'bg-emerald-100 text-emerald-700' : p.status === 'idea' ? 'bg-gray-100 text-gray-600'
-                      : new Date(p.scheduled_at) < new Date() ? 'bg-red-100 text-red-700' : 'bg-sworkr-50 text-sworkr-600'}`}>
-                    {p.status === 'posted' ? '✓ ' : ''}{formatTime(new Date(p.posted_at || p.scheduled_at))} {p.platform}
-                  </button>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <p className="text-xs text-gray-400 mt-2">Green is posted, red is overdue, grey is an idea, purple is a shoot. Tap a day's + to plan a post on it.</p>
     </div>
   );
 }
@@ -617,7 +539,7 @@ export function PostsDue() {
     <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-gray-800">Posts & ads due</h2>
-        <Link to="/content/planner" className="text-sm text-sworkr-600 hover:text-sworkr-800">Planner →</Link>
+        <Link to="/calendar/posts" className="text-sm text-sworkr-600 hover:text-sworkr-800">All posts →</Link>
       </div>
       <ul className="divide-y divide-gray-100">
         {posts.map((p) => <PostRow key={p.id} post={p} onEdit={(x) => setModal(x)} onChanged={load} />)}
@@ -631,3 +553,19 @@ export function PostsDue() {
   );
 }
 
+
+/** Calendar → Posts: every post to put up, with its caption to copy and a tick when it's done. The calendar shows them by day. */
+export function PostsPage() {
+  const [modal, setModal] = useState(null);
+  const [version, setVersion] = useState(0);
+  return (
+    <>
+      <Planner version={version} onEdit={(p) => setModal({ post: p })} onNew={(draft) => setModal({ post: draft })} />
+      {modal && (
+        <Modal title={modal.post.id ? 'Edit post' : 'Plan a post'} onClose={() => setModal(null)} wide>
+          <PostForm post={modal.post} onDone={() => { setModal(null); setVersion((v) => v + 1); }} />
+        </Modal>
+      )}
+    </>
+  );
+}

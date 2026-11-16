@@ -30,11 +30,6 @@
               "cadence": "per_week",
               "category": "medical",
               "test_type": "weekly"
-            },
-            {
-              "label": "License or work card",
-              "cadence": "per_year",
-              "category": "Licenses & permits"
             }
           ],
           "gift_share_percent": 50

@@ -255,16 +255,15 @@ def _fill(api):
             "source_id": club["id"], "date": at(offset, 6), "kind": "shift", "gross": gross, "fees": 60,
             "description": "Shift", "notes": note, "status": "received"}))
 
-    # A few shifts at a brothel (the house keeps half) and the yearly licence.
+    # A few shifts at a brothel (the house keeps half). Its license is a document, paid to the county.
     house = _ok(api.put(f"/api/income-sources/{sources['My brothel']['id']}", json={
         "name": "The Velvet Room", "kind": "brothel", "fee_percent": 50, "work_type": "brothel",
         "payout_note": "House keeps 50%, paid out at the end of each shift"}))
     for offset, gross in [(-68, 1400), (-40, 1100), (-26, 1650), (-9, 1300)]:
         _ok(api.post("/api/income", json={"source_id": house["id"], "date": at(offset, 7), "kind": "shift",
                                           "gross": gross, "fees": gross / 2, "description": "Shift", "status": "received"}))
-    # What the house charges: room & board, its doctor, the yearly work card (paid 72 days ago, so it
-    # renews in about ten months, with a reminder).
-    amounts = {"Room & board": 100, "Doctor": 60, "License or work card": 275}
+    # What the house charges: room & board and its doctor.
+    amounts = {"Room & board": 100, "Doctor": 60}
     for charge in _ok(api.get("/api/place-charges")):
         if charge["source_id"] == house["id"] and charge["label"] in amounts:
             renews = day(-72 + 365) if charge["cadence"] == "per_year" else None
@@ -274,6 +273,11 @@ def _fill(api):
                 "renews_on": renews.isoformat() if renews else None}))
             if charge["cadence"] == "per_year":
                 _ok(api.post(f"/api/place-charges/{charge['id']}/log", json={"date": f"{day(-72).isoformat()}T12:00:00Z"}))
+    # The work card is paid to the county, not the house: a document that runs out in about ten months, renewed 72 days ago.
+    card = _ok(api.post("/api/documents", json={"name": "County work card", "kind": "work_card", "expires_on": day(-72 + 365).isoformat(),
+                                                "issued_on": day(-72).isoformat()}))
+    _ok(api.post(f"/api/documents/{card['id']}/renewed", json={"expires_on": day(-72 + 365).isoformat(), "paid": 275, "paid_to": "County sheriff's office",
+                                                               "paid_on": day(-72).isoformat()}))
 
     # ---------- working with partners ----------
     jade = _ok(api.post("/api/clients", json={

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>If something goes wrong · Sworkr docs</title>
+  <meta name="robots" content="index,follow" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#a73178" />
+  <link rel="icon" type="image/png" href="/icon.png" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="docs">
+  <header class="top">
+    <a class="brand" href="/"><span class="mark">SW</span> Sworkr</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/docs/">Docs</a>
+      <a class="pill" href="https://demo.sworkr.com">Try the demo</a>
+    </nav>
+  </header>
+  <div class="doc-layout">
+    <aside>
+      <p class="side-title">Documentation</p>
+      <ul>
+      <li><a href="/docs/index.html">Start here</a></li>
+      <li><a href="/docs/getting-started.html">Get started</a></li>
+      <li><a href="/docs/privacy-and-backups.html">Privacy &amp; backups</a></li>
+      <li><a href="/docs/phone.html">On your phone</a></li>
+      <li><a href="/docs/people.html">Clients &amp; inquiries</a></li>
+      <li><a href="/docs/money.html">Money &amp; houses</a></li>
+      <li><a href="/docs/content.html">Content &amp; planning</a></li>
+      <li><a href="/docs/health-and-safety.html">Health &amp; safety</a></li>
+      <li><a href="/docs/notifications.html">Notifications</a></li>
+      <li><a href="/docs/troubleshooting.html" aria-current="page">If something goes wrong</a></li>
+      </ul>
+    </aside>
+    <main class="doc">
+      <h1>If something goes wrong</h1>
+
+<h2>Sworkr won't start</h2>
+<ul>
+  <li><strong>Windows app:</strong> if a message says Sworkr couldn't start, it gives the file with the details (<code>sworkr.log</code> in the Sworkr data folder). If another program is using port 8765, close it, or start Sworkr with the <code>SWORKR_PORT</code> setting set to another number.</li>
+  <li><strong>Docker:</strong> "Docker Desktop isn't running": open Docker Desktop and wait for <em>Engine running</em>.</li>
+</ul>
+
+<h2>I forgot my password</h2>
+<p>Docker: open a terminal in the Sworkr folder and run<br><code>docker compose -f docker-compose.prod.yml exec api python manage.py reset-password</code><br>Windows app: ask the other admin on your copy, or restore a backup from before. If you have a passkey set up on a device, you can sign in with that.</p>
+
+<h2>I lost my phone and my recovery codes</h2>
+<p>Docker: <code>docker compose -f docker-compose.prod.yml exec api python manage.py turn-off-two-step &lt;username&gt;</code>. Then set two-step sign-in up again and save new recovery codes on paper.</p>
+
+<h2>"The database can't be opened"</h2>
+<p>The key that locks it is missing: the Credential Manager entry was deleted, the <code>sworkr_sworkr_keys</code> volume was removed, or the data was copied to another computer without its key. Install fresh and restore your latest backup with its passphrase.</p>
+
+<h2>My saved email or calendar password stopped working</h2>
+<p>That happens after a restore on another computer: the saved passwords are sealed with a key that stays on the computer they were saved on. Type the password in again once.</p>
+
+<h2>Never do these</h2>
+<ul>
+  <li>Run <code>docker compose down -v</code>, or delete the <code>sworkr_sworkr_data</code> or <code>sworkr_sworkr_keys</code> volumes. That is your data and the key that opens it.</li>
+  <li>Open Sworkr's port on your router, or point a public address at it.</li>
+</ul>
+
+    </main>
+  </div>
+  <footer>
+    <p><span class="mark small">SW</span> Sworkr. Software for independent workers, kept on your own computer.</p>
+    <p class="fine">Sworkr is a record-keeping tool. It doesn't advertise, arrange or take part in anyone's work, and it isn't tax or legal advice.</p>
+  </footer>
+</body>
+</html>

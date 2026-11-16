@@ -57,11 +57,11 @@ def test_brothel_starter_comes_with_its_charges(api):
     house = next(s for s in ok(api.get("/api/income-sources")) if s["name"] == "My brothel")
     assert house["kind"] == "brothel"
     charges = {c["label"]: c for c in ok(api.get("/api/place-charges")) if c["source_id"] == house["id"]}
-    assert set(charges) == {"Room & board", "Doctor", "License or work card"}
+    assert set(charges) == {"Room & board", "Doctor"}      # a license is paid to the government, not the house
     assert (charges["Room & board"]["cadence"], charges["Room & board"]["category"]) == ("per_day", "room_rent")
     assert (charges["Doctor"]["test_type"], charges["Doctor"]["category"]) == ("weekly", "medical")
-    licence_cat = next(c for c in ok(api.get("/api/expense-categories")) if c["key"] == charges["License or work card"]["category"])
-    assert (licence_cat["label"], licence_cat["parent_key"]) == ("Licenses & permits", "fees")
+    licence_cat = next(c for c in ok(api.get("/api/expense-categories")) if c["label"] == "Licenses & permits")
+    assert licence_cat["parent_key"] == "fees"                  # the category is still there, for what's paid to the authority
     assert all(c["amount"] is None for c in charges.values())   # left for the person to fill in
 
 
@@ -266,3 +266,22 @@ def test_a_quarterly_license_renews_three_months_on(api):
     # Paying an old quarter well before the date doesn't move it again.
     r = ok(api.post(f"/api/place-charges/{lic['id']}/log", json={}), 201)
     assert date.fromisoformat(r["charge"]["renews_on"]).replace(day=1) == later
+
+
+def test_renewing_a_license_moves_its_date_and_logs_what_was_paid_to_the_authority(api):
+    ok(api.put("/api/work-profile", json={"work_types": ["brothel"]}))
+    doc = ok(api.post("/api/documents", json={"name": "County work card", "kind": "work_card", "expires_on": (date.today() + timedelta(days=20)).isoformat()}), 201)
+    new = (date.today() + timedelta(days=365)).isoformat()
+    done = ok(api.post(f"/api/documents/{doc['id']}/renewed", json={"expires_on": new, "paid": 275, "paid_to": "County sheriff"}))
+    assert (done["expires_on"], done["issued_on"]) == (new, date.today().isoformat())
+    [expense] = [e for e in ok(api.get("/api/expenses")) if e["description"] == "County work card renewal"]
+    assert (expense["amount"], expense["notes"]) == (275, "Paid to County sheriff")
+    category = next(c for c in ok(api.get("/api/expense-categories")) if c["key"] == expense["category"])
+    assert category["label"] == "Licenses & permits"
+    task = next(t for t in ok(api.get("/api/tasks")) if t["id"] == done["task_id"])
+    assert task["due_date"] == (date.today() + timedelta(days=365 - 30)).isoformat()      # the reminder moved with it
+    assert ok(api.post(f"/api/documents/{doc['id']}/renewed", json={"expires_on": (date.today() + timedelta(days=400)).isoformat()}))["expires_on"]
+    assert len([e for e in ok(api.get("/api/expenses")) if "renewal" in e["description"]]) == 1      # no cost, no expense
+    assert api.post(f"/api/documents/{doc['id']}/renewed", json={"expires_on": date.today().isoformat()}).status_code == 400
+    assert api.post(f"/api/documents/{doc['id']}/renewed", json={"expires_on": new, "paid": -5}).status_code == 400
+    assert api.post("/api/documents/999999/renewed", json={"expires_on": new}).status_code == 404

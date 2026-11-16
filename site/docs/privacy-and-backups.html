@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy & backups · Sworkr docs</title>
+  <meta name="robots" content="index,follow" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#a73178" />
+  <link rel="icon" type="image/png" href="/icon.png" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="docs">
+  <header class="top">
+    <a class="brand" href="/"><span class="mark">SW</span> Sworkr</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/docs/">Docs</a>
+      <a class="pill" href="https://demo.sworkr.com">Try the demo</a>
+    </nav>
+  </header>
+  <div class="doc-layout">
+    <aside>
+      <p class="side-title">Documentation</p>
+      <ul>
+      <li><a href="/docs/index.html">Start here</a></li>
+      <li><a href="/docs/getting-started.html">Get started</a></li>
+      <li><a href="/docs/privacy-and-backups.html" aria-current="page">Privacy &amp; backups</a></li>
+      <li><a href="/docs/phone.html">On your phone</a></li>
+      <li><a href="/docs/people.html">Clients &amp; inquiries</a></li>
+      <li><a href="/docs/money.html">Money &amp; houses</a></li>
+      <li><a href="/docs/content.html">Content &amp; planning</a></li>
+      <li><a href="/docs/health-and-safety.html">Health &amp; safety</a></li>
+      <li><a href="/docs/notifications.html">Notifications</a></li>
+      <li><a href="/docs/troubleshooting.html">If something goes wrong</a></li>
+      </ul>
+    </aside>
+    <main class="doc">
+      <h1>Privacy &amp; backups</h1>
+
+<h2>What's stored, and where</h2>
+<p>Everything is in one database file on your computer: clients, bookings, money, plans, settings. Sworkr doesn't send it anywhere. The only things it talks to are services <em>you</em> connect: your own email, a Nextcloud calendar or content folder, and ntfy if you turn on notifications.</p>
+
+<h2>How it's locked</h2>
+<ul>
+  <li>The database file is <strong>encrypted</strong> (AES-256). A copy of the file on its own can't be read.</li>
+  <li>The key is kept apart from it. In the Windows app, it's in Windows Credential Manager, so it opens only for the person signed in to the computer. In Docker, it's in its own volume, <code>sworkr_sworkr_keys</code>.</li>
+  <li>Saved passwords (email, calendar, content folder, ntfy token) are sealed with a second key.</li>
+  <li>Sign-in: passkeys (face or fingerprint), two-step with an authenticator app, recovery codes, and a rule that can refuse passwords away from home.</li>
+</ul>
+<p><strong>What this does not do:</strong> protect against someone who can use your computer while you're signed in. Disk encryption, a locked computer account and discreet mode matter too.</p>
+
+<h2>Discreet mode</h2>
+<p><em>Account → Security &amp; privacy → Discreet mode</em> gives the browser tab a plain name like "Notes" and adds a panic switch: press <kbd>Esc</kbd> three times to hide Sworkr and sign out.</p>
+
+<h2>Backups</h2>
+<p>Backups are encrypted with <strong>your passphrase</strong>, not with the computer's key, so they open on <em>any</em> computer. That is how you get your records back if this computer dies.</p>
+<ul>
+  <li>Turn them on under <em>Account → Data &amp; users → Backups</em>. Automatic daily backups land in your backups folder.</li>
+  <li><strong>Keep a copy off this computer</strong>: on a USB stick, or under <em>Copies off this computer</em> if you have a Nextcloud or other WebDAV account.</li>
+  <li>Sworkr checks a backup opens about once a month and tells you if one doesn't.</li>
+  <li>To restore, use <em>Restore a backup</em> on the same page and enter the passphrase.</li>
+</ul>
+
+<h2>If the key is lost</h2>
+<p>Without the key, the database can't be opened. Never delete <code>sworkr_sworkr_keys</code> (Docker) or the Sworkr entries in Credential Manager. If it happens anyway, install Sworkr fresh and restore your latest backup with its passphrase.</p>
+
+<h2>Your data, your call</h2>
+<p><em>Account → Data &amp; users</em> can download everything Sworkr holds about you, or erase everything, from the page.</p>
+
+    </main>
+  </div>
+  <footer>
+    <p><span class="mark small">SW</span> Sworkr. Software for independent workers, kept on your own computer.</p>
+    <p class="fine">Sworkr is a record-keeping tool. It doesn't advertise, arrange or take part in anyone's work, and it isn't tax or legal advice.</p>
+  </footer>
+</body>
+</html>

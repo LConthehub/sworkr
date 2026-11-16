@@ -47,9 +47,9 @@ A new copy contains a few made-up clients and bookings so you can look around. R
 ## What's where
 
 - **Dashboard**: what needs doing today. *Customize* (top right) hides cards and changes their order.
-- **Calendar**: bookings, tours, time off and health tests. A booking can carry a tip.
+- **Calendar**: bookings, tours, time off and health tests, with your planning on the same days: posts to put up, shoots, and the day each ad runs out (tick which kinds to show). *Posts* and *Shoots* at the top hold the full lists. A booking can carry a tip.
 - **Contacts**: clients and collaborators, the people who've inquired and how far each got, and regulars who've gone quiet.
-- **Content**: your library, planning (posts and shoots), promoting (campaigns, ads, your platforms) and custom orders.
+- **Content**: your library, promoting (campaigns, ads, your platforms) and custom orders.
 - **Money**: income and expenses, comparisons, your rate card and deposits, goals, splits and taxes (with a CSV download).
   Each workplace has its own house rules: its share, any cuts it takes, and whether the office holds your cash.
 - **The + $ button** on every page logs cash in, a tip, or cash out in two taps.

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>On your phone · Sworkr docs</title>
+  <meta name="robots" content="index,follow" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#a73178" />
+  <link rel="icon" type="image/png" href="/icon.png" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="docs">
+  <header class="top">
+    <a class="brand" href="/"><span class="mark">SW</span> Sworkr</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/docs/">Docs</a>
+      <a class="pill" href="https://demo.sworkr.com">Try the demo</a>
+    </nav>
+  </header>
+  <div class="doc-layout">
+    <aside>
+      <p class="side-title">Documentation</p>
+      <ul>
+      <li><a href="/docs/index.html">Start here</a></li>
+      <li><a href="/docs/getting-started.html">Get started</a></li>
+      <li><a href="/docs/privacy-and-backups.html">Privacy &amp; backups</a></li>
+      <li><a href="/docs/phone.html" aria-current="page">On your phone</a></li>
+      <li><a href="/docs/people.html">Clients &amp; inquiries</a></li>
+      <li><a href="/docs/money.html">Money &amp; houses</a></li>
+      <li><a href="/docs/content.html">Content &amp; planning</a></li>
+      <li><a href="/docs/health-and-safety.html">Health &amp; safety</a></li>
+      <li><a href="/docs/notifications.html">Notifications</a></li>
+      <li><a href="/docs/troubleshooting.html">If something goes wrong</a></li>
+      </ul>
+    </aside>
+    <main class="doc">
+      <h1>On your phone</h1>
+
+<p>Sworkr only answers on the computer it runs on, on purpose. To use it from your phone <strong>without opening anything to the internet</strong>, link your phone and your computer with <strong>Tailscale</strong>, a free app that makes a private network between your own devices. Only devices signed in to your Tailscale account can reach Sworkr, and the connection is encrypted end to end. The same steps are in Sworkr under <em>Account → Connections → On your phone</em>.</p>
+
+<h2>Set it up</h2>
+<ol>
+  <li>Install Tailscale on your computer and your phone (<a href="https://tailscale.com/download">tailscale.com/download</a>, or the App Store / Google Play). Sign in to the same account on both. Use an email you keep private.</li>
+  <li>On your computer, open a terminal and run <code>tailscale serve --bg 8765</code> (Windows app) or <code>tailscale serve --bg 8080</code> (Docker). If it asks you to turn on HTTPS for your network, follow the link it gives.</li>
+  <li>It prints a private address like <code>https://your-computer.tail1234.ts.net</code>. Open it on your phone and sign in.</li>
+</ol>
+
+<h2>Make it feel like an app</h2>
+<ul>
+  <li><strong>iPhone:</strong> in Safari, tap Share, then <em>Add to Home Screen</em>. <strong>Android:</strong> in Chrome, open the menu and tap <em>Add to Home screen</em>.</li>
+  <li>Add a <strong>passkey</strong> on the phone (<em>Account → Security &amp; privacy → Passkeys</em>) so you sign in with your face or fingerprint.</li>
+  <li>Consider <em>Away from home → passkeys only</em>, so a password alone can't sign in from anywhere but your computer.</li>
+</ul>
+
+<h2>Good to know</h2>
+<ul>
+  <li>Your computer has to be on and awake for the phone to reach it.</li>
+  <li>To stop it, run <code>tailscale serve reset</code>.</li>
+  <li>Don't forward a port on your router or point a public web address at Sworkr unless you know how to secure it: it holds your most sensitive records.</li>
+  <li>For a message on your phone without opening Sworkr, see <a href="/docs/notifications.html">Notifications</a>.</li>
+</ul>
+
+    </main>
+  </div>
+  <footer>
+    <p><span class="mark small">SW</span> Sworkr. Software for independent workers, kept on your own computer.</p>
+    <p class="fine">Sworkr is a record-keeping tool. It doesn't advertise, arrange or take part in anyone's work, and it isn't tax or legal advice.</p>
+  </footer>
+</body>
+</html>

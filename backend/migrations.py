@@ -1378,6 +1378,18 @@ def _m37_preset_names(conn):
             conn.execute("UPDATE income_sources SET preset_name = name WHERE id = ?", (row[0],))
 
 
+def _m38_ntfy(conn):
+    """Push notifications (ntfy): what has already been sent, so a restart doesn't send it again."""
+    conn.execute("""
+        CREATE TABLE ntfy_sent (
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            key TEXT NOT NULL,
+            sent_at TEXT NOT NULL,
+            PRIMARY KEY (owner_id, key)
+        )
+    """)
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1416,6 +1428,7 @@ MIGRATIONS = [
     (35, "house rules: cuts, and cash the office holds", _m35_house_rules, False),
     (36, "prices by contact tag", _m36_tag_pricing, False),
     (37, "workplaces remember their starter place", _m37_preset_names, False),
+    (38, "push notifications", _m38_ntfy, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

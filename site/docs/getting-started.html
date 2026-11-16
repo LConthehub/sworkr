@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Get started · Sworkr docs</title>
+  <meta name="robots" content="index,follow" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#a73178" />
+  <link rel="icon" type="image/png" href="/icon.png" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="docs">
+  <header class="top">
+    <a class="brand" href="/"><span class="mark">SW</span> Sworkr</a>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/docs/">Docs</a>
+      <a class="pill" href="https://demo.sworkr.com">Try the demo</a>
+    </nav>
+  </header>
+  <div class="doc-layout">
+    <aside>
+      <p class="side-title">Documentation</p>
+      <ul>
+      <li><a href="/docs/index.html">Start here</a></li>
+      <li><a href="/docs/getting-started.html" aria-current="page">Get started</a></li>
+      <li><a href="/docs/privacy-and-backups.html">Privacy &amp; backups</a></li>
+      <li><a href="/docs/phone.html">On your phone</a></li>
+      <li><a href="/docs/people.html">Clients &amp; inquiries</a></li>
+      <li><a href="/docs/money.html">Money &amp; houses</a></li>
+      <li><a href="/docs/content.html">Content &amp; planning</a></li>
+      <li><a href="/docs/health-and-safety.html">Health &amp; safety</a></li>
+      <li><a href="/docs/notifications.html">Notifications</a></li>
+      <li><a href="/docs/troubleshooting.html">If something goes wrong</a></li>
+      </ul>
+    </aside>
+    <main class="doc">
+      <h1>Get started</h1>
+
+<p>Sworkr runs on <strong>your own computer</strong>. There is no account with us and nothing is sent to us. Pick one way to run it.</p>
+
+<h2>Windows app (easiest)</h2>
+<ol>
+  <li>Download <em>Sworkr-windows.zip</em> from the <a href="/#get">home page</a> and unzip it somewhere you'll keep it, like <code>Documents\Sworkr</code>.</li>
+  <li>Double-click <strong>Sworkr</strong>. Windows may say it "protected your PC" because the app is new: choose <em>More info</em>, then <em>Run anyway</em>.</li>
+  <li>Your browser opens Sworkr. A small icon appears by the clock: click it to open Sworkr again, open your backups folder, or quit.</li>
+</ol>
+<p>Your records are kept in <code>%LOCALAPPDATA%\Sworkr</code>, your backups in <code>Documents\Sworkr backups</code>.</p>
+
+<h2>Docker (any computer, or a home server)</h2>
+<ol>
+  <li>Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>, open it, and wait for <em>Engine running</em>.</li>
+  <li>Unzip <em>sworkr-docker.zip</em>. Windows: double-click <code>start.bat</code>. Mac: right-click <code>start.command</code>, choose <em>Open</em>. The first start takes a few minutes.</li>
+  <li>Open <code>http://localhost:8080</code>.</li>
+</ol>
+
+<h2>Your first minutes</h2>
+<p>Create your account. <strong>That first account is yours and is the admin.</strong> Use a password of 12 or more characters and keep it somewhere safe. Then tick the kinds of work you do, and Sworkr sets itself up to match (expense categories, workplaces and their usual charges). You can change it any time under <em>Account → My work</em>.</p>
+<p>A new copy has a few made-up clients so you can look around. Remove them under <em>Account → Data &amp; users → Example data</em>.</p>
+
+<h2>Do these three things on day one</h2>
+<ol>
+  <li><strong>Turn on backups.</strong> <em>Account → Data &amp; users → Backups</em>. Choose a passphrase and tick automatic daily backups. Write the passphrase down: without it nobody can read a backup, and neither can you.</li>
+  <li><strong>Turn on two-step sign-in.</strong> <em>Account → Security &amp; privacy → Two-step sign-in</em>, with an authenticator app. Save the recovery codes on paper.</li>
+  <li><strong>Encrypt your computer's disk</strong> (BitLocker on Windows, FileVault on a Mac) and use a locked user account.</li>
+</ol>
+
+<h2>Updating</h2>
+<p>Windows app: quit it, unzip the new version over the old folder, start it. Docker: stop it, unzip over the old folder (keep <code>backups</code>), start it. Your records are upgraded by themselves, and a copy is saved first.</p>
+
+    </main>
+  </div>
+  <footer>
+    <p><span class="mark small">SW</span> Sworkr. Software for independent workers, kept on your own computer.</p>
+    <p class="fine">Sworkr is a record-keeping tool. It doesn't advertise, arrange or take part in anyone's work, and it isn't tax or legal advice.</p>
+  </footer>
+</body>
+</html>
