@@ -34,3 +34,6 @@ backups/
 
 # Zip files made for sharing (git archive)
 release/
+
+# Desktop app builds
+dist/

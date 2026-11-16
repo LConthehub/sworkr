@@ -2211,6 +2211,11 @@ backup.start(get_db, background=_background)
 safety.start(get_db, background=_background)
 demo.start(app, get_db)   # does nothing unless DEMO_MODE=1
 
+# The desktop app serves the pages itself (Docker uses nginx for that). Registered last, so /api comes first.
+if os.environ.get("STATIC_DIR"):
+    import webpages
+    webpages.mount(app, os.environ["STATIC_DIR"])
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8008, reload=True)

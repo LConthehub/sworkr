@@ -1,0 +1,6 @@
+# Building the desktop app: sworkr's own packages, plus the packager, the tray icon and the keychain.
+-r ../backend/requirements.txt
+pyinstaller==6.16.0
+pystray==0.19.5
+keyring==25.6.0
+python-multipart
