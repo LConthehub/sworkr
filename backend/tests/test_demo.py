@@ -73,7 +73,7 @@ def test_demo_reset_builds_a_complete_sample():
     assert {"medical", "room_rent", "travel", "marketing"} <= set(out["categories"])
     assert out["tests"] == 7             # with the house doctor during the stint
     assert out["users_page"] == 403           # the demo login isn't an admin
-    assert set(out["partners"]) == {"Alex", "Jade", "Ruby"} and all(isinstance(v, float) for v in out["partners"].values())
+    assert set(out["partners"]) == {"Alex", "Jade", "Ruby"} and all(isinstance(v, (int, float)) for v in out["partners"].values())   # someone with nothing owed is a plain 0
     assert out["goals"] == ["Emergency fund", "New camera", "Retirement goal", "Taxes"]
     assert out["income"] == 29 and out["sources"] == ["Club Velvet", "Fansly", "My sugar site", "OnlyFans", "The Velvet Room"]
     assert out["change_password"] == 403
