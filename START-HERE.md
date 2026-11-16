@@ -31,15 +31,16 @@ A new copy contains a few made-up clients and bookings so you can look around. R
 2. **Turn on two-step sign-in.** *Account → Security & privacy → Two-step sign-in*, with an authenticator
    app. Save the recovery codes it gives you on paper.
 3. **Encrypt your computer's disk** (BitLocker on Windows, FileVault on a Mac) and use a locked user
-   account. Sworkr's own database is not encrypted on disk yet, so the disk has to be.
+   account. Sworkr encrypts its own database file, but its key is kept on this computer too, so the disk and a
+   locked account are what keep a stolen or borrowed computer from opening it.
 
 ## Using it day to day
 
 - Sworkr keeps running in the background and comes back when Docker Desktop starts. Just open
   <http://localhost:8080>.
 - To stop it: `stop.bat` (Windows) or `stop.command` (Mac, Linux). Your data stays.
-- **Only this computer can open it.** That's deliberate. Don't open the port to your network or the internet
-  to reach it from a phone; ask for help setting that up safely first (it needs https and passkeys).
+- **Only this computer can open it.** That's deliberate. Don't open the port to your network or the internet;
+  to use it from your phone, follow *Account → Connections → On your phone* instead.
 - *Account → Security & privacy → Discreet mode* gives the browser tab a plain name and a panic switch
   (press Esc three times).
 
@@ -56,10 +57,19 @@ A new copy contains a few made-up clients and bookings so you can look around. R
 
 ## On a phone
 
-Sworkr works in a phone's browser and can sit on the home screen like an app, with no app store involved:
-open it in Safari (iPhone) or Chrome (Android), then *Share → Add to Home Screen*. You can rename it there.
-It only works on a phone once your copy is reachable from that phone safely: see the note under
-*Using it day to day* before doing that.
+Sworkr works in a phone's browser and can sit on the home screen like an app, with no app store involved.
+*Account → Connections → On your phone* walks you through it: a free app called Tailscale links your phone and
+this computer privately (nothing is opened to the internet), then you add sworkr to the home screen and add a
+passkey on the phone. This computer has to be on for the phone to reach it.
+
+## Your data is encrypted
+
+Sworkr's database file is encrypted (AES-256). The key is kept apart from it, in Docker's `sworkr_sworkr_keys`
+volume. **Without that key the database can't be opened**, so:
+
+- never delete the `sworkr_sworkr_keys` volume, just as you never delete `sworkr_sworkr_data`;
+- keep encrypted backups turned on. A backup opens with your backup passphrase alone, on any computer, so it
+  is how you get your data back if this computer or its key is ever lost.
 
 ## Updating to a newer copy
 
@@ -74,8 +84,8 @@ It only works on a phone once your copy is reachable from that phone safely: see
   `docker compose -f docker-compose.prod.yml exec api python manage.py reset-password`
 - **Lost your phone and your recovery codes**:
   `docker compose -f docker-compose.prod.yml exec api python manage.py turn-off-two-step <username>`
-- **Never run** `docker compose down -v` or delete the `sworkr_sworkr_data` volume in Docker Desktop: that is
-  your data.
+- **Never run** `docker compose down -v` or delete the `sworkr_sworkr_data` or `sworkr_sworkr_keys` volume in
+  Docker Desktop: they are your data and the key that opens it.
 - **After restoring a backup on a different computer**, sworkr asks again for the app passwords you had
   saved (calendar, mail, content library, backup passphrase) and for a fresh authenticator-app setup.
   That is on purpose: they are locked with a key that never leaves the computer they were saved on.

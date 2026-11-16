@@ -13,6 +13,7 @@ import { WorkTypesPicker } from '../components/WorkTypes';
 import { Field, inputClass, errorMessage, buttonClass, quietButtonClass, Section, Notice } from '../components/Modal';
 import CalendarSync from '../components/CalendarSync';
 import EmailSettings from '../components/EmailSettings';
+import PhoneAccess from '../components/PhoneAccess';
 import ContentSettings from '../components/ContentSettings';
 import { CycleSettings } from '../components/Cycle';
 import { notificationsSupported, reminderSettings, saveReminderSettings } from '../components/Reminders';
@@ -104,6 +105,10 @@ const GROUPS = [
   {
     id: 'connections', label: 'Connections', icon: 'link',
     sections: [
+      {
+        id: 'phone', title: 'On your phone', words: 'phone iphone android mobile tailscale remote home screen app away',
+        render: () => <Section title="On your phone" hint="Use sworkr from your phone, privately, and put it on your home screen like an app."><PhoneAccess /></Section>,
+      },
       { id: 'email', title: 'Email', words: 'imap smtp mail inbox', render: () => <Section title="Email"><EmailSettings /></Section> },
       { id: 'calendar', title: 'Calendar & task sync', words: 'caldav nextcloud ical', render: () => <Section title="Calendar & task sync"><CalendarSync /></Section> },
       { id: 'content', title: 'Content library', words: 'folder photos videos webdav', render: () => <Section title="Content library"><ContentSettings /></Section> },
