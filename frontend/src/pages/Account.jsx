@@ -129,6 +129,7 @@ const GROUPS = [
     id: 'data', label: 'Data & users', icon: 'database',
     sections: [
       { id: 'sample', title: 'Example data', words: 'demo sample', render: () => <SampleData /> },
+      { id: 'yours', title: 'Your data', words: 'download export everything erase delete wipe remove all privacy', render: () => <YourData /> },
       { id: 'backups', title: 'Backups', words: 'export restore encrypted', admin: true, render: () => <Backups /> },
       { id: 'users', title: 'Users', words: 'accounts people', admin: true, render: ({ me }) => <Users me={me} /> },
     ],
@@ -783,6 +784,103 @@ function Backups() {
             That folder is on the same computer as sworkr, so copy the files somewhere else now and then (a USB stick, or cloud storage).
             To restore one: <code className="bg-gray-100 px-1 rounded">docker compose exec api python manage.py restore-backup /backups/&lt;file&gt;</code>
           </p>
+        </div>
+        <Notice message={message} />
+      </div>
+    </Section>
+  );
+}
+
+// ==================== YOUR DATA ====================
+
+function YourData() {
+  const [summary, setSummary] = useState(null);
+  const [busy, setBusy] = useState('');
+  const [message, setMessage] = useState(null);
+  const [erasing, setErasing] = useState(false);
+  const [password, setPassword] = useState('');
+  const [word, setWord] = useState('');
+  const load = useCallback(() => {
+    axios.get('/api/account/data').then(({ data }) => setSummary(data)).catch(() => {});
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const download = async () => {
+    setBusy('download');
+    setMessage(null);
+    try {
+      const response = await axios.get('/api/account/data/export', { responseType: 'blob' });
+      const name = /filename="([^"]+)"/.exec(response.headers['content-disposition'] || '')?.[1] || 'sworkr-my-data.zip';
+      downloadBlob(response.data, name, 'application/zip');
+      setMessage({ ok: `Saved ${name}. It isn't encrypted: keep it somewhere safe, or delete it when you're done.` });
+    } catch (err) {
+      setMessage({ error: errorMessage(err, "The download didn't work") });
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const erase = async (e) => {
+    e.preventDefault();
+    setBusy('erase');
+    setMessage(null);
+    try {
+      await axios.post('/api/account/data/erase', { password, confirm: word });
+      window.location.assign('/');   // start again from an empty sworkr, with nothing left in memory
+    } catch (err) {
+      setMessage({ error: errorMessage(err, "Nothing was erased") });
+      setBusy('');
+    }
+  };
+
+  if (!summary) return null;
+  return (
+    <Section title="Your data" hint="Take everything with you, or wipe it all.">
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <p className="text-sm text-gray-700">
+            sworkr holds {summary.records.toLocaleString()} {summary.records === 1 ? 'record' : 'records'} of yours.
+          </p>
+          <button type="button" disabled={!!busy} onClick={download} className={buttonClass}>
+            {busy === 'download' ? 'Preparing…' : 'Download everything'}
+          </button>
+          <p className="text-xs text-gray-500">
+            A zip with one readable file per kind of record: contacts, bookings, money, notes, tasks and settings. Saved passwords are left out.
+          </p>
+        </div>
+
+        <div className="border-t border-gray-100 pt-4 space-y-2">
+          <p className="text-sm font-medium text-gray-700">Erase everything</p>
+          <p className="text-xs text-gray-500">
+            Deletes every contact, booking, note, payment and setting of yours, and overwrites them in the database so they can't be recovered from it.
+            Your login stays, so you can start again. Other devices are signed out.
+          </p>
+          <p className="text-xs text-gray-500">
+            It can't reach copies made earlier: backup files in the <code className="bg-gray-100 px-1 rounded">backups</code> folder (delete those yourself),
+            and bookings already sent to your Nextcloud calendar.
+          </p>
+          {!erasing ? (
+            <button type="button" disabled={!!busy} onClick={() => setErasing(true)} className="text-sm text-red-600 hover:text-red-800 underline">
+              Erase everything…
+            </button>
+          ) : (
+            <form onSubmit={erase} className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3">
+              <p className="text-sm text-red-800">This can't be undone. Download a copy first if you might want any of it.</p>
+              <Field label="Your password">
+                <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
+              </Field>
+              <Field label={`Type ${summary.erase_word} to confirm`}>
+                <input type="text" required autoComplete="off" autoCapitalize="characters" value={word} onChange={(e) => setWord(e.target.value)} className={inputClass} />
+              </Field>
+              <div className="flex flex-wrap gap-2">
+                <button type="submit" disabled={!!busy || word.trim() !== summary.erase_word || !password}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+                  {busy === 'erase' ? 'Erasing…' : 'Erase everything of mine'}
+                </button>
+                <button type="button" disabled={!!busy} onClick={() => { setErasing(false); setPassword(''); setWord(''); }} className={quietButtonClass}>Cancel</button>
+              </div>
+            </form>
+          )}
         </div>
         <Notice message={message} />
       </div>
