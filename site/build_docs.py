@@ -24,7 +24,7 @@ PAGES = [
   <a href="/docs/phone.html"><b>On your phone</b><span>Use it from your phone without opening anything to the internet.</span></a>
   <a href="/docs/web-address.html"><b>Your own web address</b><span>A free address with HTTPS, as an alternative to Tailscale.</span></a>
   <a href="/docs/people.html"><b>Clients &amp; inquiries</b><span>Screening, inquiries, regulars who've gone quiet, prices by tag.</span></a>
-  <a href="/docs/money.html"><b>Money &amp; houses</b><span>Workplaces, house rules, cuts, cash the office holds, tips, rates, taxes.</span></a>
+  <a href="/docs/money.html"><b>Money &amp; houses</b><span>Workplaces and their rules, tips, rates and taxes.</span></a>
   <a href="/docs/content.html"><b>Content &amp; planning</b><span>The calendar, shoots, posts, campaigns, ads and custom orders.</span></a>
   <a href="/docs/health-and-safety.html"><b>Health &amp; safety</b><span>Tests on your own schedule, documents that expire, the check-in.</span></a>
   <a href="/docs/notifications.html"><b>Notifications</b><span>Messages on your phone with ntfy.</span></a>
@@ -35,7 +35,16 @@ PAGES = [
 ("getting-started", "Get started", "Get started", """
 <p>Sworkr runs on <strong>your own computer</strong>. There is no account with us and nothing is sent to us. Pick one way to run it.</p>
 
-<h2>Windows app (easiest)</h2>
+<h2>Docker (recommended: Windows, Mac, Linux or a home server)</h2>
+<ol>
+  <li>Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>, open it, and wait for <em>Engine running</em>. (On Linux or a home server, Docker Engine is enough.)</li>
+  <li>Make a folder called <code>sworkr</code> and save <a href="/downloads/docker-compose.yml" download>docker-compose.yml</a> in it.</li>
+  <li>Open a terminal in that folder and run <code>docker compose up -d</code>. The first start downloads Sworkr and takes a few minutes.</li>
+  <li>Open <a href="http://localhost:8008">localhost:8008</a>.</li>
+</ol>
+<p>Want a different port, your content folder, or your own web address? <a href="/docs/install.html">Make your setup file</a> and use that one instead.</p>
+
+<h2>Windows without Docker</h2>
 <ol>
   <li>Download <em>Sworkr-windows.zip</em> from the <a href="/#get">home page</a> and unzip it somewhere you'll keep it, like <code>Documents\\Sworkr</code>.</li>
   <li>Double-click <strong>Sworkr</strong>. Windows may say it "protected your PC" because the app is new: choose <em>More info</em>, then <em>Run anyway</em>.</li>
@@ -43,26 +52,19 @@ PAGES = [
 </ol>
 <p>Your records are kept in <code>%LOCALAPPDATA%\\Sworkr</code>, your backups in <code>Documents\\Sworkr backups</code>.</p>
 
-<h2>Docker (any computer, or a home server)</h2>
-<ol>
-  <li>Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>, open it, and wait for <em>Engine running</em>.</li>
-  <li>Unzip <em>sworkr-docker.zip</em>. Windows: double-click <code>start.bat</code>. Mac: right-click <code>start.command</code>, choose <em>Open</em>. The first start takes a few minutes.</li>
-  <li>Open <code>http://localhost:8008</code>.</li>
-</ol>
-
 <h2>Your first minutes</h2>
-<p>Create your account. <strong>That first account is yours and is the admin.</strong> Use a password of 12 or more characters and keep it somewhere safe. Then tick the kinds of work you do, and Sworkr sets itself up to match (expense categories, workplaces and their usual charges). You can change it any time under <em>Account → My work</em>.</p>
-<p>A new copy has a few made-up clients so you can look around. Remove them under <em>Account → Data &amp; users → Example data</em>.</p>
+<p>Create your account. <strong>That first account is yours and is the admin.</strong> Use a password of 12 or more characters and keep it somewhere safe. Then tick the kinds of work you do, and Sworkr sets itself up to match (expense categories, workplaces and their usual charges). You can change it any time under <em>Settings → My work</em>.</p>
+<p>A new copy has a few made-up clients so you can look around. Remove them under <em>Settings → Data &amp; users → Example data</em>.</p>
 
 <h2>Do these three things on day one</h2>
 <ol>
-  <li><strong>Turn on backups.</strong> <em>Account → Data &amp; users → Backups</em>. Choose a passphrase and tick automatic daily backups. Write the passphrase down: without it nobody can read a backup, and neither can you.</li>
-  <li><strong>Turn on two-step sign-in.</strong> <em>Account → Security &amp; privacy → Two-step sign-in</em>, with an authenticator app. Save the recovery codes on paper.</li>
+  <li><strong>Turn on backups.</strong> <em>Settings → Data &amp; users → Backups</em>. Choose a passphrase and tick automatic daily backups. Write the passphrase down: without it nobody can read a backup, and neither can you.</li>
+  <li><strong>Turn on two-step sign-in.</strong> <em>Settings → Security &amp; privacy → Two-step sign-in</em>, with an authenticator app. Save the recovery codes on paper.</li>
   <li><strong>Encrypt your computer's disk</strong> (BitLocker on Windows, FileVault on a Mac) and use a locked user account.</li>
 </ol>
 
 <h2>Updating</h2>
-<p>Windows app: quit it, unzip the new version over the old folder, start it. Docker: stop it, unzip over the old folder (keep <code>backups</code>), start it. Your records are upgraded by themselves, and a copy is saved first.</p>
+<p>Docker: in your <code>sworkr</code> folder, run <code>docker compose pull</code>, then <code>docker compose up -d</code>. Windows app: quit it, unzip the new version over the old folder, start it. Either way your records are upgraded by themselves, and a copy is saved first.</p>
 """),
 
 ("privacy-and-backups", "Privacy & backups", "Privacy &amp; backups", """
@@ -79,12 +81,12 @@ PAGES = [
 <p><strong>What this does not do:</strong> protect against someone who can use your computer while you're signed in. Disk encryption, a locked computer account and discreet mode matter too.</p>
 
 <h2>Discreet mode</h2>
-<p><em>Account → Security &amp; privacy → Discreet mode</em> gives the browser tab a plain name like "Notes" and adds a panic switch: press <kbd>Esc</kbd> three times to hide Sworkr and sign out.</p>
+<p><em>Settings → Security &amp; privacy → Discreet mode</em> gives the browser tab a plain name like "Notes" and adds a panic switch: press <kbd>Esc</kbd> three times to hide Sworkr and sign out.</p>
 
 <h2>Backups</h2>
 <p>Backups are encrypted with <strong>your passphrase</strong>, not with the computer's key, so they open on <em>any</em> computer. That is how you get your records back if this computer dies.</p>
 <ul>
-  <li>Turn them on under <em>Account → Data &amp; users → Backups</em>. Automatic daily backups land in your backups folder.</li>
+  <li>Turn them on under <em>Settings → Data &amp; users → Backups</em>. Automatic daily backups land in your backups folder.</li>
   <li><strong>Keep a copy off this computer</strong>: on a USB stick, or under <em>Copies off this computer</em> if you have a Nextcloud or other WebDAV account.</li>
   <li>Sworkr checks a backup opens about once a month and tells you if one doesn't.</li>
   <li>To restore, use <em>Restore a backup</em> on the same page and enter the passphrase.</li>
@@ -94,7 +96,7 @@ PAGES = [
 <p>Without the key, the database can't be opened. Never delete <code>sworkr_sworkr_keys</code> (Docker) or the Sworkr entries in Credential Manager. If it happens anyway, install Sworkr fresh and restore your latest backup with its passphrase.</p>
 
 <h2>Your data, your call</h2>
-<p><em>Account → Data &amp; users</em> can download everything Sworkr holds about you, or erase everything, from the page.</p>
+<p><em>Settings → Data &amp; users</em> can download everything Sworkr holds about you, or erase everything, from the page.</p>
 """),
 
 ("install", "Install with Docker", "Install with Docker", """
@@ -163,7 +165,7 @@ PAGES = [
 <script src="/setup.js" defer></script>
 """),
 ("phone", "On your phone", "On your phone", """
-<p>Sworkr only answers on the computer it runs on, on purpose. To use it from your phone <strong>without opening anything to the internet</strong>, link your phone and your computer with <strong>Tailscale</strong>, a free app that makes a private network between your own devices. Only devices signed in to your Tailscale account can reach Sworkr, and the connection is encrypted end to end. The same steps are in Sworkr under <em>Account → Connections → On your phone</em>.</p>
+<p>Sworkr only answers on the computer it runs on, on purpose. To use it from your phone <strong>without opening anything to the internet</strong>, link your phone and your computer with <strong>Tailscale</strong>, a free app that makes a private network between your own devices. Only devices signed in to your Tailscale account can reach Sworkr, and the connection is encrypted end to end. The same steps are in Sworkr under <em>Settings → Connections → On your phone</em>.</p>
 
 <h2>Set it up</h2>
 <ol>
@@ -175,7 +177,7 @@ PAGES = [
 <h2>Make it feel like an app</h2>
 <ul>
   <li><strong>iPhone:</strong> in Safari, tap Share, then <em>Add to Home Screen</em>. <strong>Android:</strong> in Chrome, open the menu and tap <em>Add to Home screen</em>.</li>
-  <li>Add a <strong>passkey</strong> on the phone (<em>Account → Security &amp; privacy → Passkeys</em>) so you sign in with your face or fingerprint.</li>
+  <li>Add a <strong>passkey</strong> on the phone (<em>Settings → Security &amp; privacy → Passkeys</em>) so you sign in with your face or fingerprint.</li>
   <li>Consider <em>Away from home → passkeys only</em>, so a password alone can't sign in from anywhere but your computer.</li>
 </ul>
 
@@ -240,7 +242,7 @@ PAGES = [
 <p><em>Contacts → Everyone</em> holds clients, <strong>collaborators</strong> (another worker, a photographer, a driver: anyone you work with) and others. A name is optional, so a handle alone is fine. Each contact can have handles, a persona (the name they know you by), preferences, a birthday, screening status and references.</p>
 <ul>
   <li><strong>Screening</strong>: unscreened, pending, verified or declined, with notes on what you checked.</li>
-  <li><strong>Do not see</strong>: tick it and Sworkr warns you if you try to book that person. A private bad-date list can be imported under <em>Account</em>.</li>
+  <li><strong>Do not see</strong>: tick it and Sworkr warns you if you try to book that person. A private bad-date list can be imported under <em>Settings → Security &amp; privacy</em>.</li>
   <li><strong>How they found you</strong>: an ad site, an account, a referral. This is what makes <em>Money → Compare → By how they found you</em> work: income against what you spent on each.</li>
   <li><strong>Tags</strong> group people, and can change their price (below).</li>
 </ul>
@@ -255,7 +257,7 @@ PAGES = [
 <p><em>Money → Rates → Prices by tag</em>: give a tag a percentage off, an amount off, or a <strong>locked-in rate</strong> (the client keeps paying what they last paid for that service). When you book someone with that tag for a service on your rate card, the price is worked out for you and says why. Locked-in clients don't show under "On an old rate".</p>
 
 <h2>Cancellations and no-shows</h2>
-<p><em>Account → Deposits &amp; cancellations</em> sets your deposit percentage, what counts as a late cancellation, and the fees. Cancelling a booking asks who cancelled and suggests the fee from your policy.</p>
+<p><em>Settings → Deposits &amp; cancellations</em> sets your deposit percentage, what counts as a late cancellation, and the fees. Cancelling a booking asks who cancelled and suggests the fee from your policy.</p>
 """),
 
 ("money", "Money & houses", "Money &amp; houses", """
@@ -289,7 +291,7 @@ PAGES = [
 
 <h2>Taxes</h2>
 <p><em>Money → Taxes</em> adds up the year: income by kind, fees, expenses by category, your profit, mileage and estimated payments, with quarterly due dates and reminders. <strong>Download as CSV</strong> gives your accountant a spreadsheet; <em>Print or save as PDF</em> gives a page. Sworkr adds up your records. It isn't tax advice.</p>
-<p>A <strong>license or work card</strong> is paid to the government, not to a workplace: keep it under <em>Account → My work → Licenses &amp; documents</em>, and when you renew it press <em>Renewed</em> to move the date and log what you paid under Fees &amp; licenses.</p>
+<p>A <strong>license or work card</strong> is paid to the government, not to a workplace: keep it under <em>Settings → My work → Licenses &amp; documents</em>, and when you renew it press <em>Renewed</em> to move the date and log what you paid under Fees &amp; licenses.</p>
 """),
 
 ("content", "Content & planning", "Content &amp; planning", """
@@ -311,7 +313,7 @@ PAGES = [
 <p><em>Content → Promote</em> holds <strong>campaigns</strong> (a push with a goal and dates, such as a tour announcement or a set launch, with its posts together) and <strong>ads</strong> (each listing's site, end date and cost; <em>Renewed</em> moves the date and logs the cost). For a tour campaign, <em>Suggest tour posts</em> adds the usual run of ideas: a week before, the day before, arrival, last day.</p>
 
 <h2>Library</h2>
-<p><em>Content → Library</em> shows the folder you already keep your photos and videos in, from Nextcloud, a Synology or other WebDAV server, or a folder on your computer. Each subfolder is a set. Sworkr only <em>reads</em> it, never copies or changes anything, and shows where each file has already been posted. Connect it under <em>Account → Connections → Content library</em>.</p>
+<p><em>Content → Library</em> shows the folder you already keep your photos and videos in, from Nextcloud, a Synology or other WebDAV server, or a folder on your computer. Each subfolder is a set. Sworkr only <em>reads</em> it, never copies or changes anything, and shows where each file has already been posted. Connect it under <em>Settings → Connections → Content library</em>.</p>
 
 <h2>Customs</h2>
 <p><em>Content → Customs</em> follows made-to-order content from request to delivery: who asked, what they want, the price, what's paid, when it's due. <em>Got paid</em> adds the payment to your income as a sale (minus the platform's fee) and says how it was paid. Sworkr flags customs being made before they're fully paid for, and late ones. <em>Your menu</em> keeps your usual prices and copies as text.</p>
@@ -319,20 +321,20 @@ PAGES = [
 
 ("health-and-safety", "Health & safety", "Health &amp; safety", """
 <h2>Health tests on your own schedule</h2>
-<p>Testing rules differ from place to place, so nothing is fixed. <em>Account → My work → Health tests</em>: each test has a name, how many days apart it's due, and what it usually costs. Everyone starts with weekly, monthly and yearly, and you can rename them, change how often, add others (like "Quarterly bloodwork" every 90 days) or switch off what you don't use. Sworkr works out when the next one is due from the last, and shows it on the dashboard before then. A test's cost fills in when you add it to the calendar and is logged as an expense.</p>
+<p>Testing rules differ from place to place, so nothing is fixed. <em>Settings → My work → Health tests</em>: each test has a name, how many days apart it's due, and what it usually costs. Everyone starts with weekly, monthly and yearly, and you can rename them, change how often, add others (like "Quarterly bloodwork" every 90 days) or switch off what you don't use. Sworkr works out when the next one is due from the last, and shows it on the dashboard before then. A test's cost fills in when you add it to the calendar and is logged as an expense.</p>
 
 <h2>Documents that expire</h2>
-<p><em>Account → My work → Licenses &amp; documents</em>: a license, work card, ID, passport, health card, a platform's ID check, insurance. Each gets a reminder before it runs out, and shows on the calendar. Sworkr keeps names and dates only: <strong>there's no field for ID or license numbers, on purpose.</strong></p>
+<p><em>Settings → My work → Licenses &amp; documents</em>: a license, work card, ID, passport, health card, a platform's ID check, insurance. Each gets a reminder before it runs out, and shows on the calendar. Sworkr keeps names and dates only: <strong>there's no field for ID or license numbers, on purpose.</strong></p>
 
 <h2>Safety check-in</h2>
-<p><em>Account → Health &amp; safety</em> sets up a trusted contact. Tick <em>Safety check-in</em> on a booking; if you haven't checked in afterwards (within the grace time you set), your contact is emailed what you chose to share. This needs email set up under <em>Connections</em>.</p>
+<p><em>Settings → Health &amp; safety</em> sets up a trusted contact. Tick <em>Safety check-in</em> on a booking; if you haven't checked in afterwards (within the grace time you set), your contact is emailed what you chose to share. This needs email set up under <em>Connections</em>.</p>
 
 <h2>Period tracker, birth control and regular meds</h2>
 <p>Optional, off until you turn them on. Dates show on the calendar, and medication marked discreet shows only as "Health".</p>
 """),
 
 ("notifications", "Notifications", "Notifications", """
-<p>Sworkr can send a message to your phone when it isn't open, using <strong>ntfy</strong>, a free app for iPhone and Android. Nothing is sent unless you turn it on. Set it up under <em>Account → Reminders → Phone notifications</em>.</p>
+<p>Sworkr can send a message to your phone when it isn't open, using <strong>ntfy</strong>, a free app for iPhone and Android. Nothing is sent unless you turn it on. Set it up under <em>Settings → Reminders → Phone notifications</em>.</p>
 
 <h2>What you get</h2>
 <ul>
