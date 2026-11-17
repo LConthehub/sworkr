@@ -9,14 +9,14 @@ Ideas and decisions, so nothing is lost between work sessions. Newest decisions 
 - Publicly, say "fan sites" or "OF", never the full platform name.
 - Docker is the preferred install on Windows, Mac and Linux. No separate standalone Mac app.
 
-## Docker install (decided 2026-11-16, not done yet)
+## Docker install (decided 2026-11-16; one container + port 8008 done, image publishing waits on GitHub)
 - One `docker-compose.yml` for users (simple), `restart: unless-stopped`.
 - Default port **8008**.
 - Publish a prebuilt image (e.g. on GitHub Container Registry) so install is a `docker compose up -d` or a
   `docker run` with no building. Update the setup builder (site/setup.js) and docs to match.
 - Make Docker the main download on sworkr.com for every system.
 
-## Licence
+## License
 - Business Source License 1.1 (LICENSE): free for individual workers and groups of up to 5 workers;
   companies (agencies, brothels, clubs, platforms, hosts) need a commercial licence; each version becomes
   AGPL-3.0 four years after release. Have a lawyer check the wording before launch.
@@ -27,6 +27,8 @@ Ideas and decisions, so nothing is lost between work sessions. Newest decisions 
   VIP share, tip-outs, fines, a shift statement. Ideas for later: quotas/minimums, stage-set fees,
   pay-period summaries for employees (wage vs tips), different rules on different nights.
 - Public wording: OF / fan sites only.
+- One-container Docker install (Dockerfile + docker-compose.yml, port 8008); image workflow in .github/.
+- Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Next
 - Tour pack lists from templates, with a budget against actual spending.
@@ -38,7 +40,6 @@ Ideas and decisions, so nothing is lost between work sessions. Newest decisions 
 - Wipe everything: password, type a phrase, 10-second countdown you can cancel.
 - Automatic off-site backups (Nextcloud, Synology, WebDAV).
 - Bad-date list export (import exists). No sharing between workers (legal risk).
-- Meds: injection site rotation and dose titration (GLP-1, hormones, testosterone, estradiol), with a log.
 - Website review page by page with the owner (home page: questions pending).
 
 ## Bigger ideas
