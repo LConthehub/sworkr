@@ -1,6 +1,6 @@
 # Sworkr: start here
 
-Sworkr is a private manager for independent work: clients, screening and inquiries, a calendar, money, rates and
+Sworkr is a private manager for s work: clients, screening and inquiries, a calendar, money, rates and
 taxes, content and ad planning, custom orders, health tests on your own schedule, and a safety check-in. This copy runs on your own computer. Nothing is sent anywhere, and nobody else has an
 account on it, including whoever gave you this copy.
 
