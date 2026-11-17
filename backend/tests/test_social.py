@@ -216,3 +216,74 @@ def test_accounts_are_private(api, admin, net):
     assert all(x["id"] != a["id"] for x in ok(admin.get("/api/social/accounts")))
     p = post(admin, caption="hi")
     assert admin.post(f"/api/posts/{p['id']}/publish", json={"account_id": a["id"]}).status_code == 404
+
+
+# ---------- pictures, alt text, Reddit galleries, failure pushes ----------
+
+class Pictures(Net):
+    def __call__(self, req):
+        host, path = req.url.host, req.url.path
+        if host == "oauth.reddit.com" and path == "/api/media/asset.json":
+            self.seen.append(req)
+            return httpx.Response(200, json={"args": {"action": "//uploads.reddit.example", "fields": [{"name": "key", "value": "k1"}]},
+                                             "asset": {"asset_id": "media1"}})
+        if host == "uploads.reddit.example":
+            self.seen.append(req)
+            return httpx.Response(201)
+        if host == "oauth.reddit.com" and path == "/api/submit_gallery_post.json":
+            self.seen.append(req)
+            return httpx.Response(200, json={"json": {"errors": [], "data": {"id": "t3_g1", "url": "https://www.reddit.com/gallery/g1"}}})
+        if host == "masto.example" and path == "/api/v2/media":
+            self.seen.append(req)
+            return httpx.Response(200, json={"id": "m1"})
+        return super().__call__(req)
+
+
+@pytest.fixture
+def pictures(api, monkeypatch, tmp_path):
+    os.makedirs(tmp_path / "Content" / "Set")
+    (tmp_path / "Content" / "Set" / "01.png").write_bytes(b"\x89PNG fake picture")
+    monkeypatch.setattr(content, "CONTENT_ROOT", str(tmp_path))
+    ok(api.put("/api/content/settings", json={"kind": "folder", "folder": "Content"}))
+    n = Pictures()
+    monkeypatch.setattr(social, "TRANSPORT", httpx.MockTransport(n))
+    return n
+
+
+def test_alt_text_is_kept_with_the_post_and_sent(api, pictures):
+    p = post(api, caption="New set", file_paths=["Set/01.png"],
+             alt_text={"Set/01.png": "Me in red lace by a window", "Set/not-attached.png": "dropped"})
+    assert p["alt_text"] == {"Set/01.png": "Me in red lace by a window"}
+    a = bluesky(api)
+    ok(api.post(f"/api/posts/{p['id']}/publish", json={"account_id": a["id"]}))
+    record = json.loads(next(r for r in pictures.seen if r.url.path.endswith("createRecord")).content)["record"]
+    assert record["embed"]["images"][0]["alt"] == "Me in red lace by a window"
+    m = ok(api.post("/api/social/accounts", json={"network": "mastodon", "server": "masto.example", "token": "t"}), 201)
+    p2 = post(api, platform="Mastodon", caption="Hi", file_paths=["Set/01.png"], alt_text={"Set/01.png": "A window"})
+    ok(api.post(f"/api/posts/{p2['id']}/publish", json={"account_id": m["id"]}))
+    upload = next(r for r in pictures.seen if r.url.path == "/api/v2/media")
+    assert b'name="description"' in upload.content and b"A window" in upload.content
+
+
+def test_pictures_go_to_reddit_as_a_gallery(api, pictures):
+    a = ok(api.post("/api/social/accounts", json={"network": "reddit", "handle": "me", "password": "pw",
+                                                  "client_id": "cid", "client_secret": "cs", "label": "porn"}), 201)
+    p = post(api, platform="Reddit", place="r/example", caption="Visiting Chicago", file_paths=["Set/01.png"])
+    done = ok(api.post(f"/api/posts/{p['id']}/publish", json={"account_id": a["id"]}))
+    assert done["post_url"] == "https://www.reddit.com/gallery/g1" and done["remote_id"] == "t3_g1"
+    upload = next(r for r in pictures.seen if r.url.host == "uploads.reddit.example")
+    assert upload.url.scheme == "https" and b'name="key"' in upload.content and b"fake picture" in upload.content
+    sent = json.loads(next(r for r in pictures.seen if r.url.path.endswith("submit_gallery_post.json")).content)
+    assert sent["items"][0]["media_id"] == "media1" and sent["nsfw"] is True and sent["sr"] == "example"
+
+
+def test_a_failed_auto_post_sends_a_discreet_push(api, net, monkeypatch):
+    import ntfy
+    sent = []
+    monkeypatch.setattr(ntfy, "publish", lambda s, title, message, **kw: sent.append((title, message)))
+    ok(api.put("/api/ntfy/settings", json={"enabled": True, "server": "https://ntfy.example", "topic": "sw-test-topic-123"}))
+    a = bluesky(api)
+    bad = post(api, caption="z" * 400, scheduled_at="2020-01-01T09:00:00Z", status="scheduled")
+    ok(api.post(f"/api/posts/{bad['id']}/publish", json={"account_id": a["id"], "when": "scheduled"}))
+    social.run_due(main.get_db)
+    assert sent == [("Something needs a look", "Open sworkr when you can.")]     # no details unless asked for

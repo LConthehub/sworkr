@@ -24,6 +24,7 @@ const STATUS = {
   posted: { label: 'Posted', badge: 'bg-emerald-100 text-emerald-700' },
   skipped: { label: 'Skipped', badge: 'bg-gray-100 text-gray-400 line-through' },
 };
+const isPicture = (path) => /\.(jpe?g|png|webp|gif)$/i.test(path);
 const thumbUrl = (path, size = 256) => `/api/content/thumbnail?path=${encodeURIComponent(path)}&size=${size}`;
 const whenText = (iso) => (iso ? `${dayLabel(new Date(iso), { weekday: 'short', month: 'short', day: 'numeric' })}, ${formatTime(new Date(iso))}` : 'No time set');
 
@@ -336,6 +337,7 @@ export function PostForm({ post, onDone }) {
   const placesFor = (platform) => places.filter((x) => !x.archived && x.platform.toLowerCase() === platform.trim().toLowerCase());
   const savedPlace = placesFor(form.platform).find((x) => x.name.toLowerCase() === form.place.trim().toLowerCase());
   const [files, setFiles] = useState(post.file_paths || []);
+  const [alt, setAlt] = useState(post.alt_text || {}); // a description of each picture, by path
   const [setPath] = useState(post.set_path || null);
   const [error, setError] = useState('');
   const [warnings, setWarnings] = useState(null);
@@ -350,7 +352,7 @@ export function PostForm({ post, onDone }) {
       platform: form.platform.trim(), account: form.account.trim() || null, status: form.status,
       persona_id: form.persona_id ? Number(form.persona_id) : null,
       scheduled_at: when ? when.toISOString() : null, caption: form.caption, price: form.price === '' ? null : Number(form.price),
-      set_path: setPath, file_paths: files, notes: form.notes, post_url: form.post_url.trim() || null,
+      set_path: setPath, file_paths: files, alt_text: Object.fromEntries(files.filter((f) => alt[f]?.trim()).map((f) => [f, alt[f].trim()])), notes: form.notes, post_url: form.post_url.trim() || null,
       posted_at: post.posted_at || null,
       campaign_id: form.campaign_id ? Number(form.campaign_id) : null, place: form.place.trim() || null,
       inquiries: form.inquiries === '' ? null : Number(form.inquiries),
@@ -503,6 +505,21 @@ export function PostForm({ post, onDone }) {
               </li>
             ))}
           </ul>
+        )}
+        {files.some(isPicture) && (
+          <details className="mt-2" open={files.some((f) => alt[f])}>
+            <summary className="text-xs text-gray-500 cursor-pointer">Describe the pictures (alt text)</summary>
+            <p className="text-xs text-gray-400 mt-1">Read out by screen readers. Sent to Bluesky, Mastodon and Reddit when sworkr posts.</p>
+            <ul className="mt-2 space-y-2">
+              {files.filter(isPicture).map((f) => (
+                <li key={f} className="flex items-center gap-2">
+                  <img src={thumbUrl(f, 64)} alt="" className="w-8 h-8 rounded object-cover bg-gray-100 shrink-0" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                  <input value={alt[f] || ''} onChange={(e) => setAlt({ ...alt, [f]: e.target.value })} maxLength={1000}
+                    placeholder="What it shows" aria-label={`Describe ${f}`} className={inputClass} />
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
       </div>
       {(form.status === 'posted' || form.post_url || form.inquiries !== '') && (

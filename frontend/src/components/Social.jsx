@@ -12,7 +12,7 @@ const LABELS = {
 const HELP = {
   bluesky: 'Make an app password in Bluesky: Settings → Privacy and security → App passwords. Not your main password.',
   mastodon: 'On your server: Preferences → Development → New application. Tick read:statuses, write:statuses and write:media, then copy "Your access token".',
-  reddit: 'Make your own app at reddit.com/prefs/apps: choose "script", any redirect address (like http://localhost). The id is under the app\'s name. Text posts only for now.',
+  reddit: 'Make your own app at reddit.com/prefs/apps: choose "script", any redirect address (like http://localhost). The id is under the app\'s name. Pictures go up as a gallery.',
 };
 
 // One fetch shared by every post on the page (a list can show dozens).

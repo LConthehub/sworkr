@@ -150,12 +150,12 @@ class Bluesky:
             record["facets"] = facets
         if images:
             embedded = []
-            for name, data, mime in images:
+            for name, data, mime, alt in images:
                 if len(data) > BLUESKY_MAX_IMAGE:
                     raise SocialError(f"{name} is too big for Bluesky (the limit is about 1 MB); post a smaller copy")
                 blob = _check(self.http.post(f"{self.server}/xrpc/com.atproto.repo.uploadBlob", content=data,
                                              headers={**self._auth(), "Content-Type": mime}), "Bluesky picture upload")
-                embedded.append({"alt": "", "image": blob["blob"]})
+                embedded.append({"alt": alt[:2000], "image": blob["blob"]})
             record["embed"] = {"$type": "app.bsky.embed.images", "images": embedded}
         if label in ("suggestive", "nudity", "porn"):
             record["labels"] = {"$type": "com.atproto.label.defs#selfLabels",
@@ -195,8 +195,9 @@ class Mastodon:
         if len(text) > self.LIMIT:
             raise SocialError(f"Mastodon posts are usually up to {self.LIMIT} characters; this one is {len(text)}")
         media = []
-        for name, data, mime in images:
-            m = _check(self.http.post(f"{self.server}/api/v2/media", files={"file": (name, data, mime)}),
+        for name, data, mime, alt in images:
+            m = _check(self.http.post(f"{self.server}/api/v2/media", files={"file": (name, data, mime)},
+                                      data={"description": alt[:1500]} if alt else None),
                        "Mastodon picture upload")
             media.append(m["id"])
         form = {"status": text, "media_ids[]": media, "sensitive": "true" if label != "none" else "false"}
@@ -242,18 +243,46 @@ class Reddit:
             self.login()
         return {"Authorization": f"bearer {self.token}"}
 
+    def _upload(self, name: str, data: bytes, mime: str) -> str:
+        """Reddit takes pictures in two steps: ask for an upload slot, then send the file to it."""
+        lease = _check(self.http.post("https://oauth.reddit.com/api/media/asset.json", headers=self._auth(),
+                                      data={"filepath": name, "mimetype": mime}), "Reddit picture upload")
+        args = lease.get("args") or {}
+        action = args.get("action") or ""
+        if action.startswith("//"):
+            action = "https:" + action
+        if not action.startswith("https://"):
+            raise SocialError("Reddit picture upload: Reddit sent an upload address sworkr doesn't understand")
+        fields = {f["name"]: f["value"] for f in args.get("fields", [])}
+        r = self.http.post(action, data=fields, files={"file": (name, data, mime)})
+        if r.status_code >= 300:
+            raise SocialError(f"Reddit picture upload: the upload was refused ({r.status_code})")
+        return lease["asset"]["asset_id"]
+
     def post(self, text: str, images: List[tuple], label: str, subreddit: Optional[str]) -> dict:
-        if images:
-            raise SocialError("Posting pictures to Reddit isn't built in yet: post this one on Reddit yourself")
         sr = (subreddit or "").strip().removeprefix("r/").removeprefix("/r/").strip("/")
         if not re.fullmatch(r"[A-Za-z0-9_]{2,21}", sr):
             raise SocialError("Put the subreddit in the post's \"where\" field (like r/example)")
         title, _, body = text.strip().partition("\n")
         if not title.strip():
             raise SocialError("The first line of the caption is the Reddit title, and it's empty")
+        nsfw = label in ("nudity", "porn")
+        if images:
+            items = [{"media_id": self._upload(name, data, mime), "caption": alt[:180], "outbound_url": ""}
+                     for name, data, mime, alt in images]
+            data = _check(self.http.post("https://oauth.reddit.com/api/submit_gallery_post.json", headers=self._auth(), json={
+                "sr": sr, "title": title.strip()[:300], "items": items, "nsfw": nsfw, "spoiler": False,
+                "sendreplies": True, "api_type": "json", "show_error_list": True, "validate_on_submit": True,
+                "text": body.strip()}), "Reddit post")
+            errors = data.get("json", {}).get("errors") or []
+            if errors:
+                raise SocialError("Reddit said: " + "; ".join(str(e) for e in errors)[:300])
+            d = data["json"]["data"]
+            rid = d.get("id") or ""
+            return {"remote_id": rid if rid.startswith("t3_") else (f"t3_{rid}" if rid else None), "url": d.get("url")}
         data = _check(self.http.post("https://oauth.reddit.com/api/submit", headers=self._auth(), data={
             "sr": sr, "kind": "self", "title": title.strip()[:300], "text": body.strip(),
-            "nsfw": "true" if label in ("nudity", "porn") else "false", "api_type": "json"}), "Reddit post")
+            "nsfw": "true" if nsfw else "false", "api_type": "json"}), "Reddit post")
         errors = data.get("json", {}).get("errors") or []
         if errors:
             raise SocialError("Reddit said: " + "; ".join(" ".join(str(x) for x in e[1:2]) for e in errors))
@@ -422,7 +451,7 @@ def _images(library, post: dict) -> List[tuple]:
     out = []
     for p in paths:
         try:
-            out.append((p.rsplit("/", 1)[-1], library.read(p), mimetypes.guess_type(p)[0]))
+            out.append((p.rsplit("/", 1)[-1], library.read(p), mimetypes.guess_type(p)[0], (post.get("alt_text") or {}).get(p, "")))
         except content.LibraryError as e:
             raise SocialError(f"Couldn't read {p} from the library: {e}")
     return out
@@ -535,13 +564,30 @@ def run_due(get_db: Callable, now: Optional[datetime] = None) -> int:
                 reason = e.detail if isinstance(e, HTTPException) else str(e)
                 db.execute("UPDATE posts SET auto_post = 0, post_error = ? WHERE id = ?", (str(reason)[:500], p["id"]))
                 db.commit()
+                tell_failed(db, p["owner_id"], str(reason))
             except Exception:
                 log.exception("Auto-post %s failed", p["id"])
                 db.execute("UPDATE posts SET auto_post = 0, post_error = 'Something went wrong posting it' WHERE id = ?", (p["id"],))
                 db.commit()
+                tell_failed(db, p["owner_id"], "Something went wrong posting it")
     finally:
         db.close()
     return done
+
+
+def tell_failed(db, owner: int, reason: str):
+    """A push through the person's ntfy, if they set it up. Discreet unless they chose to show details."""
+    import ntfy
+    try:
+        s = ntfy.load_settings(db, owner)
+        if not s["enabled"] or not s["topic"]:
+            return
+        if s["details"]:
+            ntfy.publish(s, "A scheduled post didn't go out", f"{reason[:300]} It's back in your plan to post by hand.", tags=["warning"])
+        else:
+            ntfy.publish(s, "Something needs a look", "Open sworkr when you can.", tags=["warning"])
+    except Exception:
+        log.warning("Couldn't send the ntfy push for a failed post", exc_info=True)
 
 
 def _worker():

@@ -37,6 +37,9 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - GitHub: user will link the account; scan history for secrets before the first public push.
 
 ## Done recently
+- Social extras: alt text for each picture (Bluesky, Mastodon, Reddit), pictures on Reddit as a gallery,
+  an ntfy push when a scheduled post fails (discreet unless details are on). The Reddit gallery path is
+  tested against a pretend Reddit only: check it with a real post.
 - Erase everything now ends with a 10-second countdown and a big Stop button (after password + typing ERASE).
 - Bad-date list: download your list as CSV (reads back in through the import); for your own use, not sharing.
 - Discreet receipts (2026-11-16): your name and wording, numbered R-2026-001, saved as issued, print or PDF;
@@ -59,7 +62,6 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Next
-- Social, later: pictures on Reddit; alt text for pictures; reminders when an auto-post fails (ntfy).
 - Website review page by page with the owner (home page done 2026-11-16; next: the docs pages).
 
 ## Bigger ideas

@@ -619,6 +619,7 @@ class PostIn(BaseModel):
     place: Optional[str] = None           # where on the platform: a subreddit, a channel, a group
     inquiries: Optional[int] = None       # how many inquiries or sales it brought, once you know
     also: List["PostTarget"] = []         # the same post on other platforms: one more row each (new posts only)
+    alt_text: Dict[str, str] = {}         # a description of each picture, by its path (sent where the network takes it)
 
 
 class PostTarget(BaseModel):
@@ -660,6 +661,8 @@ def _check_post(body: PostIn):
     body.place = (body.place or "").strip()[:120] or None
     body.set_path = clean_path(body.set_path) or None
     body.file_paths = list(dict.fromkeys(clean_path(p) for p in body.file_paths if p))
+    body.alt_text = {clean_path(k): v.strip()[:1000] for k, v in body.alt_text.items()
+                     if k and (v or "").strip() and clean_path(k) in body.file_paths}
     if body.status == "posted" and body.posted_at is None:
         body.posted_at = datetime.now(timezone.utc)
 
@@ -667,7 +670,12 @@ def _check_post(body: PostIn):
 def _post_row(r) -> dict:
     d = dict(r)
     d["file_paths"] = json.loads(d["file_paths"] or "[]")
+    d["alt_text"] = json.loads(d.get("alt_text") or "{}")
     return d
+
+
+def _save_alt(db, post_id: int, body: PostIn):
+    db.execute("UPDATE posts SET alt_text = ? WHERE id = ?", (json.dumps(body.alt_text) if body.alt_text else None, post_id))
 
 
 def get_post(db, post_id: int, owner_id: int) -> Optional[dict]:
@@ -771,6 +779,7 @@ def create_post(body: PostIn, request: Request):
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (*_values(version, when), series if version is body else None, owner, now, now))
                 ids.append(cur.lastrowid)
+                _save_alt(db, cur.lastrowid, version)
                 personas.assign(db, "posts", cur.lastrowid, owner, body)
         db.commit()
         _queue_sync(ids, owner)
@@ -794,6 +803,7 @@ def update_post(post_id: int, body: PostIn, request: Request):
                    file_paths = ?, posted_at = ?, post_url = ?, notes = ?, campaign_id = ?, place = ?, inquiries = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (*_values(body, body.scheduled_at), _now(), post_id, owner))
+        _save_alt(db, post_id, body)
         personas.assign(db, "posts", post_id, owner, body)
         db.commit()
         _queue_sync([post_id], owner)

@@ -1518,6 +1518,11 @@ def _m44_receipts(conn):
     conn.execute("CREATE INDEX idx_receipts_appt ON receipts(appointment_id)")
 
 
+def _m45_post_alt_text(conn):
+    """A description of each picture in a post (alt text), as JSON: {"path": "what it shows"}."""
+    conn.execute("ALTER TABLE posts ADD COLUMN alt_text TEXT")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1563,6 +1568,7 @@ MIGRATIONS = [
     (42, "tour meals and snacks", _m42_tour_meals, False),
     (43, "social accounts, auto-posting and post numbers", _m43_social, False),
     (44, "discreet receipts", _m44_receipts, False),
+    (45, "alt text for post pictures", _m45_post_alt_text, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 
