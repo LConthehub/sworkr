@@ -43,7 +43,7 @@ export function Campaigns({ version, onPlan }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
         <h2 className="font-semibold text-gray-800">Campaigns</h2>
         <button onClick={() => setEditing({})} className="px-4 py-2 rounded-full text-sm font-medium bg-sworkr-500 text-white hover:bg-sworkr-600">+ New campaign</button>
@@ -202,7 +202,7 @@ export function Toolkit({ platforms }) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
           <h2 className="font-semibold text-gray-800">Your platforms</h2>
           <button onClick={() => setPlace({})} className={buttonClass}>+ Add a platform</button>
@@ -241,7 +241,7 @@ export function Toolkit({ platforms }) {
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
           <h2 className="font-semibold text-gray-800">Saved text</h2>
           <button onClick={() => setSnippet({})} className={buttonClass}>+ Add text</button>
@@ -255,7 +255,7 @@ export function Toolkit({ platforms }) {
                   <span className="font-medium text-gray-800">{s.label}</span>
                   <span className="block text-sm text-gray-600 whitespace-pre-wrap line-clamp-3">{s.body}</span>
                 </button>
-                <button onClick={() => copy(s)} className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">{copied === s.id ? 'Copied ✓' : 'Copy'}</button>
+                <button onClick={() => copy(s)} className="text-xs px-2.5 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50">{copied === s.id ? 'Copied ✓' : 'Copy'}</button>
               </li>
             ))}
           </ul>

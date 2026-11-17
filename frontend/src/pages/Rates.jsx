@@ -41,7 +41,7 @@ export default function Rates() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
           <h2 className="text-xl font-bold text-gray-800">Your rates</h2>
           <button onClick={() => setEditing({})} className="px-4 py-2 rounded-full text-sm font-medium bg-sworkr-500 text-white hover:bg-sworkr-600">+ Add a rate</button>
@@ -79,7 +79,7 @@ export default function Rates() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2 items-start">
-        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
           <h3 className="font-semibold text-gray-800">Deposits to collect</h3>
           {!deposits ? null : deposits.deposit_percent === 0 ? (
             <p className="text-sm text-gray-500 mt-1">
@@ -108,7 +108,7 @@ export default function Rates() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
           <h3 className="font-semibold text-gray-800">On an old rate</h3>
           <p className="text-xs text-gray-500 mb-2">Clients whose last booking cost less than your card says now. Worth knowing before you tell regulars about a new price.</p>
           {behind.length === 0 ? <p className="text-sm text-gray-400 py-2">Nobody: everyone's last booking was at your current rate, or isn't on the card.</p> : (
@@ -192,7 +192,7 @@ export function DepositsDue() {
   useEffect(() => { axios.get('/api/rates/deposits').then(({ data: d }) => setData(d)).catch(() => {}); }, []);
   if (!data || data.to_collect.length === 0) return null;
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
+    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-gray-800">Deposits to collect</h2>
         <Link to="/money/rates" className="text-sm text-sworkr-600 hover:text-sworkr-800">Rates →</Link>
@@ -235,7 +235,7 @@ function TagPricing({ onChanged }) {
   };
   const describe = (x) => (x.kind === 'locked' ? 'Locked-in rate: keeps paying what they last paid' : x.kind === 'percent' ? `${x.value}% off` : `${money(x.value)} off`);
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
       <h3 className="font-semibold text-gray-800">Prices by tag</h3>
       <p className="text-xs text-gray-500 mb-2">
         Give a contact tag its own price rule, such as 10% off for #regular, or a locked-in rate for clients you've promised the old price.

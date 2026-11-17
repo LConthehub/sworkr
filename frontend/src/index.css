@@ -2,8 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* The same look as sworkr.com (site/style.css): white and blush with a soft pink glow, plum ink. */
 body {
   min-height: 100vh;
-  background: linear-gradient(135deg, #fc4c9c 0%, #e67eb6 50%, #a73178 100%);
+  color: #2b2230;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  background: radial-gradient(120% 70% at 85% 0%, #ffd2e6 0%, transparent 55%),
+              linear-gradient(170deg, #fff3f8, #ffffff 70%);
   background-attachment: fixed;
 }

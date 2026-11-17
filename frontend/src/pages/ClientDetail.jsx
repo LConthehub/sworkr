@@ -67,7 +67,7 @@ export default function ClientDetail() {
 
   if (error) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-6">
+      <div className="bg-white rounded-2xl border border-line shadow-sm p-6">
         <p className="text-gray-700">{error}</p>
         <Link to="/contacts" className="inline-block mt-3 text-sm text-sworkr-600 hover:text-sworkr-800">← All contacts</Link>
       </div>
@@ -88,18 +88,18 @@ export default function ClientDetail() {
 
   return (
     <div className="space-y-4">
-      <Link to="/contacts" className="inline-block text-sm text-white/90 hover:text-white">← All contacts</Link>
+      <Link to="/contacts" className="inline-block text-sm text-muted hover:text-sworkr-600">← All contacts</Link>
       <BadDateWarning key={client.updated_at} clientId={client.id} />
       {client.role === 'client' && <Arrangement clientId={client.id} onChanged={load} />}
 
       {client.do_not_see && (
         <div className="rounded-2xl bg-red-600 text-white px-5 py-4 shadow-lg" role="alert">
           <p className="font-bold">Do not see</p>
-          <p className="text-sm text-white/90">{client.do_not_see_reason || 'This client is flagged. No reason was recorded.'}</p>
+          <p className="text-sm text-muted">{client.do_not_see_reason || 'This client is flagged. No reason was recorded.'}</p>
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6">
+      <div className="bg-white rounded-2xl border border-line shadow-sm p-5 sm:p-6">
         <div className="flex flex-wrap items-start gap-4">
           <div className="w-14 h-14 shrink-0 rounded-xl flex items-center justify-center font-bold text-white text-2xl" style={{ background: colorFor(client.display_name) }}>
             {client.display_name.replace(/^@/, '').charAt(0).toUpperCase()}
@@ -171,7 +171,7 @@ export default function ClientDetail() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px] items-start">
-        <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6">
+        <div className="bg-white rounded-2xl border border-line shadow-sm p-5 sm:p-6">
           <h2 className="font-semibold text-gray-800 mb-3">Appointments</h2>
           {appointments.length === 0 && <p className="text-sm text-gray-400">No appointments yet.</p>}
           {upcoming.length > 0 && (
@@ -192,7 +192,7 @@ export default function ClientDetail() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-5">
+        <div className="bg-white rounded-2xl border border-line shadow-sm p-5">
           <h2 className="font-semibold text-gray-800 mb-3">Notes</h2>
           <form onSubmit={addNote} className="mb-4">
             <textarea

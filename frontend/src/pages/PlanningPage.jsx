@@ -10,7 +10,7 @@ export default function PlanningPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-white">Calendar</h1>
+        <h1 className="text-xl font-bold text-night tracking-tight">Calendar</h1>
         <CalendarSwitch current={tab} />
       </div>
       {tab === 'posts' ? <PostsPage /> : <Shoots />}

@@ -47,7 +47,7 @@ export default function Goals() {
   };
 
   if (!goals) {
-    return <div className="bg-white rounded-2xl shadow-lg p-6 text-sm text-gray-400">{error || 'Loading…'}</div>;
+    return <div className="bg-white rounded-2xl border border-line shadow-sm p-6 text-sm text-gray-400">{error || 'Loading…'}</div>;
   }
   const active = goals.filter((g) => !g.archived);
   const archived = goals.filter((g) => g.archived);
@@ -57,7 +57,7 @@ export default function Goals() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold text-gray-800">Savings goals</h2>
@@ -76,7 +76,7 @@ export default function Goals() {
       {!hasTaxGoal && <TaxPrompt onCreated={load} />}
 
       {active.length === 0 && hasTaxGoal && (
-        <p className="text-center text-white/90 text-sm py-6">No goals yet. Add one for an emergency fund, a move, new gear, or retirement.</p>
+        <p className="text-center text-muted text-sm py-6">No goals yet. Add one for an emergency fund, a move, new gear, or retirement.</p>
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -88,7 +88,7 @@ export default function Goals() {
 
       {archived.length > 0 && (
         <div>
-          <button onClick={() => setShowArchived(!showArchived)} className="text-sm text-white/90 hover:text-white">
+          <button onClick={() => setShowArchived(!showArchived)} className="text-sm text-muted hover:text-sworkr-600">
             {showArchived ? 'Hide' : 'Show'} {archived.length} archived goal{archived.length === 1 ? '' : 's'}
           </button>
           {showArchived && (
@@ -126,7 +126,7 @@ function GoalCard({ goal: g, onEdit, onEntry, onSetAside, onChanged }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+    <div className="bg-white rounded-2xl border border-line shadow-sm overflow-hidden">
       <div className="h-1.5" style={{ background: color }} />
       <div className="p-4 sm:p-5 space-y-3">
         <div className="flex items-start justify-between gap-3">
@@ -170,7 +170,7 @@ function GoalCard({ goal: g, onEdit, onEntry, onSetAside, onChanged }) {
             {g.suggested > 0 ? (
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 <span className="text-amber-800">Set aside <strong>{money(g.suggested, g.currency)}</strong> to catch up</span>
-                <button onClick={onSetAside} className="ml-auto text-xs px-3 py-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 font-medium">
+                <button onClick={onSetAside} className="ml-auto text-xs px-3 py-1.5 rounded-full bg-amber-500 text-white hover:bg-amber-600 font-medium">
                   I've set it aside
                 </button>
               </div>
@@ -220,7 +220,7 @@ function TaxPrompt({ onCreated }) {
     }
   };
   return (
-    <form onSubmit={create} className="bg-white rounded-2xl shadow-lg p-4 sm:p-5 border-l-4 border-indigo-500">
+    <form onSubmit={create} className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5 border-l-4 border-indigo-500">
       <h2 className="font-semibold text-gray-800">Set money aside for taxes?</h2>
       <p className="text-sm text-gray-500 mt-1">
         Choose a share of everything you receive to put aside. sworkr will work out how much that is and remind you.

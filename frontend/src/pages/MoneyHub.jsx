@@ -29,15 +29,15 @@ export default function MoneyHub() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-white">Money</h1>
-        <nav className="flex gap-1 overflow-x-auto rounded-full bg-white/20 p-1 backdrop-blur-sm" aria-label="Money">
+        <h1 className="text-xl font-bold text-night tracking-tight">Money</h1>
+        <nav className="flex gap-1 overflow-x-auto rounded-full bg-white/90 border border-line p-1 backdrop-blur-sm" aria-label="Money">
           {TABS.map((t) => (
             <NavLink
               key={t.id}
               to={t.to}
               end
               className={({ isActive }) => `whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                isActive ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'
+                isActive ? 'bg-sworkr-600 text-white shadow-sm' : 'text-muted hover:text-sworkr-600 hover:bg-blush'
               }`}
             >
               {t.label}

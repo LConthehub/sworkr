@@ -38,11 +38,11 @@ export default function Splits() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  if (!partners) return <div className="bg-white rounded-2xl shadow-lg p-6 text-sm text-gray-400">{error || 'Loading…'}</div>;
+  if (!partners) return <div className="bg-white rounded-2xl border border-line shadow-sm p-6 text-sm text-gray-400">{error || 'Loading…'}</div>;
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
           <h2 className="text-xl font-bold text-gray-800">Splits with collaborators</h2>
           <button onClick={() => setModal('partner')} className="px-4 py-2 rounded-full text-sm font-medium bg-sworkr-500 text-white hover:bg-sworkr-600">+ Add a collaborator</button>
@@ -73,7 +73,7 @@ export default function Splits() {
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
           <h2 className="font-semibold text-gray-800">Split agreements</h2>
           <button onClick={() => setModal({ agreement: null })} disabled={partners.length === 0} className="text-sm text-sworkr-600 hover:text-sworkr-800 disabled:opacity-40">+ New agreement</button>

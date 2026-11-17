@@ -241,17 +241,17 @@ export default function AppointmentCalendar() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-white">Calendar</h1>
+        <h1 className="text-xl font-bold text-night tracking-tight">Calendar</h1>
         <CalendarSwitch current="calendar" />
       </div>
-      <div className="bg-white rounded-2xl shadow-lg p-3 sm:p-5">
+      <div className="bg-white rounded-2xl border border-line shadow-sm p-3 sm:p-5">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-1 sm:gap-2">
-            <button onClick={() => step(-1)} className="w-9 h-9 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Earlier">←</button>
+            <button onClick={() => step(-1)} className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600" aria-label="Earlier">←</button>
             <h2 className="text-base sm:text-xl font-bold text-gray-800 sm:min-w-52 text-center">{title}</h2>
-            <button onClick={() => step(1)} className="w-9 h-9 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Later">→</button>
-            <button onClick={() => setCursor(startOfDay(today))} className="ml-1 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Today</button>
+            <button onClick={() => step(1)} className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600" aria-label="Later">→</button>
+            <button onClick={() => setCursor(startOfDay(today))} className="ml-1 px-3 py-1.5 rounded-full border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Today</button>
             {loading && <span className="w-4 h-4 animate-spin border-2 rounded-full border-sworkr-500/20 border-t-sworkr-500" role="status" aria-label="Loading" />}
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -333,7 +333,7 @@ export default function AppointmentCalendar() {
       <div className={`grid gap-4 items-start ${shownView === 'month' || shownView === 'day' ? 'lg:grid-cols-[1fr_340px]' : ''}`}>
       {/* The chosen day, in full (month and day views) */}
       {(shownView === 'month' || shownView === 'day') && (
-        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
+        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="flex items-center gap-2 font-semibold text-gray-800">{dayLabel(cursor)}
               {cycle[toKey(cursor)] && <span className="flex items-center gap-1 text-xs font-normal text-gray-500"><CycleDot kind={cycle[toKey(cursor)]} />{CYCLE_LABELS[cycle[toKey(cursor)]]}</span>}
@@ -811,7 +811,7 @@ function CancelChooser({ appointment: a, onCancel, onClose }) {
       <div className="flex gap-2">
         <button type="button" disabled={!reason} onClick={() => onCancel({ cancel_reason: reason, ...(charged ? { cancellation_fee: fee === '' ? 0 : Number(fee) } : {}) })}
           className="text-xs px-2.5 py-1.5 rounded-lg bg-red-600 text-white disabled:opacity-40">Cancel booking</button>
-        <button type="button" onClick={onClose} className="text-xs px-2.5 py-1.5 rounded-lg text-gray-600 hover:bg-white">Keep it</button>
+        <button type="button" onClick={onClose} className="text-xs px-2.5 py-1.5 rounded-full text-gray-600 hover:bg-white">Keep it</button>
       </div>
     </div>
   );

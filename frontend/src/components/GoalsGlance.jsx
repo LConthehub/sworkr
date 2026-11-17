@@ -12,7 +12,7 @@ export default function GoalsGlance({ version }) {
   if (!goals) return null;
   const toSetAside = goals.reduce((sum, g) => sum + (g.suggested || 0), 0);
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="font-semibold text-gray-800">Savings goals</h2>
         <Link to="/money/goals" className="text-sm text-sworkr-600 hover:text-sworkr-800">

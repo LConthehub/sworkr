@@ -12,9 +12,9 @@ import { WorkTypesFirstRun } from './components/WorkTypes';
 import { clearCaches, setDemoMode } from './api';
 
 const navClass = ({ isActive }) =>
-  `transition-colors ${isActive ? 'text-white font-semibold' : 'text-white/80 hover:text-white'}`;
+  `transition-colors ${isActive ? 'text-sworkr-600 font-semibold' : 'text-muted hover:text-sworkr-600'}`;
 const tabClass = ({ isActive }) =>
-  `whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium ${isActive ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'}`;
+  `whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium ${isActive ? 'bg-sworkr-600 text-white shadow-sm' : 'text-muted hover:text-sworkr-600 hover:bg-blush'}`;
 
 const PAGES = [
   { to: '/', label: 'Dashboard', end: true },
@@ -123,7 +123,7 @@ function App() {
   if (auth.user === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin border-4 rounded-full border-white/30 border-t-white w-12 h-12" role="status" aria-label="Loading" />
+        <div className="animate-spin border-4 rounded-full border-sworkr-100 border-t-sworkr-600 w-12 h-12" role="status" aria-label="Loading" />
       </div>
     );
   }
@@ -132,7 +132,7 @@ function App() {
     return (
       <>
         {(auth.offline || notice) && (
-          <p className="fixed top-4 inset-x-0 px-4 text-center text-white text-sm">
+          <p className="fixed top-4 inset-x-0 px-4 text-center text-muted text-sm">
             {auth.offline ? "Can't reach the server. Is the api container running?" : notice}
           </p>
         )}
@@ -146,16 +146,16 @@ function App() {
       <div className="min-h-screen">
         {/* Stays at the top. The brand plum, slightly see-through with the page blurred behind it: readable
             on any background, without the hard edge of a solid bar. */}
-        <nav className="print:hidden sticky top-0 z-40 bg-sworkr-700/85 backdrop-blur-md backdrop-saturate-150 border-b border-white/15 shadow-sm">
+        <nav className="print:hidden sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-line">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
             {/* Pages on the left, search in the middle, settings on the right (like Nextcloud). */}
             <div className="grid grid-cols-[auto_1fr_auto] items-center h-14 sm:h-16 gap-3 sm:gap-6">
               <div className="flex items-center gap-4 lg:gap-6 text-sm">
                 <NavLink to="/" className="flex items-center gap-3" aria-label="sworkr, dashboard">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-sworkr-500 to-sworkr-800 flex items-center justify-center text-white font-bold text-lg sm:text-xl">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-sworkr-500 to-sworkr-900 flex items-center justify-center text-white font-extrabold text-lg sm:text-xl">
                     SW
                   </div>
-                  <span className="hidden xl:inline text-white font-bold text-xl tracking-tight">Sworkr</span>
+                  <span className="hidden xl:inline text-ink font-extrabold text-xl tracking-tight">Sworkr</span>
                 </NavLink>
                 <div className="hidden sm:flex items-center gap-4 lg:gap-6">
                   {PAGES.map((p) => <NavLink key={p.to} to={p.to} end={p.end} className={navClass}>{p.label}</NavLink>)}
@@ -169,7 +169,7 @@ function App() {
               <div className="flex items-center gap-2 sm:gap-3">
                 {discreet.enabled && discreet.panicButton && (
                   <button type="button" onClick={panic} title="Hide sworkr now and log out"
-                    className="px-2.5 py-1 rounded-lg bg-white/25 text-white text-xs font-semibold hover:bg-white/40">
+                    className="px-2.5 py-1 rounded-full border border-sworkr-600/40 text-sworkr-600 text-xs font-semibold hover:bg-sworkr-600 hover:text-white">
                     Hide
                   </button>
                 )}
@@ -190,7 +190,7 @@ function App() {
           {auth.demo && <DemoBanner />}
           <CheckInBanner />
           <QuickCash userId={auth.user.id} />
-          <Suspense fallback={<p className="text-white/80 text-sm py-10 text-center" role="status">Loading…</p>}>
+          <Suspense fallback={<p className="text-muted text-sm py-10 text-center" role="status">Loading…</p>}>
           <Routes>
             <Route path="/" element={<Dashboard user={auth.user} />} />
             <Route path="/calendar" element={<AppointmentCalendar />} />

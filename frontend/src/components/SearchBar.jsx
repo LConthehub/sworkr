@@ -23,14 +23,14 @@ export default function SearchBar() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-full bg-white/20 text-white/90 hover:bg-white/30 transition-colors text-sm text-left"
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-full bg-white border border-line text-muted hover:border-sworkr-300 transition-colors text-sm text-left"
         aria-label="Search contacts, bookings and expenses"
       >
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 shrink-0" aria-hidden="true">
           <circle cx="8.5" cy="8.5" r="5.5" /><path d="M13 13l4 4" strokeLinecap="round" />
         </svg>
         <span className="flex-1 truncate">Search…</span>
-        <kbd className="hidden md:inline text-[11px] px-1.5 rounded bg-white/20 text-white/80 font-sans">/</kbd>
+        <kbd className="hidden md:inline text-[11px] px-1.5 rounded border border-line bg-blush text-muted font-sans">/</kbd>
       </button>
       <SearchOverlay isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </>

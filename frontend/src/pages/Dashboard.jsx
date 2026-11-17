@@ -69,13 +69,13 @@ export default function Dashboard({ user }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white">{greeting(now)}, {user.username}</h1>
-          <p className="text-sm text-white/90">{dayLabel(now, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-night tracking-tight">{greeting(now)}, {user.username}</h1>
+          <p className="text-sm text-muted">{dayLabel(now, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
         </div>
-        <button onClick={() => setCustomizing(!customizing)} className="text-sm text-white/90 hover:text-white underline">{customizing ? 'Close' : 'Customize'}</button>
+        <button onClick={() => setCustomizing(!customizing)} className="text-sm text-muted hover:text-sworkr-600 underline">{customizing ? 'Close' : 'Customize'}</button>
       </div>
       {customizing && (
-        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
+        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
           <h2 className="font-semibold text-gray-800">Customize your dashboard</h2>
           <p className="text-xs text-gray-500 mb-2">Untick what you don't want, and move the rest into the order you like. Some cards only appear when there's something to show.</p>
           <ul className="divide-y divide-gray-100">
@@ -85,14 +85,14 @@ export default function Dashboard({ user }) {
                   <input type="checkbox" checked={!hidden.includes(id)} onChange={(e) => setHidden(e.target.checked ? hidden.filter((x) => x !== id) : [...hidden, id])} />
                   {CARDS[id]}
                 </label>
-                <button onClick={() => move(i, -1)} disabled={i === 0} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600 disabled:opacity-30" aria-label={`Move ${CARDS[id]} up`}>↑</button>
-                <button onClick={() => move(i, 1)} disabled={i === order.length - 1} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600 disabled:opacity-30" aria-label={`Move ${CARDS[id]} down`}>↓</button>
+                <button onClick={() => move(i, -1)} disabled={i === 0} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 disabled:opacity-30" aria-label={`Move ${CARDS[id]} up`}>↑</button>
+                <button onClick={() => move(i, 1)} disabled={i === order.length - 1} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 disabled:opacity-30" aria-label={`Move ${CARDS[id]} down`}>↓</button>
               </li>
             ))}
           </ul>
           <div className="flex flex-wrap gap-2 mt-3">
-            <button onClick={saveLayout} className="px-4 py-2 rounded-lg text-sm bg-sworkr-500 text-white hover:bg-sworkr-600">Save</button>
-            <button onClick={() => { setOrder(Object.keys(CARDS)); setHidden([]); }} className="px-4 py-2 rounded-lg text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">Back to the usual</button>
+            <button onClick={saveLayout} className="px-4 py-2 rounded-full text-sm bg-sworkr-500 text-white hover:bg-sworkr-600">Save</button>
+            <button onClick={() => { setOrder(Object.keys(CARDS)); setHidden([]); }} className="px-4 py-2 rounded-full text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">Back to the usual</button>
           </div>
         </div>
       )}
@@ -138,7 +138,7 @@ function WeekAhead({ version }) {
   const booked = bookings.reduce((s, a) => s + (a.rate || 0), 0);
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
+    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-semibold text-gray-800">This week</h2>
         <Link to="/calendar" className="text-sm text-sworkr-600 hover:text-sworkr-800">Open calendar →</Link>

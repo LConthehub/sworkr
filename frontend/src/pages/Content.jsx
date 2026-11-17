@@ -34,9 +34,9 @@ const SECTION_OF = { campaigns: 'promote', promote: 'promote', ads: 'promote', t
 /** The two halves of a section, as a small switch under the main tabs. */
 function Switch({ label, options }) {
   return (
-    <div className="inline-flex rounded-lg bg-white/20 p-0.5 text-sm backdrop-blur-sm" role="group" aria-label={label}>
+    <div className="inline-flex rounded-lg bg-white/90 border border-line p-0.5 text-sm backdrop-blur-sm" role="group" aria-label={label}>
       {options.map(([to, text, active]) => (
-        <Link key={to} to={to} aria-current={active ? 'page' : undefined} className={`px-3 py-1 rounded-md font-medium ${active ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'}`}>{text}</Link>
+        <Link key={to} to={to} aria-current={active ? 'page' : undefined} className={`px-3 py-1 rounded-md font-medium ${active ? 'bg-sworkr-600 text-white shadow-sm' : 'text-muted hover:text-sworkr-600 hover:bg-blush'}`}>{text}</Link>
       ))}
     </div>
   );
@@ -53,11 +53,11 @@ export default function Content() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-white">Content</h1>
-        <nav className="flex gap-1 overflow-x-auto rounded-full bg-white/20 p-1 backdrop-blur-sm" aria-label="Content">
+        <h1 className="text-xl font-bold text-night tracking-tight">Content</h1>
+        <nav className="flex gap-1 overflow-x-auto rounded-full bg-white/90 border border-line p-1 backdrop-blur-sm" aria-label="Content">
           {SECTIONS.map(([id, to, label]) => (
             <Link key={id} to={to} aria-current={section === id ? 'page' : undefined}
-              className={`whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium ${section === id ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'}`}>
+              className={`whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium ${section === id ? 'bg-sworkr-600 text-white shadow-sm' : 'text-muted hover:text-sworkr-600 hover:bg-blush'}`}>
               {label}
             </Link>
           ))}
@@ -109,7 +109,7 @@ function Library({ onPlan, version }) {
 
   if (notSetUp) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-6">
+      <div className="bg-white rounded-2xl border border-line shadow-sm p-5 sm:p-6">
         <h2 className="font-semibold text-gray-800">Connect your content folder</h2>
         <p className="text-sm text-gray-600 mt-1">
           Point sworkr at the folder you keep your photos and videos in, for ads, socials and fan sites: Nextcloud, a Synology
@@ -126,7 +126,7 @@ function Library({ onPlan, version }) {
   const toggle = (p) => setSelected((s) => (s.includes(p) ? s.filter((x) => x !== p) : [...s, p]));
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
       <div className="flex flex-wrap items-center gap-2 mb-4 text-sm">
         <button onClick={() => setPath('')} className={`font-semibold ${path ? 'text-sworkr-600 hover:text-sworkr-800' : 'text-gray-800'}`}>Library</button>
         {crumbs.map((c, i) => (
@@ -223,7 +223,7 @@ export function Planner({ version, onEdit, onNew }) {
   const days = Object.keys(byDay).sort((a, b) => (a === 'unscheduled' ? 1 : b === 'unscheduled' ? -1 : filter === 'posted' ? b.localeCompare(a) : a.localeCompare(b)));
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm" role="group" aria-label="Show">
           {[['open', 'To do'], ['posted', 'Posted'], ['all', 'All']].map(([id, label]) => (
@@ -307,8 +307,8 @@ export function PostRow({ post: p, campaign, onEdit, onChanged }) {
         {p.caption && <span className="block text-sm text-gray-600 line-clamp-2 whitespace-pre-wrap">{p.caption}</span>}
       </button>
       <span className="flex gap-2 shrink-0">
-        {p.caption && <button onClick={copy} className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">{copied ? 'Copied ✓' : 'Copy caption'}</button>}
-        {p.status !== 'posted' && <button onClick={posted} className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">✓ Posted</button>}
+        {p.caption && <button onClick={copy} className="text-xs px-2.5 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50">{copied ? 'Copied ✓' : 'Copy caption'}</button>}
+        {p.status !== 'posted' && <button onClick={posted} className="text-xs px-2.5 py-1.5 rounded-full bg-emerald-600 text-white hover:bg-emerald-700">✓ Posted</button>}
         {p.post_url && <a href={p.post_url} target="_blank" rel="noreferrer noopener" className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Open ↗</a>}
       </span>
       <span className="basis-full flex justify-end"><PublishButtons post={p} accounts={accounts} onChanged={onChanged} /></span>
@@ -540,7 +540,7 @@ export function PostsDue() {
   useEffect(() => { load(); }, [load]);
   if (!posts || posts.length === 0) return null;
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
+    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-gray-800">Posts & ads due</h2>
         <Link to="/calendar/posts" className="text-sm text-sworkr-600 hover:text-sworkr-800">All posts →</Link>

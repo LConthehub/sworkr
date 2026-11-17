@@ -66,13 +66,13 @@ export function PublishButtons({ post, accounts, onChanged }) {
   };
   return (
     <span className="flex flex-wrap items-center gap-2">
-      <button disabled={busy} onClick={() => go('now')} className="text-xs px-2.5 py-1.5 rounded-lg bg-sworkr-500 text-white hover:bg-sworkr-600 disabled:opacity-50">
+      <button disabled={busy} onClick={() => go('now')} className="text-xs px-2.5 py-1.5 rounded-full bg-sworkr-500 text-white hover:bg-sworkr-600 disabled:opacity-50">
         Post to {NETWORKS[account.network]}
       </button>
       {post.auto_post
-        ? <button onClick={stop} className="text-xs px-2.5 py-1.5 rounded-lg border border-sworkr-200 text-sworkr-600">Posts itself ✕</button>
+        ? <button onClick={stop} className="text-xs px-2.5 py-1.5 rounded-full border border-sworkr-200 text-sworkr-600">Posts itself ✕</button>
         : post.scheduled_at && new Date(post.scheduled_at) > new Date()
-          && <button disabled={busy} onClick={() => go('scheduled')} className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Post at its time</button>}
+          && <button disabled={busy} onClick={() => go('scheduled')} className="text-xs px-2.5 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50">Post at its time</button>}
       {post.post_error && <span className="text-xs text-red-600 basis-full">{post.post_error}</span>}
     </span>
   );
@@ -162,7 +162,7 @@ function Accounts() {
     load();
   };
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 space-y-4">
+    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold text-gray-800">Accounts</h2>
         {!adding && <button onClick={() => setAdding(true)} className={quietButtonClass}>+ Connect an account</button>}
@@ -225,7 +225,7 @@ function Numbers() {
   if (!data) return null;
   const n = (v) => (v == null ? '–' : v.toLocaleString());
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 space-y-4">
+    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold text-gray-800">Numbers</h2>
         <span className="flex flex-wrap gap-2">

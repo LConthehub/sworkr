@@ -56,7 +56,7 @@ export default function ClientList() {
   }, [filter, sort, searchQuery, page, persona]);
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-bold text-gray-800">Contacts</h1>

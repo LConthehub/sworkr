@@ -159,7 +159,7 @@ export function TasksPanel({ version, onChanged, onOpen }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
+    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold text-gray-800">Tasks</h2>
         <button onClick={() => onOpen(null)} className="text-sm text-sworkr-600 hover:text-sworkr-800">+ Task with a day</button>
