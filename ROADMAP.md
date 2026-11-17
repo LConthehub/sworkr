@@ -20,6 +20,7 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   (Nextcloud or Synology for files and calendar, ntfy for notifications, a local AI model).
 - Keep anything insider-only off public pages (site, demo). Coded names only inside the private app.
 - Publicly, say "fan sites" or "OF", never the full platform name.
+- Receipts are an in-app feature only: don't mention them on the site, docs or demo text (owner, 2026-11-16).
 - Public messaging says "s work" / "s workers" (coded, deliberate). Not "independent work", not spelled out.
 - Docker is the preferred install on Windows, Mac and Linux. No separate standalone Mac app.
 

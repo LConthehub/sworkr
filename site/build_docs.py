@@ -69,7 +69,7 @@ PAGES = [
 
 ("privacy-and-backups", "Privacy & backups", "Privacy &amp; backups", """
 <h2>What's stored, and where</h2>
-<p>Everything is in one database file on your computer: clients, bookings, money, plans, settings. Sworkr doesn't send it anywhere. The only things it talks to are services <em>you</em> connect: your own email, a Nextcloud calendar or content folder, and ntfy if you turn on notifications.</p>
+<p>Everything is in one database file on your computer: clients, bookings, money, plans, settings. Sworkr doesn't send it anywhere. The only things it talks to are services <em>you</em> connect: your own email, a Nextcloud calendar or content folder, ntfy if you turn on notifications, and Bluesky, Mastodon or Reddit if you connect them for posting.</p>
 
 <h2>How it's locked</h2>
 <ul>
@@ -81,13 +81,13 @@ PAGES = [
 <p><strong>What this does not do:</strong> protect against someone who can use your computer while you're signed in. Disk encryption, a locked computer account and discreet mode matter too.</p>
 
 <h2>Discreet mode</h2>
-<p><em>Settings → Security &amp; privacy → Discreet mode</em> gives the browser tab a plain name like "Notes" and adds a panic switch: press <kbd>Esc</kbd> three times to hide Sworkr and sign out.</p>
+<p><em>Settings → Security &amp; privacy → Discreet mode</em> gives the browser tab a plain name like "Notes" and adds a panic switch: press <kbd>Esc</kbd> three times, or tap <em>Hide</em> at the top on a phone, to hide Sworkr and sign out.</p>
 
 <h2>Backups</h2>
 <p>Backups are encrypted with <strong>your passphrase</strong>, not with the computer's key, so they open on <em>any</em> computer. That is how you get your records back if this computer dies.</p>
 <ul>
   <li>Turn them on under <em>Settings → Data &amp; users → Backups</em>. Automatic daily backups land in your backups folder.</li>
-  <li><strong>Keep a copy off this computer</strong>: on a USB stick, or under <em>Copies off this computer</em> if you have a Nextcloud or other WebDAV account.</li>
+  <li><strong>Keep a copy off this computer</strong>: on a USB stick, or under <em>Copies off this computer</em> if you have a Nextcloud, a Synology NAS or any other WebDAV storage. Your own storage at home is the most private place for it.</li>
   <li>Sworkr checks a backup opens about once a month and tells you if one doesn't.</li>
   <li>To restore, use <em>Restore a backup</em> on the same page and enter the passphrase.</li>
 </ul>
@@ -96,7 +96,7 @@ PAGES = [
 <p>Without the key, the database can't be opened. Never delete <code>sworkr_sworkr_keys</code> (Docker) or the Sworkr entries in Credential Manager. If it happens anyway, install Sworkr fresh and restore your latest backup with its passphrase.</p>
 
 <h2>Your data, your call</h2>
-<p><em>Settings → Data &amp; users</em> can download everything Sworkr holds about you, or erase everything, from the page.</p>
+<p><em>Settings → Data &amp; users</em> can download everything Sworkr holds about you, or erase everything. Erasing asks for your password, for you to type ERASE, then gives you 10 seconds to stop it. It can't reach backup files you've already saved elsewhere: delete those yourself.</p>
 """),
 
 ("install", "Install with Docker", "Install with Docker", """
