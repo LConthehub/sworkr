@@ -57,7 +57,8 @@ export default function CalendarSync() {
       setForm((f) => {
         if (f) return f;
         setProvider(guessProvider(data.url));
-        return { url: data.url, username: data.username, app_password: '', enabled: data.enabled, discreet: data.discreet };
+        return { url: data.url, username: data.username, app_password: '', enabled: data.enabled, discreet: data.discreet,
+                 events_name: data.events_name, tasks_name: data.tasks_name };
       });
     } catch (err) {
       setMessage({ error: errorMessage(err, 'Could not load calendar sync') });
@@ -99,7 +100,7 @@ export default function CalendarSync() {
     run('save', async () => {
       const { data } = await axios.put('/api/calendar-sync', form);
       setStatus(data);
-      setForm({ ...form, url: data.url, app_password: '' });
+      setForm({ ...form, url: data.url, app_password: '', events_name: data.events_name, tasks_name: data.tasks_name });
       setMessage({ ok: data.enabled ? 'Saved. Syncing now…' : 'Saved. Calendar sync is off.' });
     });
   };
@@ -168,6 +169,18 @@ export default function CalendarSync() {
               </span>
             </span>
           </label>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Field label="Calendar name">
+              <input value={form.events_name ?? ''} onChange={set('events_name')} maxLength={60} placeholder="sworkr" className={inputClass} />
+            </Field>
+            <Field label="Task list name">
+              <input value={form.tasks_name ?? ''} onChange={set('tasks_name')} maxLength={60} placeholder="sworkr tasks" className={inputClass} />
+            </Field>
+          </div>
+          <p className="text-xs text-gray-400 -mt-1">
+            What they're called in your calendar app, e.g. "Work" and "To do" so the name doesn't stand out. Changing it
+            renames them at the next sync; what's already in them stays.
+          </p>
         </fieldset>
 
         {message?.error && <p className="text-sm text-red-600">{message.error}</p>}

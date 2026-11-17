@@ -25,6 +25,7 @@ import threading
 import time
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta, timezone
+from xml.sax.saxutils import escape as xml_escape
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple
 from urllib.parse import unquote, urljoin, urlsplit
 
@@ -54,7 +55,19 @@ Item = Tuple[str, int]            # ("appointment" | "period" | "task", id)
 # ==================== SETTINGS (per person) ====================
 
 SETTING_KEYS = ("cal_enabled", "cal_url", "cal_username", "cal_password", "cal_discreet", "cal_events_url",
-                "cal_tasks_url", "cal_last_sync_at", "cal_last_error", "cal_last_error_at")
+                "cal_tasks_url", "cal_last_sync_at", "cal_last_error", "cal_last_error_at",
+                "cal_events_name", "cal_tasks_name", "cal_rename_pending")
+NAME_MAX = 60
+
+
+def clean_calendar_name(value: Optional[str], default: str) -> str:
+    """The name to show for the calendar or the task list in someone's calendar app, from what they typed.
+    `default` is "sworkr" or "sworkr tasks". The result is put into XML (escaped there), and the web
+    address of the calendar never changes, only this name."""
+    # Pasted text can carry line breaks or tabs: they become single spaces. Then trim, keep it short, and if
+    # nothing's left, use the default.
+    name = " ".join((value or "").split())[:NAME_MAX].strip()
+    return name or default
 
 
 def get_setting(db, user_id: int, key: str) -> Optional[str]:
@@ -130,12 +143,15 @@ class CalDav:
     """A CalDAV account. `prepare()` finds (or creates) sworkr's calendar and task list."""
 
     def __init__(self, url: str, username: str, password: str, events_url: Optional[str] = None,
-                 tasks_url: Optional[str] = None, transport: Optional[httpx.BaseTransport] = None):
+                 tasks_url: Optional[str] = None, transport: Optional[httpx.BaseTransport] = None,
+                 events_name: str = EVENTS_NAME, tasks_name: str = TASKS_NAME):
         self.base = url.rstrip("/") + "/"
         self.http = httpx.Client(auth=(username, password), timeout=30, follow_redirects=True, transport=transport,
                                  headers={"User-Agent": "sworkr-calendar-sync"})
         self.events_url = events_url or None
         self.tasks_url = tasks_url or None
+        self.events_name = events_name
+        self.tasks_name = tasks_name
 
     def close(self):
         self.http.close()
@@ -206,7 +222,7 @@ class CalDav:
         r = self._request("MKCALENDAR", url, headers={"Content-Type": "application/xml; charset=utf-8"}, content=(
             '<?xml version="1.0" encoding="utf-8"?>'
             '<c:mkcalendar xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" xmlns:x="http://apple.com/ns/ical/">'
-            f'<d:set><d:prop><d:displayname>{name}</d:displayname><x:calendar-color>#fc4c9c</x:calendar-color>'
+            f'<d:set><d:prop><d:displayname>{xml_escape(name)}</d:displayname><x:calendar-color>#fc4c9c</x:calendar-color>'
             f'<c:supported-calendar-component-set><c:comp name="{component}"/></c:supported-calendar-component-set>'
             '</d:prop></d:set></c:mkcalendar>'))
         if r.status_code in (200, 201):
@@ -215,7 +231,7 @@ class CalDav:
         r, root = self._propfind(home, "1", "<d:displayname/>", "<d:resourcetype/>")
         for resp in (root.iterfind("d:response", NS) if root is not None else []):
             shown = resp.find(".//d:displayname", NS)
-            if shown is not None and (shown.text or "").strip().lower() == name and resp.find(".//c:calendar", NS) is not None:
+            if shown is not None and (shown.text or "").strip().lower() == name.lower() and resp.find(".//c:calendar", NS) is not None:
                 return urljoin(str(r.url), resp.find("d:href", NS).text)
         return None
 
@@ -224,11 +240,18 @@ class CalDav:
         if self.events_url and self.tasks_url:
             return
         home = self.discover_home()
-        self.events_url = self.events_url or self._ensure(home, EVENTS_SLUG, EVENTS_NAME, "VEVENT")
+        self.events_url = self.events_url or self._ensure(home, EVENTS_SLUG, self.events_name, "VEVENT")
         if not self.events_url:
-            raise SyncError(f"Couldn't create the '{EVENTS_NAME}' calendar. Create a calendar called "
-                            f"'{EVENTS_NAME}' in your calendar app, then press Sync now.")
-        self.tasks_url = self.tasks_url or self._ensure(home, TASKS_SLUG, TASKS_NAME, "VTODO") or NO_TASKS
+            raise SyncError(f"Couldn't create the '{self.events_name}' calendar. Create a calendar called "
+                            f"'{self.events_name}' in your calendar app, then press Sync now.")
+        self.tasks_url = self.tasks_url or self._ensure(home, TASKS_SLUG, self.tasks_name, "VTODO") or NO_TASKS
+
+    def rename(self, url: str, name: str) -> bool:
+        """Change the name a calendar or task list shows under. Its address stays, so nothing is synced twice."""
+        r = self._request("PROPPATCH", url, headers={"Content-Type": "application/xml; charset=utf-8"}, content=(
+            '<?xml version="1.0" encoding="utf-8"?><d:propertyupdate xmlns:d="DAV:"><d:set><d:prop>'
+            f'<d:displayname>{xml_escape(name)}</d:displayname></d:prop></d:set></d:propertyupdate>'))
+        return r.status_code in (200, 207)
 
     def _collection(self, kind: str) -> Optional[str]:
         if kind == "task":
@@ -479,7 +502,9 @@ def queue_full_sync(owner_id: Optional[int] = None):
 def _connect(db, owner_id: int) -> CalDav:
     return CalDav(get_setting(db, owner_id, "cal_url") or "", get_setting(db, owner_id, "cal_username") or "",
                   get_setting(db, owner_id, "cal_password") or "", get_setting(db, owner_id, "cal_events_url"),
-                  get_setting(db, owner_id, "cal_tasks_url"))
+                  get_setting(db, owner_id, "cal_tasks_url"),
+                  events_name=get_setting(db, owner_id, "cal_events_name") or EVENTS_NAME,
+                  tasks_name=get_setting(db, owner_id, "cal_tasks_name") or TASKS_NAME)
 
 
 def _plan(db, batch: Iterable[tuple], users: List[int]) -> Tuple[Dict[int, Set[Item]], Set[int]]:
@@ -518,6 +543,14 @@ def _sync_user(db, owner_id: int, items: Set[Item], full: bool):
             for key, value in (("cal_events_url", dav.events_url), ("cal_tasks_url", dav.tasks_url)):
                 if value and value != get_setting(db, owner_id, key):
                     set_setting(db, owner_id, key, value)
+            if get_setting(db, owner_id, "cal_rename_pending") == "1":
+                renamed = dav.rename(dav.events_url, dav.events_name)
+                if dav.tasks_url and dav.tasks_url != NO_TASKS:
+                    renamed = dav.rename(dav.tasks_url, dav.tasks_name) and renamed
+                if renamed:
+                    set_setting(db, owner_id, "cal_rename_pending", None)
+                else:
+                    errors.append("The calendar's new name couldn't be saved on the server; rename it in your calendar app")
             if full:
                 # Anything in the calendar that's no longer in sworkr goes, even if it was deleted
                 # while sync was off or the server was unreachable.
@@ -608,6 +641,8 @@ class SyncSettings(BaseModel):
     username: str = ""
     app_password: Optional[str] = None   # blank or missing: keep the saved one
     discreet: bool = False
+    events_name: Optional[str] = None    # what the calendar is called (default "sworkr")
+    tasks_name: Optional[str] = None     # what the task list is called (default "sworkr tasks")
 
 
 class TestRequest(BaseModel):
@@ -635,6 +670,8 @@ def _status_payload(db, user_id: int) -> dict:
         "username": get_setting(db, user_id, "cal_username") or "",
         "has_password": bool(get_setting(db, user_id, "cal_password")),   # the password itself is never sent back
         "discreet": get_setting(db, user_id, "cal_discreet") == "1",
+        "events_name": get_setting(db, user_id, "cal_events_name") or EVENTS_NAME,
+        "tasks_name": get_setting(db, user_id, "cal_tasks_name") or TASKS_NAME,
         "last_sync_at": get_setting(db, user_id, "cal_last_sync_at"),
         "last_error": get_setting(db, user_id, "cal_last_error"),
         "last_error_at": get_setting(db, user_id, "cal_last_error_at"),
@@ -674,6 +711,14 @@ def save_settings(body: SyncSettings, request: Request):
                            ("cal_enabled", "1" if body.enabled else "0"),
                            ("cal_discreet", "1" if body.discreet else "0")):
             set_setting(db, user_id, key, value)
+        for key, typed, default in (("cal_events_name", body.events_name, EVENTS_NAME),
+                                    ("cal_tasks_name", body.tasks_name, TASKS_NAME)):
+            if typed is None:
+                continue                      # not sent: keep the name it has
+            name = clean_calendar_name(typed, default)
+            if name != (get_setting(db, user_id, key) or default):
+                set_setting(db, user_id, key, name)
+                set_setting(db, user_id, "cal_rename_pending", "1")   # renamed on the server at the next sync
         set_setting(db, user_id, "cal_last_error", None)
         if body.enabled:
             queue_full_sync(user_id)

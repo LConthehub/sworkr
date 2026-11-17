@@ -67,6 +67,14 @@ class FakeAccount:
         if self.fail:
             raise calendar_sync.SyncError(self.fail)
 
+    renamed = None
+
+    def rename(self, url, name):
+        self.renamed = {**(self.renamed or {}), url: name}
+        return True
+
+    events_name, tasks_name = calendar_sync.EVENTS_NAME, calendar_sync.TASKS_NAME
+
     def list_items(self):
         return set(self.items)
 
@@ -83,7 +91,12 @@ class FakeAccount:
 def accounts(monkeypatch):
     """One fake account per person."""
     by_user = {}
-    monkeypatch.setattr(calendar_sync, "_connect", lambda db, owner_id: by_user.setdefault(owner_id, FakeAccount()))
+    def connect(db, owner_id):
+        account = by_user.setdefault(owner_id, FakeAccount())
+        account.events_name = calendar_sync.get_setting(db, owner_id, "cal_events_name") or calendar_sync.EVENTS_NAME
+        account.tasks_name = calendar_sync.get_setting(db, owner_id, "cal_tasks_name") or calendar_sync.TASKS_NAME
+        return account
+    monkeypatch.setattr(calendar_sync, "_connect", connect)
     return by_user
 
 
@@ -346,7 +359,11 @@ class FakeServer:
             if self.style == "icloud" and component == "VTODO":
                 return httpx.Response(403)     # iCloud doesn't take to-do lists from other apps
             self.collections[path] = component
+            self.made = {**getattr(self, "made", {}), path: request.content.decode()}
             return httpx.Response(201)
+        if method == "PROPPATCH":
+            self.names = {**getattr(self, "names", {}), path: request.content.decode()}
+            return httpx.Response(207)
         if method == "PUT":
             self.files[path] = request.content
             return httpx.Response(201)
@@ -415,3 +432,42 @@ def test_saved_password_is_never_sent_to_a_different_server(api):
     db = main.get_db()
     assert calendar_sync.get_setting(db, api.user_id, "cal_url") == "https://cloud.example.com"
     db.close()
+
+
+# ---------- what the calendar and task list are called ----------
+
+@pytest.mark.parametrize("typed, expected", [
+    ("Work", "Work"),
+    ("  Work  ", "Work"),
+    ("", "sworkr"),
+    (None, "sworkr"),
+    ("   ", "sworkr"),
+])
+def test_calendar_names_are_tidied(typed, expected):
+    assert calendar_sync.clean_calendar_name(typed, "sworkr") == expected
+
+
+def test_calendar_names_are_never_too_long():
+    assert len(calendar_sync.clean_calendar_name("x" * 500, "sworkr")) <= calendar_sync.NAME_MAX
+
+
+def test_a_new_calendar_gets_the_chosen_name_safely_escaped():
+    server = FakeServer("nextcloud")
+    with calendar_sync.CalDav("https://cloud.example.com", "me", "secret", transport=httpx.MockTransport(server),
+                              events_name="Work & play", tasks_name="To do") as dav:
+        dav.prepare()
+        assert dav.events_url.endswith("/sworkr/")       # the address stays the same whatever it's called
+        assert dav.rename(dav.events_url, "Work <now>")
+    assert "<d:displayname>Work &amp; play</d:displayname>" in server.made["/remote.php/dav/calendars/me/sworkr/"]
+    assert "Work &lt;now&gt;" in server.names["/remote.php/dav/calendars/me/sworkr/"]
+
+
+def test_renaming_happens_at_the_next_sync(api, accounts):
+    status = api.put("/api/calendar-sync", json={**SETTINGS, "events_name": "Work", "tasks_name": "To do"}).json()
+    assert (status["events_name"], status["tasks_name"]) == ("Work", "To do")
+    full_sync()
+    me = accounts[api.get("/api/auth/status").json()["user"]["id"]]   # (other people sync too)
+    assert set(me.renamed.values()) == {"Work", "To do"}
+    me.renamed = None
+    full_sync()                                           # done once, not every sync
+    assert me.renamed is None
