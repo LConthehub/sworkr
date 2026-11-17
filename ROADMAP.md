@@ -8,10 +8,10 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 
 ## Answers (2026-11-16)
 - About the maker (public): a former s worker with ADHD; the tool they needed while working; began as an app
-  idea shelved in 2017 plus years of messy spreadsheets. Home page says this (no mention of which branches).
+  idea shelved in 2017 plus years of unorganized spreadsheets. 
 - Home page "Tours & houses" no longer mentions house cuts or the office holding cash.
 - Own web address stays in the docs, not the home page privacy list.
-- Social after Bluesky and Mastodon: Reddit. X only if someone sponsors the API cost (don't pay for it).
+- Social after Bluesky and Mastodon: Reddit. X only if someone sponsors the API cost.
 - AI is for statistics and search, not for writing. No drafting replies or captions: the creative part stays
   the worker's, and censoring models make drafting unreliable for this work anyway.
 
@@ -21,7 +21,7 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Keep anything insider-only off public pages (site, demo). Coded names only inside the private app.
 - Publicly, say "fan sites" or "OF", never the full platform name.
 - Receipts are an in-app feature only: don't mention them on the site, docs or demo text (owner, 2026-11-16).
-- Public messaging says "s work" / "s workers" (coded, deliberate). Not "independent work", not spelled out.
+- Public messaging says "s work" / "s workers" (coded, deliberate).
 - Docker is the preferred install on Windows, Mac and Linux. No separate standalone Mac app.
 
 ## Docker install (decided 2026-11-16; one container + port 8008 done, image publishing waits on GitHub)
@@ -65,6 +65,12 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 ## Next
 - Docs review finished 2026-11-17 (last six pages in one pass; owner may veto). Troubleshooting page not re-read.
 - Setup builder: option to add Caddy to the same docker-compose.yml (own web address without a separate download).
+- Simplify social media integration where possible for ease of use such as including making it a part of the connection settings because duh?
+- Autofill/copy button for urls that are expected such as https://caldav.icloud.com to set up for ease of use.
+- change "gone quiet" to ghosts
+- Workers know who gets paid work card fees. This needs no language explaining. It can be tied to a workplace and to tours, so that accurateinformation is reported to the user.
+- Health tests can be tied to workplaces or not. When tied to a workplace a testing schedule occurstests can be set to a doctor day(like maybe the doctor only comes wednesday typically so thats when a test wouldoccur on a tour)
+- Make goals into envelopes or goals/envelopes, so one envelope could be the office envelope of cash that some places keep for the worker.
 
 ## Bigger ideas
 - Local AI: an optional assistant that talks to a model running on your own machine (LM Studio, llama.cpp,
