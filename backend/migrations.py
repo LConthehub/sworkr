@@ -1491,6 +1491,33 @@ def _m43_social(conn):
     """)
 
 
+def _m44_receipts(conn):
+    """Receipts as issued: number, wording and amount kept, so a reprint looks the same."""
+    conn.execute("""
+        CREATE TABLE receipts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            appointment_id INTEGER REFERENCES appointments(id) ON DELETE SET NULL,
+            year INTEGER NOT NULL,
+            seq INTEGER NOT NULL,
+            number TEXT NOT NULL,
+            issued_on TEXT NOT NULL,
+            billed_to TEXT,
+            description TEXT NOT NULL,
+            amount REAL NOT NULL CHECK(amount > 0),
+            currency TEXT NOT NULL DEFAULT 'USD',
+            method TEXT,
+            note TEXT,
+            business TEXT,
+            contact TEXT,
+            footer TEXT,
+            created_at TEXT NOT NULL,
+            UNIQUE(owner_id, year, seq)
+        )
+    """)
+    conn.execute("CREATE INDEX idx_receipts_appt ON receipts(appointment_id)")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1535,6 +1562,7 @@ MIGRATIONS = [
     (41, "tour planning: pack lists and budgets", _m41_tour_planning, False),
     (42, "tour meals and snacks", _m42_tour_meals, False),
     (43, "social accounts, auto-posting and post numbers", _m43_social, False),
+    (44, "discreet receipts", _m44_receipts, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

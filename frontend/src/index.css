@@ -7,3 +7,11 @@ body {
   background: linear-gradient(135deg, #fc4c9c 0%, #e67eb6 50%, #a73178 100%);
   background-attachment: fixed;
 }
+
+/* Printing a receipt shows only the receipt, black on white, whatever the theme. */
+@media print {
+  body { background: #fff !important; }
+  body * { visibility: hidden; }
+  .receipt-print, .receipt-print * { visibility: visible; color: #111 !important; border-color: #ccc !important; }
+  .receipt-print { position: fixed; top: 0; left: 0; right: 0; margin: 0 auto; background: #fff !important; box-shadow: none; }
+}

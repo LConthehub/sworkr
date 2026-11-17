@@ -15,7 +15,7 @@ from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Callable, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/blocklist")
@@ -329,6 +329,35 @@ def import_list(body: ImportIn, request: Request):
         return {"added": added, "skipped": skipped, "replaced": removed}
     finally:
         db.close()
+
+
+@router.get("/export")
+def export_list(request: Request, list_name: Optional[str] = None):
+    """Your list as a CSV, for your own backup or another device of yours. The headings are the ones the
+    import recognises, so it reads straight back in. There is no sharing between workers (legal risk)."""
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        sql, args = "SELECT * FROM blocklist WHERE owner_id = ?", [owner]
+        if list_name:
+            sql += " AND list_name = ?"
+            args.append(list_name)
+        out = io.StringIO()
+        w = csv.writer(out)
+        w.writerow(FIELDS + ["list"])
+        for r in db.execute(sql + " ORDER BY list_name, id", args):
+            w.writerow([_csv_safe(r[f]) for f in FIELDS] + [_csv_safe(r["list_name"])])
+        name = re.sub(r"[^A-Za-z0-9_-]+", "-", list_name or "bad-date-list").strip("-") or "bad-date-list"
+        return Response(out.getvalue(), media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": f'attachment; filename="{name}.csv"', "Cache-Control": "no-store"})
+    finally:
+        db.close()
+
+
+def _csv_safe(value) -> str:
+    """No spreadsheet formulas: a cell starting with = + - @ is opened as text."""
+    v = "" if value is None else str(value)
+    return "'" + v if v[:1] in ("=", "+", "-", "@") and not re.fullmatch(r"\+?[\d\s().-]+", v) else v
 
 
 @router.get("/check")

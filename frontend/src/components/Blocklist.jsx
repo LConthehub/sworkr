@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { Field, inputClass, errorMessage, buttonClass, quietButtonClass, Notice } from './Modal';
+import { downloadBlob } from '../api';
 
 const FIELD_LABELS = {
   phone: 'Phone number', email: 'Email', handle: 'Handle or username', name: 'Name or alias',
@@ -76,6 +77,15 @@ export function BlocklistSettings() {
     load();
   };
 
+  const exportList = async () => {
+    try {
+      const { data } = await axios.get('/api/blocklist/export', { responseType: 'blob' });
+      downloadBlob(data, 'bad-date-list.csv');
+    } catch (err) {
+      setMessage({ error: errorMessage(err, "Couldn't download the list") });
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="space-y-2">
@@ -83,10 +93,16 @@ export function BlocklistSettings() {
           Upload a list from your local warning group (a CSV file; most spreadsheet apps can save one). Uploading a newer copy
           with the same list name replaces the old one.
         </p>
-        <label className={`${quietButtonClass} inline-block cursor-pointer`}>
-          Choose a CSV file…
-          <input type="file" accept=".csv,text/csv,text/plain" onChange={pickFile} className="sr-only" />
-        </label>
+        <div className="flex flex-wrap gap-2">
+          <label className={`${quietButtonClass} inline-block cursor-pointer`}>
+            Choose a CSV file…
+            <input type="file" accept=".csv,text/csv,text/plain" onChange={pickFile} className="sr-only" />
+          </label>
+          <button type="button" onClick={exportList} className={quietButtonClass}>Download my list (CSV)</button>
+        </div>
+        <p className="text-xs text-gray-500">
+          The download is for you: a backup, or moving to another device. It isn't for sharing; passing on lists of people can carry legal risk.
+        </p>
       </div>
 
       {upload && (

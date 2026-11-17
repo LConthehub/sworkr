@@ -105,3 +105,16 @@ def test_the_list_is_private(api, admin):
     assert admin.put(f"/api/blocklist/{e['id']}", json={"phone": "1"}).status_code in (400, 404)
     admin.delete(f"/api/blocklist/{e['id']}")
     assert len(ok(api.get("/api/blocklist"))["entries"]) == 1
+
+
+def test_my_list_exports_as_csv_that_imports_back(api, admin):
+    ok(api.post("/api/blocklist", json={"phone": "+1 555 222 3333", "name": "=HYPERLINK(1)", "description": "Pushy",
+                                        "severity": "block"}), 201)
+    r = api.get("/api/blocklist/export")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
+    text = r.text
+    assert text.splitlines()[0] == "phone,email,handle,name,description,area,reported_on,severity,list"
+    assert "+1 555 222 3333" in text and "'=HYPERLINK(1)" in text      # phone kept, formula defused
+    assert "Pushy" not in admin.get("/api/blocklist/export").text      # only your own list
+    p = ok(api.post("/api/blocklist/preview", json={"csv": text}))
+    assert p["mapping"]["phone"] == "phone" and p["mapping"]["severity"] == "severity"

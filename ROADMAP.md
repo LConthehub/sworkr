@@ -37,6 +37,13 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - GitHub: user will link the account; scan history for secrets before the first public push.
 
 ## Done recently
+- Erase everything now ends with a 10-second countdown and a big Stop button (after password + typing ERASE).
+- Bad-date list: download your list as CSV (reads back in through the import); for your own use, not sharing.
+- Discreet receipts (2026-11-16): your name and wording, numbered R-2026-001, saved as issued, print or PDF;
+  "Receipt" on a paid booking; Settings > My work > Receipts.
+- Dark mode (2026-11-16): Settings > Look (Light default, Dark, Follow my device), sworkr.com's dark colours.
+- Saved replies fill in {name}, {day}, {time}, {wanted} from the inquiry.
+- The app keeps its pink look with the frosted glass top bar (owner's choice, 2026-11-16).
 - Social (2026-11-16): connect Bluesky (app password), Mastodon (access token), Reddit (own script app, text
   posts); post a planned post now or let it post itself at its time; a content label per account (Bluesky
   self-labels, Mastodon sensitive, Reddit NSFW); likes/reposts/replies fetched, or imported from any CSV export
@@ -53,10 +60,6 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 
 ## Next
 - Social, later: pictures on Reddit; alt text for pictures; reminders when an auto-post fails (ntfy).
-- Saved replies for inquiries.
-- Discreet receipts for clients.
-- Wipe everything: password, type a phrase, 10-second countdown you can cancel.
-- Bad-date list export (import exists). No sharing between workers (legal risk).
 - Website review page by page with the owner (home page done 2026-11-16; next: the docs pages).
 
 ## Bigger ideas

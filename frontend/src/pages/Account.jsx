@@ -9,6 +9,7 @@ import DocumentsSettings from '../components/Documents';
 import { TestKindsSettings } from '../components/TestKinds';
 import { DiscreetSettings } from '../components/Discreet';
 import LookSettings from '../components/Look';
+import { ReceiptSettings } from '../components/Receipts';
 import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from '../components/SignInSecurity';
 import { WorkTypesPicker } from '../components/WorkTypes';
 import { Field, inputClass, errorMessage, buttonClass, quietButtonClass, Section, Notice } from '../components/Modal';
@@ -56,6 +57,10 @@ const GROUPS = [
       },
       { id: 'policy', title: 'Deposits & cancellations', words: 'deposit no-show no show cancellation fee late policy', render: () => <BookingPolicy /> },
       { id: 'categories', title: 'Expense categories', words: 'rename hide colour color', render: () => <ExpenseCategories /> },
+      {
+        id: 'receipts', title: 'Receipts', words: 'receipt invoice discreet business name client paid print pdf',
+        render: () => <Section title="Receipts" hint="Plain receipts for clients who ask: your choice of name and wording, nothing about the work."><ReceiptSettings /></Section>,
+      },
     ],
   },
   {
@@ -980,6 +985,7 @@ function YourData() {
   const [busy, setBusy] = useState('');
   const [message, setMessage] = useState(null);
   const [erasing, setErasing] = useState(false);
+  const [countdown, setCountdown] = useState(null);   // seconds left before erasing; null when not counting
   const [password, setPassword] = useState('');
   const [word, setWord] = useState('');
   const load = useCallback(() => {
@@ -1002,8 +1008,20 @@ function YourData() {
     }
   };
 
-  const erase = async (e) => {
+  // Submitting only starts a 10-second countdown with a Cancel button; nothing is sent until it reaches zero.
+  const startErase = (e) => {
     e.preventDefault();
+    setMessage(null);
+    setCountdown(10);
+  };
+  useEffect(() => {
+    if (countdown === null) return undefined;
+    if (countdown === 0) { setCountdown(null); erase(); return undefined; }
+    const t = setTimeout(() => setCountdown((n) => (n === null ? null : n - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [countdown]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const erase = async () => {
     setBusy('erase');
     setMessage(null);
     try {
@@ -1046,7 +1064,17 @@ function YourData() {
               Erase everything…
             </button>
           ) : (
-            <form onSubmit={erase} className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3">
+            countdown !== null ? (
+              <div className="space-y-3 rounded-lg border border-red-300 bg-red-50 p-4 text-center" role="alert">
+                <p className="text-sm text-red-800">Erasing everything in</p>
+                <p className="text-4xl font-bold text-red-700 tabular-nums">{countdown}</p>
+                <button type="button" autoFocus onClick={() => setCountdown(null)}
+                  className="w-full rounded-lg bg-white border-2 border-red-600 px-4 py-3 text-base font-semibold text-red-700 hover:bg-red-100">
+                  Stop! Don't erase
+                </button>
+              </div>
+            ) : (
+            <form onSubmit={startErase} className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3">
               <p className="text-sm text-red-800">This can't be undone. Download a copy first if you might want any of it.</p>
               <Field label="Your password">
                 <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
@@ -1061,7 +1089,9 @@ function YourData() {
                 </button>
                 <button type="button" disabled={!!busy} onClick={() => { setErasing(false); setPassword(''); setWord(''); }} className={quietButtonClass}>Cancel</button>
               </div>
+              <p className="text-xs text-red-700">You'll get 10 seconds to change your mind.</p>
             </form>
+            )
           )}
         </div>
         <Notice message={message} />
