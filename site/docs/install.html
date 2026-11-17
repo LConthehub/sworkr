@@ -42,7 +42,7 @@
 
 <p class="lead">Pick your options, copy one file, start it. This page writes the setup file for you.</p>
 <p>Sworkr's Docker setup is one file, <code>docker-compose.yml</code>: where your records live, which folders it can see, and who can open it. Fill in what you want below; the file updates as you type. <strong>Nothing you type here leaves your browser.</strong></p>
-<p id="no-script">This builder needs JavaScript. Without it, use <code>docker-compose.yml</code> from the download as it is: it works without changes.</p>
+<p id="no-script">This builder needs JavaScript. Without it, use the ready-made <a href="/downloads/docker-compose.yml" download>docker-compose.yml</a> as it is: it works without changes.</p>
 
 <div id="builder" hidden>
 <form id="setup" class="builder" onsubmit="return false">
@@ -100,6 +100,8 @@
 <ul>
   <li>You need <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a> (Windows or Mac) or Docker on Linux. Don't want Docker? The <a href="/docs/getting-started.html">Windows app</a> needs nothing else.</li>
   <li>Already using Sworkr? Keep the name <code>sworkr</code> at the top of the file and your records stay where they are. Changing the data folder later starts an empty one: move your records with a backup first (<a href="/docs/privacy-and-backups.html">how</a>).</li>
+  <li>To update, run <code>docker compose pull</code>, then <code>docker compose up -d</code>, in the same folder.</li>
+  <li>On a Synology NAS: <em>Container Manager → Project → Create</em>, and paste this file. Other home servers (Unraid, TrueNAS, a Raspberry Pi 4 or 5) work the same way with Docker.</li>
   <li><strong>Never</strong> run <code>docker compose down -v</code>: the <code>-v</code> deletes your records.</li>
 </ul>
 <script src="/setup.js" defer></script>
