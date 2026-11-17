@@ -5,7 +5,7 @@ import { CHART, money } from '../colors';
 
 /** Suggestions only: anything can be typed in. */
 const COMMON = ['Tryst', 'Eros', 'Slixa', 'Private Delights', 'AdultWork', 'Scarlet Blue', 'Leolist', 'My website',
-  'X', 'Instagram', 'Reddit', 'Telegram', 'Bluesky', 'OnlyFans', 'Fansly', 'Referral', 'Agency', 'Met in person'];
+  'X', 'Instagram', 'Reddit', 'Telegram', 'Bluesky', 'OF', 'Fansly', 'Referral', 'Agency', 'Met in person'];
 
 /** "How they found you" on a contact: what you've typed before comes first, then common places. */
 export function FoundViaField({ value, onChange }) {

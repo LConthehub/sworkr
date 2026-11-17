@@ -7,7 +7,7 @@ import { BadDateWarning } from './Blocklist';
 import { SCREENING_STYLES } from '../colors';
 import { fetchAll } from '../api';
 
-const PLATFORMS = ['Instagram', 'X (Twitter)', 'OnlyFans', 'Fansly', 'TikTok', 'Snapchat', 'Telegram', 'WhatsApp',
+const PLATFORMS = ['Instagram', 'X (Twitter)', 'OF', 'Fansly', 'TikTok', 'Snapchat', 'Telegram', 'WhatsApp',
   'Signal', 'Reddit', 'Discord', 'Bluesky', 'Facebook', 'LinkedIn', 'Tryst', 'Eros'];
 const INDUSTRIES = ['Finance', 'Tech', 'Law', 'Medicine', 'Real estate', 'Sales', 'Entertainment', 'Hospitality', 'Construction',
   'Government', 'Education', 'Sports', 'Business owner', 'Retired', 'Student', 'Unknown'];

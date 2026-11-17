@@ -205,7 +205,7 @@ def test_nextcloud_can_use_the_calendar_login(api):
 # ---------- posts ----------
 
 def post(api, expect=201, **fields):
-    body = {"platform": "OnlyFans", "scheduled_at": "2049-01-10T18:00:00Z", **fields}
+    body = {"platform": "OF", "scheduled_at": "2049-01-10T18:00:00Z", **fields}
     return ok(api.post("/api/posts", json=body), expect)
 
 
@@ -219,12 +219,12 @@ def test_planning_and_posting(api, library):
 
     # The library shows where things went.
     sets = {e["name"]: e for e in ok(api.get("/api/content/browse"))["entries"]}
-    assert sets["2026-11 Red lace"]["platforms"] == ["OnlyFans"]
+    assert sets["2026-11 Red lace"]["platforms"] == ["OF"]
     files = {e["name"]: e for e in ok(api.get("/api/content/browse", params={"path": "2026-11 Red lace"}))["entries"]}
-    assert files["01.png"]["posts"][0]["platform"] == "OnlyFans" and files["02.mp4"]["posts"] == []
+    assert files["01.png"]["posts"][0]["platform"] == "OF" and files["02.mp4"]["posts"] == []
 
     again = post(api, file_paths=["2026-11 Red lace/01.png"])
-    assert "Already posted to OnlyFans" in again["warnings"][0]
+    assert "Already posted to OF" in again["warnings"][0]
     assert post(api, platform="Fansly", file_paths=["2026-11 Red lace/01.png"])["warnings"] == []
 
     x1 = post(api, platform="X", file_paths=["Teasers/a.jpg"], status="posted", posted_at="2049-01-01T12:00:00Z")
@@ -259,14 +259,14 @@ def test_posts_are_private(api, admin):
 
 
 def test_posts_go_to_the_calendar():
-    ics = calendar_sync.post_ics({"id": 5, "platform": "OnlyFans", "account": "@sunny", "status": "scheduled",
+    ics = calendar_sync.post_ics({"id": 5, "platform": "OF", "account": "@sunny", "status": "scheduled",
                                   "scheduled_at": "2049-01-10T18:00:00+00:00", "posted_at": None,
                                   "updated_at": "2049-01-01T00:00:00+00:00", "caption": "New set"}, discreet=False).decode()
-    assert "SUMMARY:Post: OnlyFans (@sunny)" in ics and "DTSTART:20490110T180000Z" in ics and "New set" in ics
-    discreet = calendar_sync.post_ics({"id": 5, "platform": "OnlyFans", "account": None, "status": "posted",
+    assert "SUMMARY:Post: OF (@sunny)" in ics and "DTSTART:20490110T180000Z" in ics and "New set" in ics
+    discreet = calendar_sync.post_ics({"id": 5, "platform": "OF", "account": None, "status": "posted",
                                        "scheduled_at": None, "posted_at": "2049-01-10T18:00:00+00:00",
                                        "updated_at": "2049-01-01T00:00:00+00:00", "caption": "x"}, discreet=True).decode()
-    assert "SUMMARY:Posted" in discreet and "OnlyFans" not in discreet
+    assert "SUMMARY:Posted" in discreet and "OF" not in discreet
 
 
 # ---------- the demo ----------

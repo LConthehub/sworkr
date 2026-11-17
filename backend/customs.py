@@ -62,7 +62,7 @@ class OrderIn(BaseModel):
     title: str                            # what it is, in a few words
     details: Optional[str] = None         # the script: what to say, wear, do
     client_id: Optional[int] = None
-    source_id: Optional[int] = None       # the place it's paid through (OnlyFans, a clip site, cash app…)
+    source_id: Optional[int] = None       # the place it's paid through (OF, a clip site, cash app…)
     persona_id: Optional[int] = None
     requested_at: Optional[datetime] = None
     price: Optional[float] = None

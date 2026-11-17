@@ -12,7 +12,7 @@ import { dayLabel, formatTime, fromDateTimeInputs, money, repeatDates, toDateInp
 export const PLATFORM_GROUPS = {
   'Ad sites': ['Tryst', 'Eros', 'Slixa', 'Private Delights', 'AdultWork', 'Scarlet Blue', 'Leolist', 'Skip the Games', 'My website'],
   Social: ['X', 'Instagram', 'Reddit', 'TikTok', 'Bluesky', 'Threads', 'Telegram', 'Snapchat'],
-  'Fan & clip sites': ['OnlyFans', 'Fansly', 'Fanvue', 'LoyalFans', 'Patreon', 'ManyVids', 'Clips4Sale', 'Pornhub'],
+  'Fan & clip sites': ['OF', 'Fansly', 'Fanvue', 'LoyalFans', 'Patreon', 'ManyVids', 'Clips4Sale', 'Pornhub'],
 };
 export const PLATFORMS = Object.values(PLATFORM_GROUPS).flat();
 const PAID_PLATFORMS = new Set(PLATFORM_GROUPS['Fan & clip sites'].map((p) => p.toLowerCase()));

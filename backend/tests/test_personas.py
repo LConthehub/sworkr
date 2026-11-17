@@ -63,9 +63,9 @@ def test_contacts_places_and_posts_name_a_persona(api):
     # Saving without persona_id (an older app, an import) leaves it alone; null clears it.
     assert ok(api.put(f"/api/clients/{client['id']}", json={"name": "Sam R"}))["persona_id"] == lux["id"]
     assert ok(api.put(f"/api/clients/{client['id']}", json={"name": "Sam R", "persona_id": None}))["persona_id"] is None
-    place = ok(api.post("/api/income-sources", json={"name": "OnlyFans", "kind": "platform", "persona_id": lux["id"]}), 201)
+    place = ok(api.post("/api/income-sources", json={"name": "OF", "kind": "platform", "persona_id": lux["id"]}), 201)
     assert place["persona_id"] == lux["id"]
-    post = ok(api.post("/api/posts", json={"platform": "OnlyFans", "persona_id": lux["id"]}), 201)
+    post = ok(api.post("/api/posts", json={"platform": "OF", "persona_id": lux["id"]}), 201)
     assert post["persona_id"] == lux["id"]
     assert ok(api.get("/api/personas"))[0]["places"] == 1
 
@@ -85,7 +85,7 @@ def test_personas_are_private(api, admin):
 def test_earnings_compared_by_persona(api):
     lux = ok(api.post("/api/personas", json={"name": "Lux"}), 201)
     kit = ok(api.post("/api/personas", json={"name": "Kit"}), 201)
-    of = ok(api.post("/api/income-sources", json={"name": "OnlyFans", "kind": "platform", "persona_id": kit["id"]}), 201)
+    of = ok(api.post("/api/income-sources", json={"name": "OF", "kind": "platform", "persona_id": kit["id"]}), 201)
     ok(api.post("/api/income", json={"source_id": of["id"], "date": "2044-03-10T20:00:00Z", "gross": 100, "fees": 20}), 201)
     ok(api.post("/api/income", json={"date": "2044-03-11T20:00:00Z", "gross": 50}), 201)
     sam = ok(api.post("/api/clients", json={"name": "Sam", "persona_id": lux["id"]}), 201)

@@ -16,7 +16,7 @@ from pydantic import BaseModel
 MAX_HANDLES = 12
 
 # Suggestions for the platform box; anything else may be typed.
-PLATFORMS = ["Instagram", "X (Twitter)", "OnlyFans", "Fansly", "TikTok", "Snapchat", "Telegram", "WhatsApp", "Signal",
+PLATFORMS = ["Instagram", "X (Twitter)", "OF", "Fansly", "TikTok", "Snapchat", "Telegram", "WhatsApp", "Signal",
              "Reddit", "Discord", "Bluesky", "Facebook", "LinkedIn", "Tryst", "Eros", "Other"]
 
 

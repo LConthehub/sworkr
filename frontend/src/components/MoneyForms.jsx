@@ -379,7 +379,7 @@ export function SourceForm({ source, onSaved }) {
     <form onSubmit={submit} className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Name *">
-          <input required autoFocus value={form.name} onChange={set('name')} placeholder="e.g. OnlyFans, Club Velvet" className={inputClass} />
+          <input required autoFocus value={form.name} onChange={set('name')} placeholder="e.g. OF, Club Velvet" className={inputClass} />
         </Field>
         <Field label="Kind">
           <select value={form.kind} onChange={changeKind} className={inputClass}>

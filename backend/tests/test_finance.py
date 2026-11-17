@@ -140,21 +140,21 @@ def test_csv_import_matches_categories_by_name(api):
 
 def test_places_you_earn(api, admin):
     club = ok(api.post("/api/income-sources", json={"name": "Club Velvet", "kind": "club", "fee_per_shift": 60}), 201)
-    of = ok(api.post("/api/income-sources", json={"name": "OnlyFans", "kind": "platform", "fee_percent": 20}), 201)
+    of = ok(api.post("/api/income-sources", json={"name": "OF", "kind": "platform", "fee_percent": 20}), 201)
     assert api.post("/api/income-sources", json={"name": "Bad", "fee_percent": 120}).status_code == 400
     assert api.post("/api/income-sources", json={"name": " "}).status_code == 400
     assert api.post("/api/income-sources", json={"name": "Euro site", "currency": "EUR"}).status_code == 400
     assert api.post("/api/income-sources", json={"name": "Site", "kind": "castle"}).status_code == 422
     ok(api.put(f"/api/income-sources/{club['id']}", json={"name": "Club Velvet", "kind": "club", "fee_per_shift": 80, "archived": True}))
-    assert [s["name"] for s in ok(api.get("/api/income-sources"))] == ["OnlyFans", "Club Velvet"]   # archived last
+    assert [s["name"] for s in ok(api.get("/api/income-sources"))] == ["OF", "Club Velvet"]   # archived last
     assert ok(admin.get("/api/income-sources")) == [] or of["id"] not in [s["id"] for s in ok(admin.get("/api/income-sources"))]
     assert admin.put(f"/api/income-sources/{of['id']}", json={"name": "Taken"}).status_code == 404
 
 
 def test_income_records_fees_and_pending_payouts(api, admin):
-    of = ok(api.post("/api/income-sources", json={"name": "OnlyFans", "kind": "platform", "fee_percent": 20}), 201)
+    of = ok(api.post("/api/income-sources", json={"name": "OF", "kind": "platform", "fee_percent": 20}), 201)
     paid = add_income(api, source_id=of["id"], kind="subscription", gross=500, fees=100)
-    assert (paid["net"], paid["source_name"], paid["status"], paid["currency"]) == (400, "OnlyFans", "received", "USD")
+    assert (paid["net"], paid["source_name"], paid["status"], paid["currency"]) == (400, "OF", "received", "USD")
     pending = add_income(api, when="2044-03-12T20:00:00Z", kind="tips", gross=80, fees=16, status="pending")
     shift = add_income(api, when="2044-03-13T04:00:00Z", kind="shift", gross=40, fees=60, description="Slow Tuesday")
     assert shift["net"] == -20                                  # a house fee can cost more than the night made
@@ -277,7 +277,7 @@ def test_work_profile_adds_starter_categories_and_places_once(api):
     assert {o["key"] for o in profile["options"]} >= {"brothel", "independent", "dancer", "cam", "phone", "content"}
 
     r = ok(api.put("/api/work-profile", json={"work_types": ["dancer", "content"]}))
-    assert "Shoes & heels" in r["added"]["categories"] and "OnlyFans" in r["added"]["sources"]
+    assert "Shoes & heels" in r["added"]["categories"] and "OF" in r["added"]["sources"]
     all_cats = ok(api.get("/api/expense-categories"))
     cats = {c["label"]: c for c in all_cats}
     assert cats["Shoes & heels"]["parent_key"] == "wardrobe" and cats["Camera & lighting"]["parent_key"] == "gear"
@@ -285,11 +285,11 @@ def test_work_profile_adds_starter_categories_and_places_once(api):
     # Kinds of work share subcategories instead of each bringing its own copy.
     assert [c["label"] for c in all_cats].count("Costumes & props") == 1
     sources = {s["name"]: s for s in ok(api.get("/api/income-sources"))}
-    assert sources["OnlyFans"]["fee_percent"] == 20 and "My club" in sources
+    assert sources["OF"]["fee_percent"] == 20 and "My club" in sources
 
     # Again, plus one more kind: nothing is doubled, and only the new kind's things are added.
     r = ok(api.put("/api/work-profile", json={"work_types": ["dancer", "content", "cam"]}))
-    assert "OnlyFans" not in r["added"]["sources"] and "My cam site" in r["added"]["sources"]
+    assert "OF" not in r["added"]["sources"] and "My cam site" in r["added"]["sources"]
     assert "Makeup & beauty" not in r["added"]["categories"]      # dancer already added it
     assert len(ok(api.get("/api/income-sources"))) == 4
     assert ok(api.get("/api/work-profile"))["work_types"] == ["dancer", "content", "cam"]
@@ -303,14 +303,14 @@ def test_work_profile_adds_starter_categories_and_places_once(api):
 def test_income_compared_by_kind_of_work_and_by_place(api):
     ok(api.put("/api/work-profile", json={"work_types": ["dancer", "content"]}))
     sources = {s["name"]: s for s in ok(api.get("/api/income-sources"))}
-    assert sources["OnlyFans"]["work_type"] == "content" and sources["My club"]["work_type"] == "dancer"
+    assert sources["OF"]["work_type"] == "content" and sources["My club"]["work_type"] == "dancer"
     side = ok(api.post("/api/income-sources", json={"name": "Side gig"}), 201)
     assert side["work_type"] is None
     assert api.post("/api/income-sources", json={"name": "x", "work_type": "astronaut"}).status_code == 400
 
     when = "2047-02-10T20:00:00Z"
-    add_income(api, when=when, source_id=sources["OnlyFans"]["id"], gross=500, fees=100)
-    add_income(api, when=when, source_id=sources["OnlyFans"]["id"], gross=50, fees=10, status="pending")
+    add_income(api, when=when, source_id=sources["OF"]["id"], gross=500, fees=100)
+    add_income(api, when=when, source_id=sources["OF"]["id"], gross=50, fees=10, status="pending")
     add_income(api, when=when, source_id=sources["My club"]["id"], kind="shift", gross=300, fees=60)
     add_income(api, when=when, source_id=side["id"], gross=100)
     add_income(api, when="2047-04-01T20:00:00Z", source_id=sources["My club"]["id"], gross=999)   # outside the range
@@ -329,7 +329,7 @@ def test_income_compared_by_kind_of_work_and_by_place(api):
 
     by_place = ok(api.get("/api/earnings/by-source", params={**range_, "group": "source"}))
     labels = {x["label"]: x["net"] for x in by_place["rows"]}
-    assert labels == {"In-person bookings": 600, "OnlyFans": 400, "My club": 240, "Side gig": 100}
+    assert labels == {"In-person bookings": 600, "OF": 400, "My club": 240, "Side gig": 100}
     assert api.get("/api/earnings/by-source", params={**range_, "group": "moon"}).status_code == 400
 
 

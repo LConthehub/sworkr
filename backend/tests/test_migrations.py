@@ -249,12 +249,12 @@ def test_upgrade_to_v6_fills_in_kinds_of_work_for_starter_places(monkeypatch):
     monkeypatch.undo()
     db = sqlite3.connect(path)
     db.executemany("INSERT INTO income_sources (owner_id, name, created_at, updated_at) VALUES (1, ?, ?, ?)",
-                   [("OnlyFans", T, T), ("my club", T, T), ("Something else", T, T)])
+                   [("OF", T, T), ("my club", T, T), ("Something else", T, T)])
     db.commit()
     db.close()
     migrations.run(path)
     assert {r["name"]: r["work_type"] for r in rows(path, "SELECT name, work_type FROM income_sources")} == {
-        "OnlyFans": "content", "my club": "dancer", "Something else": None}
+        "OF": "content", "my club": "dancer", "Something else": None}
 
 
 def test_upgrade_to_v7_partners_room_and_board_and_license_fees(monkeypatch):
@@ -335,14 +335,14 @@ def test_upgrade_to_v12_gives_venues_a_precise_kind(monkeypatch):
     db.executemany("INSERT INTO income_sources (owner_id, name, kind, work_type, created_at, updated_at) VALUES (1, ?, ?, ?, ?, ?)", [
         ("House", "venue", "brothel", T, T), ("Club", "venue", "dancer", T, T), ("Dungeon", "venue", "fetish", T, T),
         ("Con", "venue", "cosplay", T, T), ("Somewhere", "venue", None, T, T), ("My brothel or agency", "agency", "brothel", T, T),
-        ("Real agency", "agency", "brothel", T, T), ("OnlyFans", "platform", "content", T, T)])
+        ("Real agency", "agency", "brothel", T, T), ("OF", "platform", "content", T, T)])
     db.execute("INSERT INTO income (owner_id, source_id, date, gross, created_at, updated_at) VALUES (1, 2, ?, 100, ?, ?)", (T, T, T))
     db.commit()
     db.close()
     migrations.run(path)
     kinds = {r["name"]: r["kind"] for r in rows(path, "SELECT name, kind FROM income_sources")}
     assert kinds == {"House": "brothel", "Club": "club", "Dungeon": "studio", "Con": "event", "Somewhere": "club",
-                     "My brothel or agency": "brothel", "Real agency": "agency", "OnlyFans": "platform"}
+                     "My brothel or agency": "brothel", "Real agency": "agency", "OF": "platform"}
     assert rows(path, "SELECT source_id FROM income") == [{"source_id": 2}]
     assert rows(path, "SELECT COUNT(*) AS n FROM place_charges") == [{"n": 0}]
 

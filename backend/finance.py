@@ -282,7 +282,7 @@ class SourceKind(str, Enum):
     BROTHEL = "brothel"
     CLUB = "club"            # strip club, bar
     AGENCY = "agency"
-    PLATFORM = "platform"    # OnlyFans, cam site, clip store
+    PLATFORM = "platform"    # OF, cam site, clip store
     PHONE = "phone"          # phone, text or chat line
     STUDIO = "studio"        # dungeon, studio or room you hire
     EVENT = "event"          # convention, party, event

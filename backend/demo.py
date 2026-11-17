@@ -126,9 +126,9 @@ def _fill(api):
     clients = {p["name"].split()[0]: _ok(api.post("/api/clients", json=p)) for p in people}
     # Sometimes a handle is all you know.
     _ok(api.post("/api/clients", json={
-        "handles": [{"platform": "Instagram", "handle": "velvet.nights.fan"}, {"platform": "OnlyFans", "handle": "vnf_22"}],
+        "handles": [{"platform": "Instagram", "handle": "velvet.nights.fan"}, {"platform": "OF", "handle": "vnf_22"}],
         "display_handle": 0, "tags": ["fan"], "screening_status": "unscreened", "industry": "Unknown",
-        "bio": "Big spender on OnlyFans, asking to meet in Miami. No real name yet."}))
+        "bio": "Big spender on OF, asking to meet in Miami. No real name yet."}))
     for who, body in [("Jordan", "Mentioned a work trip to Miami next month - may want to book there."),
                       ("Jordan", "Paid in cash, brought flowers."),
                       ("Taylor", "Asked to move next overnight to a Friday."),
@@ -238,7 +238,7 @@ def _fill(api):
         _ok(api.post("/api/expenses", json={"description": description, "amount": amount,
                                             "category": categories[category], "date": f"{d.isoformat()}T12:00:00Z"}))
 
-    onlyfans = sources["OnlyFans"]["id"]
+    onlyfans = sources["OF"]["id"]
     for offset, kind, gross, description, status in [
         (-84, "subscription", 640, "Subscriptions", "received"), (-77, "sale", 180, "PPV set: red lace", "received"),
         (-63, "subscription", 710, "Subscriptions", "received"), (-49, "tips", 95, "Tips", "received"),
@@ -286,7 +286,7 @@ def _fill(api):
     # ---------- working with partners ----------
     jade = _ok(api.post("/api/clients", json={
         "name": "Jade", "role": "partner", "industry": "Escort & content creator",
-        "handles": [{"platform": "Instagram", "handle": "jade.after.dark"}, {"platform": "OnlyFans", "handle": "jadeafterdark"}],
+        "handles": [{"platform": "Instagram", "handle": "jade.after.dark"}, {"platform": "OF", "handle": "jadeafterdark"}],
         "bio": "Duo collaborator for bookings and collab content. Splits 50/50 on bookings, 60/40 to whoever posts."}))
     ruby = _ok(api.post("/api/clients", json={"name": "Ruby", "role": "partner", "bio": "Joins for parties at Cheryl's Ranch"}))
     _ok(api.post("/api/clients", json={"name": "Alex", "role": "partner", "industry": "Photographer", "email": "alex.photo@example.com",
@@ -317,13 +317,13 @@ def _fill(api):
 
     # ---------- posts (the demo's library is made up: see content.DemoLibrary) ----------
     for platform, offset, hour, status, caption, price, set_path, files, account in [
-        ("OnlyFans", -12, 19, "posted", "Red lace is finally here ❤️ Full set in your DMs", 15, "2026-10 Red lace",
+        ("OF", -12, 19, "posted", "Red lace is finally here ❤️ Full set in your DMs", 15, "2026-10 Red lace",
          ["2026-10 Red lace/01.jpg", "2026-10 Red lace/02.jpg", "2026-10 Red lace/03.jpg"], "@sunny"),
         ("X", -11, 17, "posted", "New set just dropped, link in bio 💋", None, "2026-10 Red lace", ["2026-10 Red lace/01.jpg"], "@sunny_xo"),
-        ("OnlyFans", 0, 20, "scheduled", "Beach day ☀️ who wants the rest?", 12, "2026-10 Beach day",
+        ("OF", 0, 20, "scheduled", "Beach day ☀️ who wants the rest?", 12, "2026-10 Beach day",
          ["2026-10 Beach day/02.jpg", "2026-10 Beach day/04.jpg"], "@sunny"),
         ("Reddit", 1, 18, "ready", "First time posting here, be nice 😇", None, "Teasers", ["Teasers/01.jpg"], "u/sunny_days"),
-        ("OnlyFans", 3, 21, "scheduled", "Collab with @jadeafterdark 👯 PPV unlock", 25, "2026-11 Collab with Jade",
+        ("OF", 3, 21, "scheduled", "Collab with @jadeafterdark 👯 PPV unlock", 25, "2026-11 Collab with Jade",
          ["2026-11 Collab with Jade/01.jpg", "2026-11 Collab with Jade/05.mp4"], "@sunny"),
         ("X", 4, 17, "idea", "Office roleplay teaser?", None, "2026-11 Office roleplay", [], "@sunny_xo"),
     ]:
@@ -423,7 +423,7 @@ def _fill(api):
 
     # ---------- documents ----------
     _ok(api.post("/api/documents", json={"name": "Passport", "kind": "passport", "expires_on": day(500).isoformat()}))
-    _ok(api.post("/api/documents", json={"name": "OnlyFans ID check", "kind": "verification", "persona_id": kitty["id"],
+    _ok(api.post("/api/documents", json={"name": "OF ID check", "kind": "verification", "persona_id": kitty["id"],
                                          "expires_on": day(40).isoformat(), "notes": "They ask again every year"}))
 
     # ---------- taxes: mileage and an estimated payment ----------
@@ -488,7 +488,7 @@ def _fill(api):
 
     def custom(paid=0, delivered=False, **body):
         order = _ok(api.post("/api/customs", json={"source_id": onlyfans, "persona_id": kitty["id"], **body}))
-        if paid:   # these sales are already in the OnlyFans payouts above, so they aren't logged a second time
+        if paid:   # these sales are already in the OF payouts above, so they aren't logged a second time
             _ok(api.post(f"/api/customs/{order['id']}/payment", json={"amount": paid, "log_income": False}))
         if delivered:
             _ok(api.post(f"/api/customs/{order['id']}/delivered", json={"delivery_note": "Sent in DMs"}))
@@ -515,7 +515,7 @@ def _fill(api):
                                ("prep", "Send Jade the release", {"due_date": day(2).isoformat()}), ("prep", "Pay the studio deposit", {"done": True}),
                                ("budget", "Studio hire", {"amount": 150}), ("budget", "Lingerie", {"amount": 80}),
                                ("marketing", "Teaser on X the day before", {"due_date": day(5).isoformat()}),
-                               ("marketing", "Pay-per-view drop on OnlyFans", {"due_date": day(12).isoformat()})):
+                               ("marketing", "Pay-per-view drop on OF", {"due_date": day(12).isoformat()})):
         _ok(api.post(f"/api/shoots/{shoot['id']}/items", json={"kind": kind, "label": label, **extra}))
     _ok(api.post(f"/api/shoots/{shoot['id']}/campaign"))
     _ok(api.post("/api/shoots", json={"title": "Beach day", "status": "idea", "concept": "Golden hour, the white set."}))

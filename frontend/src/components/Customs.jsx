@@ -250,7 +250,7 @@ function DeliverForm({ order, onDone }) {
           {money(order.owed)} of this hasn't been paid yet.
         </p>
       )}
-      <Field label="How you sent it (optional)"><input autoFocus value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. DM on OnlyFans, private link" className={inputClass} /></Field>
+      <Field label="How you sent it (optional)"><input autoFocus value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. DM on OF, private link" className={inputClass} /></Field>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex justify-end"><button type="submit" className={buttonClass}>Mark as delivered</button></div>
     </form>

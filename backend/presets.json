@@ -138,7 +138,7 @@
       ]
     },
     "content": {
-      "label": "Content creator (OnlyFans, Fansly…)",
+      "label": "Content creator (fan sites)",
       "categories": {
         "gear": [
           "Camera & lighting",
@@ -154,7 +154,7 @@
       },
       "sources": [
         {
-          "name": "OnlyFans",
+          "name": "OF",
           "kind": "platform",
           "fee_percent": 20,
           "payout_note": "Platform keeps 20% at the time of writing; check"

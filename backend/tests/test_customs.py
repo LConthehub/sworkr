@@ -54,12 +54,12 @@ def order(api, buyer="@fan", title="5 minute video", **more):
 
 
 def test_an_order_from_request_to_delivery(api):
-    place = ok(api.post("/api/income-sources", json={"name": "OnlyFans", "kind": "platform", "fee_percent": 20}), 201)
+    place = ok(api.post("/api/income-sources", json={"name": "OF", "kind": "platform", "fee_percent": 20}), 201)
     o = order(api, " @fan ", " Name video ", details="Say 'Alex', red dress", price=150, due_date=day(5), source_id=place["id"],
               requested_at="2026-03-01T12:00:00Z")
     assert (o["buyer"], o["title"], o["status"], o["payment"], o["owed"], o["days_left"], o["late"]) == \
         ("@fan", "Name video", "requested", "unpaid", 150, 5, False)
-    assert o["source_name"] == "OnlyFans"
+    assert o["source_name"] == "OF"
     assert ok(api.post(f"/api/customs/{o['id']}/status", json={"status": "quoted"}))["status"] == "quoted"
 
     part = ok(api.post(f"/api/customs/{o['id']}/payment", json={"amount": 50, "paid_on": "2026-03-02T12:00:00Z"}))
@@ -67,7 +67,7 @@ def test_an_order_from_request_to_delivery(api):
     paid = ok(api.post(f"/api/customs/{o['id']}/payment", json={"amount": 100, "fees": 0}))
     assert (paid["payment"], paid["owed"]) == ("paid", 0)
     income = sorted(ok(api.get("/api/income")), key=lambda i: i["gross"])
-    assert [(i["gross"], i["fees"], i["kind"], i["source_name"]) for i in income] == [(50, 10, "sale", "OnlyFans"), (100, 0, "sale", "OnlyFans")]
+    assert [(i["gross"], i["fees"], i["kind"], i["source_name"]) for i in income] == [(50, 10, "sale", "OF"), (100, 0, "sale", "OF")]
     assert income[0]["description"] == "Custom: Name video (@fan)" and income[0]["date"].startswith("2026-03-02")
 
     done = ok(api.post(f"/api/customs/{o['id']}/delivered", json={"delivered_at": "2026-03-05T12:00:00Z", "delivery_note": "Sent in DMs"}))

@@ -260,7 +260,7 @@ PAGES = [
 
 ("money", "Money & houses", "Money &amp; houses", """
 <h2>Workplaces &amp; platforms</h2>
-<p>Everywhere you earn: a club, a house, an agency, OnlyFans, a phone line. Add them under <em>Money → Income &amp; expenses → Workplaces &amp; platforms</em>, or tick your kinds of work and Sworkr adds the usual ones. Each has its own rules:</p>
+<p>Everywhere you earn: a club, a house, an agency, a fan site, a phone line. Add them under <em>Money → Income &amp; expenses → Workplaces &amp; platforms</em>, or tick your kinds of work and Sworkr adds the usual ones. Each has its own rules:</p>
 <ul>
   <li><strong>Their share</strong> of what you earn, a <strong>fee per shift</strong>, a <strong>share of gifts</strong>, a <strong>share of tips</strong>.</li>
   <li><strong>House rules (cuts)</strong>: any number of named deductions, called whatever your house calls them. Each is a percentage or an amount, taken <em>off the top</em> (before the house's share) or <em>out of your share</em>, and can be set to apply <em>always</em>.</li>
