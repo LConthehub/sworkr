@@ -22,9 +22,11 @@ Ideas and decisions, so nothing is lost between work sessions. Newest decisions 
   AGPL-3.0 four years after release. Have a lawyer check the wording before launch.
 - GitHub: user will link the account; scan history for secrets before the first public push.
 
-## In progress
-- Strip club accounting: contractor or employee, house fees by arrival time, dances with the house's cut,
-  VIP share, tip-outs, fines, a shift statement.
+## Done recently
+- Club pay (2026-11-16): contractor or employee, house fees by arrival time, dances with the house's cut,
+  VIP share, tip-outs, fines, a shift statement. Ideas for later: quotas/minimums, stage-set fees,
+  pay-period summaries for employees (wage vs tips), different rules on different nights.
+- Public wording: OF / fan sites only.
 
 ## Next
 - Tour pack lists from templates, with a budget against actual spending.
