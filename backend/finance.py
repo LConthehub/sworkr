@@ -18,6 +18,7 @@ from typing import Callable, List, Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
+import clubpay
 import collab
 import currencies
 import personas
@@ -306,6 +307,7 @@ class SourceIn(BaseModel):
     cuts: Optional[List["CutIn"]] = None     # the place's deductions; left out: they stay as they are
     holds_cash: bool = False                 # the office keeps what you earn until payout
     cash_limit: Optional[float] = None       # how much cash you may keep on you there
+    club_pay: Optional[dict] = None          # how a club pays (see clubpay.py); left out: stays as it is
 
 
 class CutIn(BaseModel):
@@ -345,7 +347,9 @@ def _source_values(s: SourceIn) -> tuple:
 
 
 def _source_row(r) -> dict:
-    return {**dict(r), "archived": bool(r["archived"]), "holds_cash": bool(r["holds_cash"]), "cuts": []}
+    row = dict(r)
+    return {**row, "archived": bool(r["archived"]), "holds_cash": bool(r["holds_cash"]), "cuts": [],
+            "club_pay": clubpay.load(row.get("club_pay"))}
 
 
 def _with_cuts(db, owner_id: int, sources: List[dict]) -> List[dict]:
@@ -409,6 +413,7 @@ def create_source(body: SourceIn, request: Request):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (*_source_values(body), _owner(request), now, now))
         personas.assign(db, "income_sources", cur.lastrowid, _owner(request), body)
+        clubpay.save(db, cur.lastrowid, _owner(request), body)
         _save_house_rules(db, cur.lastrowid, _owner(request), body)
         db.commit()
         return get_source(db, cur.lastrowid, _owner(request))
@@ -431,6 +436,7 @@ def update_source(source_id: int, body: SourceIn, request: Request):
             WHERE id = ? AND owner_id = ?
         """, (*_source_values(body), _now(), source_id, owner))
         personas.assign(db, "income_sources", source_id, owner, body)
+        clubpay.save(db, source_id, owner, body)
         _save_house_rules(db, source_id, owner, body)
         db.commit()
         return get_source(db, source_id, owner)

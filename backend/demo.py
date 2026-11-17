@@ -225,7 +225,11 @@ def _fill(api):
         "notes": "Stopped posting here; kept for last year's figures"}))
     club = _ok(api.put(f"/api/income-sources/{sources['My club']['id']}", json={
         "name": "Club Velvet", "kind": "club", "fee_per_shift": 60, "work_type": "dancer",
-        "payout_note": "Cash at the end of each shift; $60 house fee"}))
+        "payout_note": "Cash at the end of each shift",
+        "club_pay": {"status": "contractor", "house_fees": [{"until": "21:00", "fee": 40}, {"until": None, "fee": 80}],
+                     "dance_price": 20, "dance_house": 5, "dance_house_kind": "amount", "vip_house_percent": 50,
+                     "tip_outs": [{"label": "DJ", "kind": "amount", "value": 20},
+                                  {"label": "House mom", "kind": "percent", "value": 5}]}}))
     for offset, description, amount, category in [(-46, "Lace set", 120, "Lingerie & outfits"),
                                                   (-26, "Lash appointment", 85, "Makeup & beauty"),
                                                   (-11, "Verification site renewal", 40, "Ads & verification"),

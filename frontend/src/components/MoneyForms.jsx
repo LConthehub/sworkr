@@ -5,6 +5,7 @@ import { Field, inputClass, errorMessage, buttonClass } from './Modal';
 import { fetchAll, isDemo, reloadCategories, useCategories } from '../api';
 import { SplitEditor, useSplit } from './Splits';
 import { PersonaSelect } from './Personas';
+import { BLANK_CLUB_PAY, ClubPayEditor, ClubShift } from './ClubPay';
 import { CADENCES, INCOME_KINDS, money, SOURCE_KINDS, toDateInput } from '../colors';
 
 const numberOrNull = (value) => (value === '' || value == null ? null : Number(value));
@@ -307,6 +308,7 @@ export function SourceForm({ source, onSaved }) {
     holds_cash: !!source?.holds_cash,
     cash_limit: source?.cash_limit ?? '',
   });
+  const [clubPay, setClubPay] = useState(source?.club_pay || BLANK_CLUB_PAY);
   const [workTypes, setWorkTypes] = useState([]);
   useEffect(() => {
     axios.get('/api/work-profile').then(({ data }) => setWorkTypes(data.options)).catch(() => {});
@@ -348,6 +350,7 @@ export function SourceForm({ source, onSaved }) {
       cuts: form.cuts.filter((c) => c.label.trim() && c.value !== '').map((c) => ({ ...c, label: c.label.trim(), value: Number(c.value) })),
       holds_cash: form.holds_cash,
       cash_limit: form.holds_cash ? numberOrNull(form.cash_limit) : null,
+      ...(form.kind === 'club' ? { club_pay: clubPay } : {}),
       currency: 'USD',
     };
     setSaving(true);
@@ -417,6 +420,7 @@ export function SourceForm({ source, onSaved }) {
         <input type="number" min="0" max="100" step="1" inputMode="decimal" value={form.tip_share_percent} onChange={set('tip_share_percent')} placeholder="Leave empty if tips are all yours" className={`${inputClass} max-w-[16rem]`} />
         <span className="block text-xs text-gray-500 mt-1">A house cut or tip-out. Logging a tip from here takes it off for you.</span>
       </Field>
+      {form.kind === 'club' && <ClubPayEditor value={clubPay} onChange={setClubPay} />}
       <fieldset className="rounded-lg border border-gray-200 px-3 pt-2 pb-3 space-y-2">
         <legend className="px-1 text-xs font-medium text-gray-500">House rules</legend>
         {isDemo() ? (
@@ -651,6 +655,16 @@ export function IncomeForm({ income, sources, defaultDate, onSaved }) {
             {contacts.map((c) => <option key={c.id} value={c.id}>{c.display_name}</option>)}
           </select>
         </Field>
+      )}
+      {!income && source?.kind === 'club' && form.kind === 'shift' && (
+        <ClubShift sourceId={source.id} onResult={(st) => {
+          setFeesTouched(true);
+          setForm((f) => ({
+            ...f, gross: String(st.gross), fees: String(st.fees),
+            description: f.description || 'Shift',
+            notes: [`Took home ${money(st.take_home)}.`, ...st.taken.map((t) => `${t.label} ${money(t.amount)}`)].join(' '),
+          }));
+        }} />
       )}
       <Field label="Description">
         <input value={form.description} onChange={set('description')} placeholder={form.kind === 'gift' ? 'e.g. Designer bag' : 'e.g. Friday shift, March subscriptions'} className={inputClass} />

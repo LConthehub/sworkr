@@ -1390,6 +1390,11 @@ def _m38_ntfy(conn):
     """)
 
 
+def _m39_club_pay(conn):
+    """How a club pays: contractor or employee, house fees by arrival time, dances, VIP, tip-outs (JSON)."""
+    conn.execute("ALTER TABLE income_sources ADD COLUMN club_pay TEXT")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1429,6 +1434,7 @@ MIGRATIONS = [
     (36, "prices by contact tag", _m36_tag_pricing, False),
     (37, "workplaces remember their starter place", _m37_preset_names, False),
     (38, "push notifications", _m38_ntfy, False),
+    (39, "club pay", _m39_club_pay, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 
