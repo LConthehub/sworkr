@@ -26,7 +26,7 @@ docker compose down              # stop
 
 Don't run both at once.
 
-**Only this computer can open sworkr.** The ports are bound to `127.0.0.1`, so other devices on
+**Only this computer or home server can open sworkr.** The ports are bound to `127.0.0.1`, so other devices on
 your network can't reach it. To use it from a phone you would need to put it behind HTTPS on
 purpose; don't just open the port.
 
@@ -58,7 +58,7 @@ There is also a global search (press `/`) across clients, appointments and expen
 
 - **Rate and payment.** Each appointment can have a rate and the amount paid so far. Income on the
   Money page is what has actually been paid, counted in the month of the appointment.
-- **Where.** Incall / outcall and an address.
+- **Where.** Where the appointment takes place.
 - **Warnings.** Booking a client marked *do not see*, or a time that overlaps another booking,
   shows a warning first. You can still save.
 - **Repeats.** Weekly, every two weeks or monthly, up to 52 times. Each repeat is its own
