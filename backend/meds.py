@@ -10,6 +10,7 @@ reminder" unless you turn that off, since tasks can show up on a shared calendar
 """
 
 import datetime as dt
+import json
 from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 from typing import Callable, List, Optional
@@ -37,6 +38,7 @@ class Method(str, Enum):
     PATCH = "patch"
     RING = "ring"
     SHOT = "shot"
+    INJECTION = "injection"  # self-injected on a schedule: GLP-1, testosterone, estradiol...
     IMPLANT = "implant"
     IUD = "iud"
     CONDOMS = "condoms"
@@ -60,6 +62,11 @@ class LogKind(str, Enum):
     REFILLED = "refilled"
 
 
+class DoseStep(BaseModel):
+    dose: str                                # as written on the plan: "0.25 mg", "100 mg/0.5 mL"
+    weeks: Optional[int] = None              # how long; the last step can be open-ended
+
+
 class MedIn(BaseModel):
     name: str                                # "Pill", "PrEP", "Depo shot"…
     method: Method = Method.PILL
@@ -70,6 +77,39 @@ class MedIn(BaseModel):
     discreet: bool = True
     active: bool = True
     notes: Optional[str] = None
+    every_days: Optional[int] = None         # injections: how many days apart (7 = weekly)
+    sites: Optional[List[str]] = None        # injections: the sites to rotate through, in order
+    doses: Optional[List[DoseStep]] = None   # injections: the dose steps from your prescriber's plan
+
+
+def _json_list(value) -> list:
+    try:
+        return json.loads(value) if value else []
+    except ValueError:
+        return []
+
+
+def next_site(sites: List[str], last: Optional[str]) -> Optional[str]:
+    """The site after the last one used, going round the list; the first if none was used yet."""
+    if not sites:
+        return None
+    if last in sites:
+        return sites[(sites.index(last) + 1) % len(sites)]
+    return sites[0]
+
+
+def dose_on(steps: list, started: Optional[date], day: date) -> Optional[str]:
+    """Which dose step `day` falls in, counting weeks from the start. Past the last step: the last dose."""
+    if not steps:
+        return None
+    if not started or day < started:
+        return steps[0]["dose"]
+    weeks_in = (day - started).days // 7
+    for step in steps:
+        if step.get("weeks") is None or weeks_in < step["weeks"]:
+            return step["dose"]
+        weeks_in -= step["weeks"]
+    return steps[-1]["dose"]
 
 
 class LogIn(BaseModel):
@@ -77,6 +117,8 @@ class LogIn(BaseModel):
     date: Optional[dt.date] = None           # (dt.date: a field called `date` would hide the type)
     note: Optional[str] = None
     cost: Optional[float] = None             # a refill this time, if different
+    site: Optional[str] = None               # an injection: where (left out: the next in the rotation)
+    dose: Optional[str] = None               # an injection: how much (left out: today's step of the plan)
 
 
 def _last(db, med_id: int, kinds) -> Optional[date]:
@@ -110,6 +152,15 @@ def status(db, med: dict, today: Optional[date] = None) -> dict:
         else:
             out["ring"] = "out"
             out["next"] = {"what": "Put a new ring in", "on": (cycle_start + timedelta(days=RING_IN + RING_OUT)).isoformat()}
+    elif method == Method.INJECTION:
+        every = med.get("every_days") or 7
+        if changed:
+            out["next"] = {"what": "Next injection", "on": (changed + timedelta(days=every)).isoformat()}
+        last = db.execute("SELECT site FROM med_logs WHERE med_id = ? AND kind = 'changed' AND site IS NOT NULL "
+                          "ORDER BY date DESC, id DESC LIMIT 1", (med["id"],)).fetchone()
+        out["last_site"] = last["site"] if last else None
+        out["next_site"] = next_site(_json_list(med.get("sites")), out["last_site"])
+        out["dose"] = dose_on(_json_list(med.get("doses")), started, today)
     elif method in (Method.IMPLANT, Method.IUD) and med["replace_by"]:
         out["next"] = {"what": f"Replace the {'implant' if method == Method.IMPLANT else 'IUD'}", "on": med["replace_by"]}
     if med["refill_every_days"]:
@@ -158,8 +209,9 @@ def _get(db, med_id: int, owner_id: int) -> Optional[dict]:
 
 def _out(db, med: dict) -> dict:
     logs = [dict(r) for r in db.execute(
-        "SELECT id, date, kind, note FROM med_logs WHERE med_id = ? ORDER BY date DESC, id DESC LIMIT 10", (med["id"],))]
-    return {**med, "discreet": bool(med["discreet"]), "active": bool(med["active"]), "status": status(db, med), "recent": logs}
+        "SELECT id, date, kind, note, site, dose FROM med_logs WHERE med_id = ? ORDER BY date DESC, id DESC LIMIT 10", (med["id"],))]
+    return {**med, "discreet": bool(med["discreet"]), "active": bool(med["active"]), "status": status(db, med), "recent": logs,
+            "sites": _json_list(med.get("sites")), "doses": _json_list(med.get("doses"))}
 
 
 def _validate(body: MedIn) -> MedIn:
@@ -172,7 +224,23 @@ def _validate(body: MedIn) -> MedIn:
         raise HTTPException(status_code=400, detail="The cost must be 0 or more")
     if body.method not in (Method.IMPLANT, Method.IUD):
         body.replace_by = None
+    if body.method == Method.INJECTION:
+        if body.every_days is not None and not 1 <= body.every_days <= 120:
+            raise HTTPException(status_code=400, detail="Injections must be between 1 and 120 days apart")
+        body.sites = [s.strip()[:40] for s in (body.sites or []) if s and s.strip()][:24]
+        for step in body.doses or []:
+            step.dose = (step.dose or "").strip()[:40]
+            if not step.dose or (step.weeks is not None and not 1 <= step.weeks <= 520):
+                raise HTTPException(status_code=400, detail="Each dose step needs a dose, and weeks between 1 and 520")
+    else:
+        body.every_days, body.sites, body.doses = None, None, None
     return body
+
+
+def _save_injection(db, med_id: int, body: MedIn):
+    db.execute("UPDATE med_schedules SET every_days = ?, sites = ?, doses = ? WHERE id = ?",
+               (body.every_days, json.dumps(body.sites) if body.sites else None,
+                json.dumps([d.model_dump() for d in body.doses]) if body.doses else None, med_id))
 
 
 def _values(b: MedIn) -> tuple:
@@ -209,6 +277,7 @@ def create_med(body: MedIn, request: Request):
                                        notes, owner_id, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (*_values(body), owner, now, now))
+        _save_injection(db, cur.lastrowid, body)
         tasks = _sync_task(db, cur.lastrowid, owner)
         db.commit()
         _after(owner, tasks)
@@ -230,6 +299,7 @@ def update_med(med_id: int, body: MedIn, request: Request):
                    discreet = ?, active = ?, notes = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (*_values(body), _now(), med_id, owner))
+        _save_injection(db, med_id, body)
         tasks = _sync_task(db, med_id, owner)
         db.commit()
         _after(owner, tasks)
@@ -270,8 +340,13 @@ def log_med(med_id: int, body: LogIn, request: Request):
         if body.kind == LogKind.TAKEN and db.execute(
                 "SELECT 1 FROM med_logs WHERE med_id = ? AND date = ? AND kind = 'taken'", (med_id, when.isoformat())).fetchone():
             return _out(db, med)   # already logged today
-        db.execute("INSERT INTO med_logs (med_id, owner_id, date, kind, note, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                   (med_id, owner, when.isoformat(), body.kind.value, (body.note or "").strip() or None, _now()))
+        site = dose = None
+        if med["method"] == Method.INJECTION.value and body.kind == LogKind.CHANGED:
+            st = status(db, med, when)
+            site = (body.site or "").strip()[:40] or st.get("next_site")
+            dose = (body.dose or "").strip()[:40] or st.get("dose")
+        db.execute("INSERT INTO med_logs (med_id, owner_id, date, kind, note, site, dose, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                   (med_id, owner, when.isoformat(), body.kind.value, (body.note or "").strip() or None, site, dose, _now()))
         if body.kind == LogKind.CHANGED and med["method"] == Method.RING.value:
             # Putting a ring in starts a new three weeks; taking it out starts the week off.
             ring = status(db, med, when)["ring"]

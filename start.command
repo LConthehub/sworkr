@@ -12,14 +12,14 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 echo "Starting sworkr. The first time takes a few minutes while it downloads what it needs..."
-if ! docker compose -f docker-compose.prod.yml up --build -d; then
+if ! docker compose up -d --build; then
     echo
     echo "sworkr couldn't start. The lines above say why."
     exit 1
 fi
 
 echo
-echo "sworkr is running at http://localhost:8080"
+echo "sworkr is running at http://localhost:8008"
 echo "It keeps running in the background, and starts again by itself when Docker Desktop starts."
 echo "To stop it, run stop.command."
-command -v open >/dev/null 2>&1 && open http://localhost:8080
+command -v open >/dev/null 2>&1 && open http://localhost:8008

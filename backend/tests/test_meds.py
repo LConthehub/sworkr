@@ -101,3 +101,39 @@ def test_meds_are_private(api, admin):
     assert pill["id"] not in [m["id"] for m in ok(admin.get("/api/meds"))]
     assert admin.post(f"/api/meds/{pill['id']}/log", json={"kind": "taken"}).status_code == 404
     assert admin.put(f"/api/meds/{pill['id']}", json={"name": "x"}).status_code == 404
+
+
+# ---------- injections: site rotation and dose steps ----------
+
+def test_injections_rotate_sites_and_follow_the_dose_plan(api):
+    start = TODAY - timedelta(days=30)          # 4 weeks and 2 days in: the second step
+    m = med(api, name="GLP-1", method="injection", every_days=7, started_on=start.isoformat(),
+            sites=["Left belly", "Right belly", "Left thigh"],
+            doses=[{"dose": "0.25 mg", "weeks": 4}, {"dose": "0.5 mg", "weeks": 4}, {"dose": "1 mg"}])
+    assert (m["status"]["next_site"], m["status"]["dose"]) == ("Left belly", "0.5 mg")
+    assert m["status"]["next"] == {"what": "Next injection", "on": (start + timedelta(days=7)).isoformat()}
+
+    m = ok(api.post(f"/api/meds/{m['id']}/log", json={"kind": "changed"}), 201)
+    assert (m["recent"][0]["site"], m["recent"][0]["dose"]) == ("Left belly", "0.5 mg")   # filled in from the plan
+    assert m["status"]["next_site"] == "Right belly"
+    assert m["status"]["next"]["on"] == (TODAY + timedelta(days=7)).isoformat()
+    # Choosing another site carries the rotation on from there.
+    m = ok(api.post(f"/api/meds/{m['id']}/log", json={"kind": "changed", "site": "Left thigh", "dose": "0.5 mg"}), 201)
+    assert m["status"]["next_site"] == "Left belly"
+
+
+def test_dose_steps_past_the_plan_stay_on_the_last_dose():
+    import meds
+    steps = [{"dose": "2 mg", "weeks": 1}, {"dose": "4 mg", "weeks": 1}]
+    start = date(2044, 1, 1)
+    assert meds.dose_on(steps, start, date(2044, 1, 3)) == "2 mg"
+    assert meds.dose_on(steps, start, date(2044, 1, 9)) == "4 mg"
+    assert meds.dose_on(steps, start, date(2044, 6, 1)) == "4 mg"
+    assert meds.next_site([], None) is None
+
+
+def test_injection_settings_are_checked(api):
+    assert api.post("/api/meds", json={"name": "T", "method": "injection", "every_days": 500}).status_code == 400
+    assert api.post("/api/meds", json={"name": "T", "method": "injection", "doses": [{"dose": ""}]}).status_code == 400
+    pill = med(api, name="Pill", method="pill", sites=["Left belly"])
+    assert pill["sites"] == []                    # only injections keep sites

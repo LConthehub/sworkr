@@ -15,7 +15,7 @@ account on it, including whoever gave you this copy.
    - Linux: `sh start.command`.
 
    The first start downloads what it needs and takes a few minutes.
-4. Your browser opens <http://localhost:8080>. **Create your account.** That first account is yours and is
+4. Your browser opens <http://localhost:8008>. **Create your account.** That first account is yours and is
    the admin. Use a password of 12 or more characters and keep it somewhere safe.
 
 A new copy contains a few made-up clients and bookings so you can look around. Remove them under
@@ -37,7 +37,7 @@ A new copy contains a few made-up clients and bookings so you can look around. R
 ## Using it day to day
 
 - Sworkr keeps running in the background and comes back when Docker Desktop starts. Just open
-  <http://localhost:8080>.
+  <http://localhost:8008>.
 - To stop it: `stop.bat` (Windows) or `stop.command` (Mac, Linux). Your data stays.
 - **Only this computer can open it.** That's deliberate. Don't open the port to your network or the internet;
   to use it from your phone, follow *Account → Connections → On your phone* instead.
@@ -81,9 +81,9 @@ volume. **Without that key the database can't be opened**, so:
 
 - **"Docker Desktop isn't running"**: open Docker Desktop and wait for *Engine running*.
 - **Forgot your password**: open a terminal in this folder and run
-  `docker compose -f docker-compose.prod.yml exec api python manage.py reset-password`
+  `docker compose exec sworkr python manage.py reset-password`
 - **Lost your phone and your recovery codes**:
-  `docker compose -f docker-compose.prod.yml exec api python manage.py turn-off-two-step <username>`
+  `docker compose exec sworkr python manage.py turn-off-two-step <username>`
 - **Never run** `docker compose down -v` or delete the `sworkr_sworkr_data` or `sworkr_sworkr_keys` volume in
   Docker Desktop: they are your data and the key that opens it.
 - **After restoring a backup on a different computer**, sworkr asks again for the app passwords you had

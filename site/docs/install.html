@@ -41,8 +41,8 @@
       <h1>Install with Docker</h1>
 
 <p class="lead">Pick your options, copy one file, start it. This page writes the setup file for you.</p>
-<p>Sworkr's Docker setup is one file, <code>docker-compose.prod.yml</code>: where your records live, which folders it can see, and who can open it. Fill in what you want below; the file updates as you type. <strong>Nothing you type here leaves your browser.</strong></p>
-<p id="no-script">This builder needs JavaScript. Without it, use <code>docker-compose.prod.yml</code> from the download as it is: it works without changes.</p>
+<p>Sworkr's Docker setup is one file, <code>docker-compose.yml</code>: where your records live, which folders it can see, and who can open it. Fill in what you want below; the file updates as you type. <strong>Nothing you type here leaves your browser.</strong></p>
+<p id="no-script">This builder needs JavaScript. Without it, use <code>docker-compose.yml</code> from the download as it is: it works without changes.</p>
 
 <div id="builder" hidden>
 <form id="setup" class="builder" onsubmit="return false">
@@ -61,7 +61,7 @@
   </fieldset>
   <fieldset>
     <legend>Who can open it</legend>
-    <label>Port <input name="port" type="number" min="1" max="65535" value="8080"></label>
+    <label>Port <input name="port" type="number" min="1" max="65535" value="8008"></label>
     <label class="radio"><input type="radio" name="network" value="computer" checked> Only this computer (safest; use <a href="/docs/phone.html">Tailscale</a> for your phone)</label>
     <label class="radio"><input type="radio" name="network" value="network"> Other devices on my home network too</label>
     <label>Web address for passkeys (optional) <input name="passkey_address" placeholder="e.g. https://you.duckdns.org"></label>
@@ -83,8 +83,8 @@
 
 <h2>Your setup file</h2>
 <div class="code-box">
-  <textarea id="compose" readonly rows="24" spellcheck="false" aria-label="docker-compose.prod.yml"></textarea>
-  <p><button type="button" id="copy-compose">Copy</button> <button type="button" id="download-compose">Download docker-compose.prod.yml</button></p>
+  <textarea id="compose" readonly rows="24" spellcheck="false" aria-label="docker-compose.yml"></textarea>
+  <p><button type="button" id="copy-compose">Copy</button> <button type="button" id="download-compose">Download docker-compose.yml</button></p>
 </div>
 <div id="env-wrap" class="code-box" hidden>
   <h3>And a <code>.env</code> file for email</h3>

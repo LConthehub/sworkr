@@ -1,5 +1,5 @@
 // The setup builder on /docs/install.html. Runs only in your browser: nothing you type is sent anywhere.
-// It writes a docker-compose.prod.yml (and, for email, a .env) from the choices on the page.
+// It writes a docker-compose.yml (and, for email, a .env) from the choices on the page.
 (function () {
   'use strict';
   var form = document.getElementById('setup');
@@ -24,7 +24,7 @@
   }
 
   function build() {
-    var port = num('port', 8080, 1, 65535);
+    var port = num('port', 8008, 1, 65535);
     var dataFolder = path(val('data_folder'));
     var keysFolder = path(val('keys_folder'));
     var backups = path(val('backups')) || './backups';
@@ -37,23 +37,22 @@
 
     var y = [];
     y.push('# Made with the setup builder at sworkr.com/docs/install.html');
-    y.push('# Start:  docker compose -f docker-compose.prod.yml up --build -d     (or double-click start)');
-    y.push('# Stop:   docker compose -f docker-compose.prod.yml down              (never add -v: it deletes your data)');
+    y.push('# Start:  docker compose up -d --build     (or double-click start)');
+    y.push('# Stop:   docker compose down              (never add -v: it deletes your records)');
     y.push('');
-    y.push('name: sworkr          # keep this name: it is how Docker finds your data again');
+    y.push('name: sworkr          # keep this name: it is how Docker finds your records again');
     y.push('');
     y.push('services:');
-    y.push('  api:');
-    y.push('    build: ./backend');
+    y.push('  sworkr:');
+    y.push('    build: .');
+    y.push('    ports:');
+    y.push('      - ' + q((network ? '' : '127.0.0.1:') + port + ':8008') + (network ? '      # other devices on your network can open it' : '      # this computer only'));
     y.push('    volumes:');
     y.push(dataFolder ? '      - ' + q(dataFolder + ':/data') + '        # your records' : '      - sworkr_data:/data                 # your records (kept by Docker)');
     y.push(keysFolder ? '      - ' + q(keysFolder + ':/keys') + '        # the key that locks them: keep it apart from backups' : '      - sworkr_keys:/keys                 # the key that locks them (kept by Docker)');
     y.push('      - ' + q(backups + ':/backups') + '        # encrypted daily backups');
     if (content) y.push('      - ' + q(content + ':/content:ro') + '        # content library (read only: sworkr never changes it)');
     y.push('    environment:');
-    y.push('      - DATA_DIR=/data');
-    y.push('      - KEY_DIR=/keys');
-    y.push('      - BACKUP_DIR=/backups');
     y.push('      - BACKUP_KEEP=' + keep);
     y.push('      - SESSION_IDLE_MINUTES=' + idle);
     if (passkeys) y.push('      - PASSKEY_ORIGINS=' + passkeys);
@@ -63,16 +62,6 @@
         y.push('      - ' + k + '=${' + k + ':-' + fallback + '}      # from the .env file next to this one');
       });
     }
-    y.push('    restart: unless-stopped');
-    y.push('');
-    y.push('  web:');
-    y.push('    build:');
-    y.push('      context: ./frontend');
-    y.push('      dockerfile: Dockerfile.prod');
-    y.push('    ports:');
-    y.push('      - ' + q((network ? '' : '127.0.0.1:') + port + ':80') + (network ? '      # other devices on your network can open it' : '      # this computer only'));
-    y.push('    depends_on:');
-    y.push('      - api');
     y.push('    restart: unless-stopped');
     if (!dataFolder || !keysFolder) {
       y.push('');
@@ -100,10 +89,10 @@
     steps.innerHTML = '';
     [
       'Download <a href="/downloads/sworkr-docker.zip">sworkr-docker.zip</a> and unzip it.',
-      'In the <code>sworkr</code> folder, open <code>docker-compose.prod.yml</code> in a text editor, replace everything in it with the text above, and save.',
+      'In the <code>sworkr</code> folder, open <code>docker-compose.yml</code> in a text editor, replace everything in it with the text above, and save.',
       email ? 'Save the second box as a file called <code>.env</code> in the same folder, and type your email app password after <code>SMTP_PASSWORD=</code>.' : null,
       dataFolder || keysFolder || content ? 'Make sure the folders you chose exist. On Mac, Docker Desktop may ask to share them: say yes.' : null,
-      'Double-click <code>start.bat</code> (Windows) or <code>start.command</code> (Mac), or run <code>docker compose -f docker-compose.prod.yml up --build -d</code> in that folder.',
+      'Double-click <code>start.bat</code> (Windows) or <code>start.command</code> (Mac), or run <code>docker compose up -d --build</code> in that folder.',
       'Open <a href="' + url + '">' + url + '</a> and make your account.',
     ].filter(Boolean).forEach(function (html) {
       var li = document.createElement('li');
@@ -141,7 +130,7 @@
   });
   copier('copy-compose', out);
   copier('copy-env', envBox);
-  downloader('download-compose', out, 'docker-compose.prod.yml');
+  downloader('download-compose', out, 'docker-compose.yml');
   downloader('download-env', envBox, '.env');
   document.getElementById('email-fields').hidden = !val('email');
   document.getElementById('builder').hidden = false;

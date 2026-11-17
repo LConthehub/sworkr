@@ -47,7 +47,7 @@ PAGES = [
 <ol>
   <li>Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>, open it, and wait for <em>Engine running</em>.</li>
   <li>Unzip <em>sworkr-docker.zip</em>. Windows: double-click <code>start.bat</code>. Mac: right-click <code>start.command</code>, choose <em>Open</em>. The first start takes a few minutes.</li>
-  <li>Open <code>http://localhost:8080</code>.</li>
+  <li>Open <code>http://localhost:8008</code>.</li>
 </ol>
 
 <h2>Your first minutes</h2>
@@ -99,8 +99,8 @@ PAGES = [
 
 ("install", "Install with Docker", "Install with Docker", """
 <p class="lead">Pick your options, copy one file, start it. This page writes the setup file for you.</p>
-<p>Sworkr's Docker setup is one file, <code>docker-compose.prod.yml</code>: where your records live, which folders it can see, and who can open it. Fill in what you want below; the file updates as you type. <strong>Nothing you type here leaves your browser.</strong></p>
-<p id="no-script">This builder needs JavaScript. Without it, use <code>docker-compose.prod.yml</code> from the download as it is: it works without changes.</p>
+<p>Sworkr's Docker setup is one file, <code>docker-compose.yml</code>: where your records live, which folders it can see, and who can open it. Fill in what you want below; the file updates as you type. <strong>Nothing you type here leaves your browser.</strong></p>
+<p id="no-script">This builder needs JavaScript. Without it, use <code>docker-compose.yml</code> from the download as it is: it works without changes.</p>
 
 <div id="builder" hidden>
 <form id="setup" class="builder" onsubmit="return false">
@@ -119,7 +119,7 @@ PAGES = [
   </fieldset>
   <fieldset>
     <legend>Who can open it</legend>
-    <label>Port <input name="port" type="number" min="1" max="65535" value="8080"></label>
+    <label>Port <input name="port" type="number" min="1" max="65535" value="8008"></label>
     <label class="radio"><input type="radio" name="network" value="computer" checked> Only this computer (safest; use <a href="/docs/phone.html">Tailscale</a> for your phone)</label>
     <label class="radio"><input type="radio" name="network" value="network"> Other devices on my home network too</label>
     <label>Web address for passkeys (optional) <input name="passkey_address" placeholder="e.g. https://you.duckdns.org"></label>
@@ -141,8 +141,8 @@ PAGES = [
 
 <h2>Your setup file</h2>
 <div class="code-box">
-  <textarea id="compose" readonly rows="24" spellcheck="false" aria-label="docker-compose.prod.yml"></textarea>
-  <p><button type="button" id="copy-compose">Copy</button> <button type="button" id="download-compose">Download docker-compose.prod.yml</button></p>
+  <textarea id="compose" readonly rows="24" spellcheck="false" aria-label="docker-compose.yml"></textarea>
+  <p><button type="button" id="copy-compose">Copy</button> <button type="button" id="download-compose">Download docker-compose.yml</button></p>
 </div>
 <div id="env-wrap" class="code-box" hidden>
   <h3>And a <code>.env</code> file for email</h3>
@@ -168,7 +168,7 @@ PAGES = [
 <h2>Set it up</h2>
 <ol>
   <li>Install Tailscale on your computer and your phone (<a href="https://tailscale.com/download">tailscale.com/download</a>, or the App Store / Google Play). Sign in to the same account on both. Use an email you keep private.</li>
-  <li>On your computer, open a terminal and run <code>tailscale serve --bg 8765</code> (Windows app) or <code>tailscale serve --bg 8080</code> (Docker). If it asks you to turn on HTTPS for your network, follow the link it gives.</li>
+  <li>On your computer, open a terminal and run <code>tailscale serve --bg 8765</code> (Windows app) or <code>tailscale serve --bg 8008</code> (Docker). If it asks you to turn on HTTPS for your network, follow the link it gives.</li>
   <li>It prints a private address like <code>https://your-computer.tail1234.ts.net</code>. Open it on your phone and sign in.</li>
 </ol>
 
@@ -210,9 +210,9 @@ PAGES = [
   <li>Download Caddy for your computer and put it in a folder, for example <code>C:\\Caddy</code>.</li>
   <li>In that folder, make a file called <code>Caddyfile</code> (no extension) with:
 <pre><code>yourname.duckdns.org {
-    reverse_proxy 127.0.0.1:8080
+    reverse_proxy 127.0.0.1:8008
 }</code></pre>
-  Use <code>8765</code> instead of <code>8080</code> for the Windows app.</li>
+  Use <code>8765</code> instead of <code>8008</code> for the Windows app.</li>
   <li>Start it from that folder with <code>caddy run</code>. To have it start with the computer, see Caddy's <em>Keep Caddy running</em> page.</li>
 </ol>
 
@@ -365,10 +365,10 @@ PAGES = [
 </ul>
 
 <h2>I forgot my password</h2>
-<p>Docker: open a terminal in the Sworkr folder and run<br><code>docker compose -f docker-compose.prod.yml exec api python manage.py reset-password</code><br>Windows app: ask the other admin on your copy, or restore a backup from before. If you have a passkey set up on a device, you can sign in with that.</p>
+<p>Docker: open a terminal in the Sworkr folder and run<br><code>docker compose exec sworkr python manage.py reset-password</code><br>Windows app: ask the other admin on your copy, or restore a backup from before. If you have a passkey set up on a device, you can sign in with that.</p>
 
 <h2>I lost my phone and my recovery codes</h2>
-<p>Docker: <code>docker compose -f docker-compose.prod.yml exec api python manage.py turn-off-two-step &lt;username&gt;</code>. Then set two-step sign-in up again and save new recovery codes on paper.</p>
+<p>Docker: <code>docker compose exec sworkr python manage.py turn-off-two-step &lt;username&gt;</code>. Then set two-step sign-in up again and save new recovery codes on paper.</p>
 
 <h2>"The database can't be opened"</h2>
 <p>The key that locks it is missing: the Credential Manager entry was deleted, the <code>sworkr_sworkr_keys</code> volume was removed, or the data was copied to another computer without its key. Install fresh and restore your latest backup with its passphrase.</p>

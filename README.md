@@ -19,8 +19,8 @@ Then open <http://localhost:5173>. Both containers reload when you save a file.
 For everyday use there is a faster built version (same data):
 
 ```bash
-docker compose -f docker-compose.prod.yml up --build -d     # then open http://localhost:8080
-docker compose -f docker-compose.prod.yml down              # stop
+docker compose up -d --build     # then open http://localhost:8008
+docker compose down              # stop
 ```
 
 Don't run both at once.
@@ -95,8 +95,8 @@ Treat it as a backup, not your only safety plan.
 - **More users.** The admin can add logins under **Account → Users**. Every user has their own
   completely separate clients, appointments, expenses and settings.
 - **Forgot the password?** On the computer sworkr runs on:
-  `docker compose exec api python manage.py reset-password`
-- **Lost your phone and your recovery codes?** `docker compose exec api python manage.py turn-off-two-step <username>`
+  `docker compose exec sworkr python manage.py reset-password`
+- **Lost your phone and your recovery codes?** `docker compose exec sworkr python manage.py turn-off-two-step <username>`
 
 ### Nextcloud calendar sync
 
@@ -179,7 +179,7 @@ computer; turn on disk encryption (BitLocker, FileVault) for that.
 Restore one from a terminal (this replaces what's in sworkr; the current database is kept as a copy first):
 
 ```bash
-docker compose exec api python manage.py restore-backup /backups/sworkr-2026-01-31-120000.swbak
+docker compose exec sworkr python manage.py restore-backup /backups/sworkr-2026-01-31-120000.swbak
 docker compose restart api
 ```
 
@@ -195,10 +195,10 @@ upgrades the database automatically, after saving a copy next to it as
 ## Maintenance commands
 
 ```bash
-docker compose exec api python manage.py list-users
-docker compose exec api python manage.py reset-password [username]
-docker compose exec api python manage.py backup /backups
-docker compose exec api python manage.py restore-backup /backups/<file>
+docker compose exec sworkr python manage.py list-users
+docker compose exec sworkr python manage.py reset-password [username]
+docker compose exec sworkr python manage.py backup /backups
+docker compose exec sworkr python manage.py restore-backup /backups/<file>
 ```
 
 ## Configuration
@@ -220,7 +220,7 @@ The backend tests run inside Docker, with the same Python and library versions a
 They use a throwaway database, so they never touch real data.
 
 ```bash
-docker compose run --rm tests
+docker compose -f docker-compose.dev.yml run --rm tests
 ```
 
 ## API

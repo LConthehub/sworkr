@@ -1,30 +1,30 @@
-# Development setup: both containers reload when you save a file.
-#   docker compose up --build
-# For everyday use there is a faster, built version:  docker compose -f docker-compose.prod.yml up --build -d
+# Sworkr: your own back office, on your own computer.
 #
-# Ports are bound to 127.0.0.1, so sworkr can only be opened from this computer,
-# not from other devices on your network.
+#   docker compose up -d --build      start (or update after downloading a new version)
+#   docker compose down               stop          (never add -v: it deletes your records)
+#
+# Then open http://localhost:8008 and make your account.
+# Want different folders, a content drive or email? sworkr.com/docs/install.html writes this file for you.
+
+name: sworkr          # keep this name: it's how Docker finds your records again
 
 services:
-  api:
-    build: ./backend
+  sworkr:
+    build: .
+    # Once ready-made images are published, this line can replace "build: ." so nothing is built:
+    # image: ghcr.io/OWNER/sworkr:latest
     ports:
-      - "127.0.0.1:8008:8008"
+      - "127.0.0.1:8008:8008"     # this computer only. For your phone, see sworkr.com/docs/phone.html
     volumes:
-      - sworkr_data:/data
-      # The key that seals saved passwords, kept apart from the database (see backend/vault.py).
-      - sworkr_keys:/keys
-      - ./backups:/backups    # automatic encrypted backups land here, in the project folder
-      # Content library from a folder on this computer, a NAS share or a drive (read-only; sworkr never changes it).
-      # Uncomment and change the left side, then choose "Mounted folder" under Settings → Content library:
+      - sworkr_data:/data           # your records (encrypted)
+      - sworkr_keys:/keys           # the key that locks them: kept apart from the records and backups
+      - ./backups:/backups          # encrypted daily backups, in a folder next to this file
+      # A content library from a folder or drive (read only; sworkr never changes it). Uncomment and change
+      # the left side, then choose "Mounted folder" in Settings > Content library:
       # - D:/Content:/content:ro
-      - ./backend:/app        # live code: backend restarts itself when you save a file
     environment:
-      - DATA_DIR=/data
-      - KEY_DIR=/keys
-      - BACKUP_DIR=/backups
-      - WATCHFILES_FORCE_POLLING=true   # needed for file-change detection on Windows
-      # Email account used to send safety check-in alerts. Set these in a file called .env (see .env.example).
+      # Email for safety check-in alerts and sign-in codes. Put the values in a file called .env next to this
+      # one (see .env.example), never in this file.
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
@@ -32,34 +32,7 @@ services:
       - SMTP_FROM=${SMTP_FROM:-}
       - SMTP_SECURITY=${SMTP_SECURITY:-starttls}
       - PASSKEY_ORIGINS=${PASSKEY_ORIGINS:-}
-    command: uvicorn main:app --host 0.0.0.0 --port 8008 --reload
     restart: unless-stopped
-
-  web:
-    build: ./frontend
-    ports:
-      - "127.0.0.1:5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules   # keep the container's Linux node_modules, not the Windows one
-    environment:
-      - API_PROXY_TARGET=http://api:8008
-    depends_on:
-      - api
-    restart: unless-stopped
-
-  # Runs the backend tests, then exits:  docker compose run --rm tests
-  # It uses its own throwaway database and never touches the sworkr_data volume.
-  tests:
-    build: ./backend
-    profiles: ["test"]      # keeps it out of a plain "docker compose up"
-    volumes:
-      - ./backend:/app:ro
-    environment:
-      - PYTHONDONTWRITEBYTECODE=1
-    command: >
-      sh -c "pip install -q --root-user-action=ignore --disable-pip-version-check -r requirements-dev.txt
-      && python -m pytest -p no:cacheprovider"
 
 volumes:
   sworkr_data:

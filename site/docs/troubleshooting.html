@@ -47,10 +47,10 @@
 </ul>
 
 <h2>I forgot my password</h2>
-<p>Docker: open a terminal in the Sworkr folder and run<br><code>docker compose -f docker-compose.prod.yml exec api python manage.py reset-password</code><br>Windows app: ask the other admin on your copy, or restore a backup from before. If you have a passkey set up on a device, you can sign in with that.</p>
+<p>Docker: open a terminal in the Sworkr folder and run<br><code>docker compose exec sworkr python manage.py reset-password</code><br>Windows app: ask the other admin on your copy, or restore a backup from before. If you have a passkey set up on a device, you can sign in with that.</p>
 
 <h2>I lost my phone and my recovery codes</h2>
-<p>Docker: <code>docker compose -f docker-compose.prod.yml exec api python manage.py turn-off-two-step &lt;username&gt;</code>. Then set two-step sign-in up again and save new recovery codes on paper.</p>
+<p>Docker: <code>docker compose exec sworkr python manage.py turn-off-two-step &lt;username&gt;</code>. Then set two-step sign-in up again and save new recovery codes on paper.</p>
 
 <h2>"The database can't be opened"</h2>
 <p>The key that locks it is missing: the Credential Manager entry was deleted, the <code>sworkr_sworkr_keys</code> volume was removed, or the data was copied to another computer without its key. Install fresh and restore your latest backup with its passphrase.</p>

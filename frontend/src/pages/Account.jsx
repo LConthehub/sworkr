@@ -447,7 +447,7 @@ function Password() {
         <button type="submit" className={buttonClass}>Change password</button>
         <p className="text-xs text-gray-400">
           Forgot it? On the computer sworkr runs on, open a terminal in the sworkr folder and run{' '}
-          <code className="bg-gray-100 px-1 rounded">docker compose exec api python manage.py reset-password</code>
+          <code className="bg-gray-100 px-1 rounded">docker compose exec sworkr python manage.py reset-password</code>
         </p>
       </form>
     </Section>
@@ -797,7 +797,7 @@ function Backups() {
           </div>
           <p className="text-xs text-gray-500">
             That folder is on the same computer as sworkr, so copy the files somewhere else now and then (a USB stick, or cloud storage).
-            To restore one: <code className="bg-gray-100 px-1 rounded">docker compose exec api python manage.py restore-backup /backups/&lt;file&gt;</code>
+            To restore one: <code className="bg-gray-100 px-1 rounded">docker compose exec sworkr python manage.py restore-backup /backups/&lt;file&gt;</code>
           </p>
         </div>
         <Notice message={message} />

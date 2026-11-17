@@ -14,7 +14,7 @@ if errorlevel 1 (
 )
 
 echo Starting sworkr. The first time takes a few minutes while it downloads what it needs...
-docker compose -f docker-compose.prod.yml up --build -d
+docker compose up -d --build
 if errorlevel 1 (
     echo.
     echo sworkr couldn't start. The lines above say why.
@@ -24,9 +24,9 @@ if errorlevel 1 (
 )
 
 echo.
-echo sworkr is running at http://localhost:8080
+echo sworkr is running at http://localhost:8008
 echo It keeps running in the background, and starts again by itself when Docker Desktop starts.
 echo To stop it, double-click stop.bat.
 echo.
-start "" http://localhost:8080
+start "" http://localhost:8008
 pause

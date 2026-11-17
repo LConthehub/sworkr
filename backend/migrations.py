@@ -1395,6 +1395,16 @@ def _m39_club_pay(conn):
     conn.execute("ALTER TABLE income_sources ADD COLUMN club_pay TEXT")
 
 
+def _m40_injections(conn):
+    """Injections on a schedule (GLP-1, hormones): how often, the sites to rotate through and the dose steps
+    (JSON), and which site and dose each logged injection was."""
+    conn.execute("ALTER TABLE med_schedules ADD COLUMN every_days INTEGER")
+    conn.execute("ALTER TABLE med_schedules ADD COLUMN sites TEXT")
+    conn.execute("ALTER TABLE med_schedules ADD COLUMN doses TEXT")
+    conn.execute("ALTER TABLE med_logs ADD COLUMN site TEXT")
+    conn.execute("ALTER TABLE med_logs ADD COLUMN dose TEXT")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1435,6 +1445,7 @@ MIGRATIONS = [
     (37, "workplaces remember their starter place", _m37_preset_names, False),
     (38, "push notifications", _m38_ntfy, False),
     (39, "club pay", _m39_club_pay, False),
+    (40, "injections: site rotation and dose steps", _m40_injections, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

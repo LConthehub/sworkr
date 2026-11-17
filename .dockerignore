@@ -1,0 +1,16 @@
+# Only what the image needs: the backend and the frontend's source. Never data, backups, keys or secrets.
+.git
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+.env
+.env.*
+backups
+backend/data
+_backup_*
+release
+site
+desktop
+.claude
+*.db

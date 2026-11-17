@@ -1,10 +1,10 @@
 """
 Command-line tools for looking after sworkr. Run them inside the api container:
 
-    docker compose exec api python manage.py list-users
-    docker compose exec api python manage.py reset-password [username]
-    docker compose exec api python manage.py backup /backups
-    docker compose exec api python manage.py restore-backup /backups/sworkr-2026-01-31-120000.swbak
+    docker compose exec sworkr python manage.py list-users
+    docker compose exec sworkr python manage.py reset-password [username]
+    docker compose exec sworkr python manage.py backup /backups
+    docker compose exec sworkr python manage.py restore-backup /backups/sworkr-2026-01-31-120000.swbak
 
 These need access to the computer sworkr runs on, which is the point: someone who can't log in
 to that computer can't reset a password.

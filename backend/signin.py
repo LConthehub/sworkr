@@ -20,7 +20,7 @@ Recovery codes: ten single-use codes, made when two-step is first turned on, to 
 in place of a code, for the day the phone or the mailbox is gone. Only their hashes are stored.
 
 If all of that fails, sign in with a passkey, or the admin runs:
-    docker compose exec api python manage.py turn-off-two-step <username>
+    docker compose exec sworkr python manage.py turn-off-two-step <username>
 """
 
 import base64

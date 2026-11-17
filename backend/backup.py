@@ -8,7 +8,7 @@ safe to keep on a USB stick or in cloud storage.
 - Download one any time from the Account page (admin only).
 - Automatic: once a passphrase is saved on the Account page, a backup is written to BACKUP_DIR
   every day and the newest BACKUP_KEEP files are kept.
-- Restore with:  docker compose exec api python manage.py restore-backup /backups/<file>
+- Restore with:  docker compose exec sworkr python manage.py restore-backup /backups/<file>
 
 File layout:  b"SWBAK1\\n" | 16-byte salt | 12-byte nonce | ciphertext (gzip of the database) + tag
 """

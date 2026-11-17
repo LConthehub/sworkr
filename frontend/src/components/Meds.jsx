@@ -5,11 +5,13 @@ import { toDateInput } from '../colors';
 
 const METHODS = {
   pill: 'Pill (daily)', patch: 'Patch (weekly)', ring: 'Ring (3 weeks in, 1 out)', shot: 'Shot (every 12 weeks)',
+  injection: 'Injection I give myself (GLP-1, hormones…)',
   implant: 'Implant', iud: 'IUD', condoms: 'Condoms', daily: 'Other daily med (PrEP, hormones…)',
   as_needed: 'As needed (doxyPEP…)', other: 'Other',
 };
 // What "changed" means for each method, as a button.
-const CHANGE_LABEL = { patch: 'New patch on', ring: 'Ring in/out', shot: 'Had the shot', implant: 'New implant', iud: 'New IUD' };
+const CHANGE_LABEL = { patch: 'New patch on', ring: 'Ring in/out', shot: 'Had the shot', implant: 'New implant', iud: 'New IUD', injection: 'Injected' };
+const DEFAULT_SITES = 'Left belly, Right belly, Left thigh, Right thigh, Left arm, Right arm';
 const BLANK = { name: '', method: 'pill', started_on: toDateInput(new Date()), replace_by: '', refill_every_days: '', cost: '', discreet: true, active: true, notes: '' };
 
 const dateText = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
@@ -60,6 +62,9 @@ export default function MedsSettings() {
                     {!daily && s.next && `${s.next.what}: ${dateText(s.next.on)}.`}
                     {s.ring && ` Ring is ${s.ring}.`}
                     {s.refill_on && ` Refill by ${dateText(s.refill_on)}.`}
+                    {m.method === 'injection' && (s.next_site || s.dose) && (
+                      <span className="block">{[s.next_site && `Next site: ${s.next_site}`, s.dose && `dose ${s.dose}`].filter(Boolean).join(' · ')}{s.last_site && ` (last: ${s.last_site})`}</span>
+                    )}
                   </p>
                 )}
                 {m.active && (
@@ -90,6 +95,9 @@ function MedForm({ med, onDone }) {
     ...BLANK, ...med,
     started_on: med.started_on || '', replace_by: med.replace_by || '',
     refill_every_days: med.refill_every_days ?? '', cost: med.cost ?? '', notes: med.notes || '',
+    every_days: med.every_days ?? 7,
+    sites_text: (med.sites && med.sites.length ? med.sites : []).join(', ') || DEFAULT_SITES,
+    doses: (med.doses || []).map((d) => ({ dose: d.dose, weeks: d.weeks ?? '' })),
   });
   const [error, setError] = useState('');
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
@@ -101,6 +109,11 @@ function MedForm({ med, onDone }) {
       started_on: form.started_on || null, replace_by: form.replace_by || null,
       refill_every_days: form.refill_every_days === '' ? null : Number(form.refill_every_days),
       cost: form.cost === '' ? null : Number(form.cost), discreet: form.discreet, active: form.active, notes: form.notes || null,
+      ...(form.method === 'injection' ? {
+        every_days: Number(form.every_days) || 7,
+        sites: form.sites_text.split(',').map((x) => x.trim()).filter(Boolean),
+        doses: form.doses.filter((d) => d.dose.trim()).map((d) => ({ dose: d.dose.trim(), weeks: d.weeks === '' ? null : Number(d.weeks) })),
+      } : {}),
     };
     try {
       if (med.id) await axios.put(`/api/meds/${med.id}`, body); else await axios.post('/api/meds', body);
@@ -114,7 +127,7 @@ function MedForm({ med, onDone }) {
     await axios.delete(`/api/meds/${med.id}`).catch(() => {});
     onDone();
   };
-  const firstDayLabel = { ring: 'First day the ring went in', patch: 'Last patch change', shot: 'Last shot', implant: 'Put in on', iud: 'Put in on' }[form.method] || 'Started on';
+  const firstDayLabel = { ring: 'First day the ring went in', patch: 'Last patch change', shot: 'Last shot', implant: 'Put in on', iud: 'Put in on', injection: 'First injection (the plan counts from here)' }[form.method] || 'Started on';
   return (
     <form onSubmit={submit} className="space-y-3">
       <div className="grid sm:grid-cols-2 gap-3">
@@ -133,6 +146,29 @@ function MedForm({ med, onDone }) {
           <Field label="Replace by">
             <input type="date" value={form.replace_by} onChange={set('replace_by')} className={inputClass} />
           </Field>
+        )}
+        {form.method === 'injection' && (
+          <>
+            <Field label="Every (days)">
+              <input type="number" min="1" max="120" value={form.every_days} onChange={set('every_days')} placeholder="7 = weekly" className={inputClass} />
+            </Field>
+            <Field label="Sites to rotate through (in order)">
+              <input value={form.sites_text} onChange={set('sites_text')} className={inputClass} />
+            </Field>
+            <div className="sm:col-span-2 space-y-1.5">
+              <p className="text-sm text-gray-700">Dose steps <span className="text-xs text-gray-500">(from your prescriber's plan; leave the last one's weeks empty to stay on it)</span></p>
+              {form.doses.map((d, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <input value={d.dose} onChange={(e) => setForm({ ...form, doses: form.doses.map((x, j) => (j === i ? { ...x, dose: e.target.value } : x)) })} placeholder="e.g. 0.25 mg" aria-label="Dose" className={`${inputClass} w-32`} />
+                  <span className="text-gray-500">for</span>
+                  <input type="number" min="1" max="520" value={d.weeks} onChange={(e) => setForm({ ...form, doses: form.doses.map((x, j) => (j === i ? { ...x, weeks: e.target.value } : x)) })} aria-label="Weeks" className={`${inputClass} w-20`} />
+                  <span className="text-gray-500">weeks</span>
+                  <button type="button" onClick={() => setForm({ ...form, doses: form.doses.filter((_, j) => j !== i) })} className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setForm({ ...form, doses: [...form.doses, { dose: '', weeks: '' }] })} className="text-xs text-sworkr-600 hover:text-sworkr-800">+ A dose step</button>
+            </div>
+          </>
         )}
         <Field label="Refill every (days, optional)">
           <input type="number" min="1" max="400" value={form.refill_every_days} onChange={set('refill_every_days')} placeholder="e.g. 28 or 90" className={inputClass} />
