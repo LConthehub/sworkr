@@ -53,7 +53,7 @@ PAGES = [
 <p>Your records are kept in <code>%LOCALAPPDATA%\\Sworkr</code>, your backups in <code>Documents\\Sworkr backups</code>.</p>
 
 <h2>Your first minutes</h2>
-<p>Create your account. <strong>That first account is yours and is the admin.</strong> Use a password of 12 or more characters and keep it somewhere safe. Then tick the kinds of work you do, and Sworkr sets itself up to match (expense categories, workplaces and their usual charges). You can change it any time under <em>Settings → My work</em>.</p>
+<p>Create your account. <strong>That first account is yours and is the admin.</strong> Use a password of 12 or more characters and keep it somewhere safe. Then tick the kinds of work you do, and Sworkr sets itself up to match (expense categories, workplaces and their usual charges). You can change it any time under <em>Settings → My work</em>. Prefer it dark? <em>Settings → Look</em>.</p>
 <p>A new copy has a few made-up clients so you can look around. Remove them under <em>Settings → Data &amp; users → Example data</em>.</p>
 
 <h2>Do these three things on day one</h2>
@@ -245,13 +245,13 @@ PAGES = [
 <p><em>Contacts → Everyone</em> holds clients, <strong>collaborators</strong> (another worker, a photographer, a driver: anyone you work with) and others. A name is optional, so a handle alone is fine. Each contact can have handles, a persona (the name they know you by), preferences, a birthday, screening status and references.</p>
 <ul>
   <li><strong>Screening</strong>: unscreened, pending, verified or declined, with notes on what you checked.</li>
-  <li><strong>Do not see</strong>: tick it and Sworkr warns you if you try to book that person. A private bad-date list can be imported under <em>Settings → Security &amp; privacy</em>.</li>
+  <li><strong>Do not see</strong>: tick it and Sworkr warns you if you try to book that person. A private bad-date list can be imported, or downloaded for your own backup, under <em>Settings → Security &amp; privacy</em>.</li>
   <li><strong>How they found you</strong>: an ad site, an account, a referral. This is what makes <em>Money → Compare → By how they found you</em> work: income against what you spent on each.</li>
   <li><strong>Tags</strong> group people, and can change their price (below).</li>
 </ul>
 
 <h2>Inquiries</h2>
-<p><em>Contacts → Inquiries</em> tracks everyone who got in touch: new, replied, screening, deposit, booked, or lost (with why). Move each along as it happens. Below the list: how far inquiries get, where they drop out, and which sources send people who actually book. <em>Make a contact</em> turns an inquiry into a contact when they're worth keeping. Your saved text is one tap away for replies.</p>
+<p><em>Contacts → Inquiries</em> tracks everyone who got in touch: new, replied, screening, deposit, booked, or lost (with why). Move each along as it happens. Below the list: how far inquiries get, where they drop out, and which sources send people who actually book. <em>Make a contact</em> turns an inquiry into a contact when they're worth keeping. Your saved text is one tap away for replies, and can fill in {name}, {day}, {time} and {wanted} from the inquiry.</p>
 
 <h2>Gone quiet</h2>
 <p><em>Contacts → Gone quiet</em> lists regulars you've seen at least twice who haven't booked for a while and have nothing booked ahead, biggest spenders first, with how often they used to book.</p>
@@ -268,13 +268,13 @@ PAGES = [
 <p>Everywhere you earn: a club, a house, an agency, a fan site, a phone line. Add them under <em>Money → Income &amp; expenses → Workplaces &amp; platforms</em>, or tick your kinds of work and Sworkr adds the usual ones. Each has its own rules:</p>
 <ul>
   <li><strong>Their share</strong> of what you earn, a <strong>fee per shift</strong>, a <strong>share of gifts</strong>, a <strong>share of tips</strong>.</li>
-  <li><strong>House rules (cuts)</strong>: any number of named deductions, called whatever your house calls them. Each is a percentage or an amount, taken <em>off the top</em> (before the house's share) or <em>out of your share</em>, and can be set to apply <em>always</em>.</li>
-  <li><strong>The office holds my cash</strong>: income there starts as "not paid out yet", with the cash you're allowed to keep on you noted (for example $20).</li>
+  <li><strong>Deductions</strong>: any number, named however the workplace names them. Each is a percentage or an amount, taken <em>off the top</em> (before the house's share) or <em>out of your share</em>, and can be set to apply <em>always</em>.</li>
+  <li><strong>Paid out later</strong>: income there starts as "not paid out yet" until the workplace pays you.</li>
   <li><strong>Charges you pay them</strong>: room and board, a house doctor, room hire. Tours at a workplace log these for you.</li>
 </ul>
-<p>When you add income, the form works out the fees from those rules and shows what you keep. Tick the cuts that applied; they come off in order: cuts off the top, then the house's share of what's left, then cuts out of your share.</p>
+<p>When you add income, the form works out the fees from those rules and shows what you keep. Tick the deductions that applied; they come off in the order the workplace takes them.</p>
 
-<h2>Cash the office is holding</h2>
+<h2>Pay you haven't received yet</h2>
 <p>On <em>Income &amp; expenses</em>, <strong>Not paid out to you yet</strong> shows what each workplace owes you. When they pay, press <em>Paid out</em> and say how: it marks everything received.</p>
 
 <h2>How it was paid</h2>
@@ -287,7 +287,7 @@ PAGES = [
 <p><em>Money → Rates</em> is your rate card. Pick a service when you book and its length and price fill in. <em>Copy as text</em> gives you something to send. <strong>Deposits to collect</strong> lists bookings ahead whose deposit hasn't come in; <strong>On an old rate</strong> lists clients whose last booking cost less than your card says now.</p>
 
 <h2>Tours</h2>
-<p>A tour (<em>Calendar → + New → Tour</em>) gets its own <strong>tour statement</strong>: income, what the house took, room and board, health tests, and what you kept. <em>Money → Compare → By tour</em> sets tours side by side, per working day.</p>
+<p>A tour (<em>Calendar → + New → Tour</em>) gets its own <strong>tour statement</strong>: income, fees, costs, health tests, and what you kept. Its <strong>tour plan</strong> holds a pack list (from your own templates), a budget against what you actually spend, and meals &amp; snacks whose groceries go onto the pack list. <em>Money → Compare → By tour</em> sets tours side by side, per working day.</p>
 
 <h2>Comparing</h2>
 <p><em>Money → Compare</em>: by tour, month, week, kind of work, workplace, persona, <strong>how they found you</strong> (income against ad spend) and <strong>busy times</strong> (a grid of when bookings happen, and what an hour of each kind brings in).</p>
@@ -302,7 +302,7 @@ PAGES = [
 <p><em>Calendar</em> shows bookings, tours, time off and health tests, and also what you've planned: <strong>posts to put up</strong>, <strong>shoots</strong> and <strong>the day each ad runs out</strong>. Tick or untick <em>Planning</em> at the bottom to show only what you want. <em>+ New</em> adds a booking, a post or a shoot. Click a planned item to open it. <em>Posts</em> and <em>Shoots</em> at the top hold the full lists.</p>
 
 <h2>Posts</h2>
-<p>Sworkr doesn't post for you (sites don't allow apps to). It plans, reminds, and keeps track: write the caption, pick the platform and time, copy the caption when it's due, post it yourself, then mark it posted with the link and how many inquiries it brought.</p>
+<p>Write the caption, pick the platform and time. For <strong>Bluesky, Mastodon and Reddit</strong>, connect your account under <em>Content → Social</em> and Sworkr can post it now or by itself at its time, with a content label and a description of each picture (alt text). Elsewhere, copy the caption when it's due, post it yourself, then mark it posted with the link and how many inquiries it brought. <em>Content → Social</em> also shows likes, reposts and replies, fetched or imported from a platform's CSV export.</p>
 <ul>
   <li><strong>One post, many platforms.</strong> <em>Also post it on</em> makes a row per platform, each with its own caption and time.</li>
   <li><strong>Your platforms</strong> (<em>Content → Promote → Platforms &amp; saved text</em>): each account or channel with its rules and how often you may post there. Planning a post too soon after the last one warns you.</li>
@@ -333,7 +333,7 @@ PAGES = [
 <p><em>Settings → Health &amp; safety</em> sets up a trusted contact. Tick <em>Safety check-in</em> on a booking; if you haven't checked in afterwards (within the grace time you set), your contact is emailed what you chose to share. This needs email set up under <em>Connections</em>.</p>
 
 <h2>Period tracker, birth control and regular meds</h2>
-<p>Optional, off until you turn them on. Dates show on the calendar, and medication marked discreet shows only as "Health".</p>
+<p>Optional, off until you turn them on. Injections can rotate sites and step up doses on a schedule. Dates show on the calendar, and medication marked discreet shows only as "Health".</p>
 """),
 
 ("notifications", "Notifications", "Notifications", """
@@ -343,6 +343,7 @@ PAGES = [
 <ul>
   <li>A <strong>heads-up before a booking or health test</strong>: 15 minutes to 4 hours before, as you choose. "A booking starts at 7:00 PM".</li>
   <li>A <strong>daily summary</strong> at the hour you choose: counts such as "2 bookings today, 1 deposit to collect, 1 post to put up". It's only sent on days there's something to say.</li>
+  <li>A note if a <strong>scheduled post couldn't go out</strong>.</li>
 </ul>
 <p>Each is sent once. The browser reminders under <em>Reminders</em> still work separately, but only while Sworkr is open.</p>
 
