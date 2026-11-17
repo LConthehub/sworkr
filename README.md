@@ -1,6 +1,6 @@
 # Sworkr
 
-A private management app for independent work: clients and screening, a calendar, income and
+A private management app for s work: clients and screening, a calendar, income and
 expenses, and a safety check-in.
 
 - **Backend:** FastAPI + SQLite (`backend/`), port **8008**
