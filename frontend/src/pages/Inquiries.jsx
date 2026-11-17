@@ -4,6 +4,24 @@ import axios from 'axios';
 import Modal, { Field, inputClass, errorMessage, buttonClass, quietButtonClass } from '../components/Modal';
 import ClientForm from '../components/ClientForm';
 import { useSnippets } from '../components/Promo';
+
+/**
+ * A saved reply with this inquiry's details filled in, ready to paste.
+ * Fill-ins a reply can use: {name}, {day}, {time}, {wanted}.
+ * `form` is the inquiry form: name, wanted, wanted_day ("2026-11-20" or ""), wanted_time ("19:00").
+ */
+export function fillReply(text, form) {
+  // A missing name reads fine as "there" ("Hi there"); a missing day, time or request keeps its {braces},
+  // so the gap is noticed before the reply is sent.
+  const values = {
+    name: form.name?.trim() || 'there',
+    day: form.wanted_day ? new Date(form.wanted_day + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) : null,
+    time: form.wanted_day && form.wanted_time
+      ? new Date(`${form.wanted_day}T${form.wanted_time}`).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : null,
+    wanted: form.wanted?.trim() || null,
+  };
+  return text.replace(/\{(\w+)\}/g, (whole, key) => values[key.toLowerCase()] ?? whole);
+}
 import { dayLabel, fromDateTimeInputs, money, toDateInput, toTimeInput } from '../colors';
 
 const STAGES = [
@@ -236,7 +254,7 @@ function InquiryForm({ inquiry, onDone }) {
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const copy = async (s) => {
     try {
-      await navigator.clipboard.writeText(s.body);
+      await navigator.clipboard.writeText(fillReply(s.body, form));
       setCopied(s.id);
       setTimeout(() => setCopied(null), 1500);
     } catch { /* clipboard blocked */ }
@@ -292,7 +310,7 @@ function InquiryForm({ inquiry, onDone }) {
       <Field label="Notes"><textarea rows={2} value={form.notes} onChange={set('notes')} className={inputClass} /></Field>
       {snippets.length > 0 && (
         <p className="flex flex-wrap items-center gap-1">
-          <span className="text-xs text-gray-400">Copy a reply:</span>
+          <span className="text-xs text-gray-400" title="Saved text can use {name}, {day}, {time} and {wanted}">Copy a reply:</span>
           {snippets.map((s) => (
             <button key={s.id} type="button" title={s.body} onClick={() => copy(s)} className="text-xs px-2 py-0.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50">
               {copied === s.id ? 'Copied ✓' : s.label}
@@ -371,7 +389,7 @@ export function GoneQuiet() {
                     <button onClick={() => copy(`c${c.id}`, c.contact_phone || c.email)} className={quietButtonClass}>{copied === `c${c.id}` ? 'Copied ✓' : `Copy ${c.contact_phone ? 'number' : 'email'}`}</button>
                   )}
                   {snippets.slice(0, 3).map((s) => (
-                    <button key={s.id} title={s.body} onClick={() => copy(`s${c.id}-${s.id}`, s.body)} className={quietButtonClass}>{copied === `s${c.id}-${s.id}` ? 'Copied ✓' : `Copy "${s.label}"`}</button>
+                    <button key={s.id} title={s.body} onClick={() => copy(`s${c.id}-${s.id}`, fillReply(s.body, { name: c.display_name }))} className={quietButtonClass}>{copied === `s${c.id}-${s.id}` ? 'Copied ✓' : `Copy "${s.label}"`}</button>
                   ))}
                 </span>
               </li>
