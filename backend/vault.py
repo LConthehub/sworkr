@@ -29,7 +29,8 @@ log = logging.getLogger("sworkr.vault")
 
 # Settings whose value is a secret. Everything else in the settings tables is stored as it is.
 SECRET_KEYS = frozenset({"cal_password", "content_password", "mail_password", "backup_passphrase", "totp_secret",
-                         "offsite_password", "mail2_password", "mail3_password", "mail4_password", "mail5_password", "ntfy_token"})
+                         "offsite_password", "mail2_password", "mail3_password", "mail4_password", "mail5_password", "ntfy_token",
+                         "social_secret"})
 
 PREFIX = "sealed:v1:"
 KEY_FILE = "settings.key"

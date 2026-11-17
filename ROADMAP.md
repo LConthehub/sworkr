@@ -3,15 +3,17 @@
 Ideas and decisions, so nothing is lost between work sessions. Newest decisions first.
 
 ## Open questions for the owner
-Answer here (edit this file on GitHub, even from a phone) or in chat; answered ones move to the decisions above.
-1. Home page: is "Made by a worker, from ten years of spreadsheets." how you want to describe yourself publicly? I'm a former SW that has done multiple branches of SW including legal FSSW. I also have ADHD. I wanted the tool that I needed when I was in the industry. This started as a app idea I abandoned in 2017 and amalgmation of my disorganized spreadsheets across my years in the industry.
+Answer here (edit this file on GitHub, even from a phone) or in chat; answered ones move to the decisions below.
+(None open right now.)
 
-2. Home page, "Tours & houses": it mentions house cuts and the office holding your cash. Too insider for the public page? yes too much for public page 
-3. Home page, privacy list: "On your phone, privately. Nothing is opened to the internet." Mention the own-web-address
-   option there too, or leave it to the docs? leave it to the docs
-4. Social: which networks matter most to you after Bluesky and Mastodon (Reddit, X at a price, others)?reddit. how much is x? I mean I don't want to pay Elon,but if someone sponsored it ok.
-5. Local AI: which jobs first? Suggested: drafting replies to inquiries, summarising a client's notes, sorting expenses,
-   writing post captions. I don't want to take away the creative aspects, so I want the AI integration to be more about statistics and search than drafting writing, especially when the type of work and censors.
+## Answers (2026-11-16)
+- About the maker (public): a former s worker with ADHD; the tool they needed while working; began as an app
+  idea shelved in 2017 plus years of messy spreadsheets. Home page says this (no mention of which branches).
+- Home page "Tours & houses" no longer mentions house cuts or the office holding cash.
+- Own web address stays in the docs, not the home page privacy list.
+- Social after Bluesky and Mastodon: Reddit. X only if someone sponsors the API cost (don't pay for it).
+- AI is for statistics and search, not for writing. No drafting replies or captions: the creative part stays
+  the worker's, and censoring models make drafting unreliable for this work anyway.
 
 ## Principles (2026-11-16)
 - Privacy first, "seize the means": your data stays with you. Encourage self-hosting the other services too
@@ -35,6 +37,11 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - GitHub: user will link the account; scan history for secrets before the first public push.
 
 ## Done recently
+- Social (2026-11-16): connect Bluesky (app password), Mastodon (access token), Reddit (own script app, text
+  posts); post a planned post now or let it post itself at its time; a content label per account (Bluesky
+  self-labels, Mastodon sensitive, Reddit NSFW); likes/reposts/replies fetched, or imported from any CSV export
+  by post link. Content > Social.
+- Off-site backups to WebDAV (Nextcloud, Synology) were already built (offsite.py).
 - Tour plan (2026-11-16): pack lists from templates, a budget by main category against actual spending,
   and meals & snacks whose groceries go onto the pack list and whose costs become the Food & drink plan.
 - Club pay (2026-11-16): contractor or employee, house fees by arrival time, dances with the house's cut,
@@ -45,17 +52,15 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Next
-- Social: post to Bluesky and Mastodon; Reddit posting with the person's own app key; import stats from
-  platforms' CSV exports.
+- Social, later: pictures on Reddit; alt text for pictures; reminders when an auto-post fails (ntfy).
 - Saved replies for inquiries.
 - Discreet receipts for clients.
 - Wipe everything: password, type a phrase, 10-second countdown you can cancel.
-- Automatic off-site backups (Nextcloud, Synology, WebDAV).
 - Bad-date list export (import exists). No sharing between workers (legal risk).
-- Website review page by page with the owner (home page: questions pending).
+- Website review page by page with the owner (home page done 2026-11-16; next: the docs pages).
 
 ## Bigger ideas
 - Local AI: an optional assistant that talks to a model running on your own machine (LM Studio, llama.cpp,
   Ollama: all speak the OpenAI-style API on localhost). Cloud AI only as an explicit opt-in, clearly marked,
-  off by default. Ideas: draft replies to inquiries, summarise a client's notes, sort expenses, write post captions.
+  off by default. Jobs: statistics and search (ask questions of your own numbers, find things across notes), not writing.
 - Translations: Spanish, Russian, French first. Later.

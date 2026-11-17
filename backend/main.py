@@ -38,6 +38,7 @@ import healthtests
 import arrangements
 import clubpay
 import tourplan
+import social
 import calendar_dates
 import blocklist
 import signin
@@ -2171,6 +2172,7 @@ app.include_router(offsite.router)
 app.include_router(arrangements.router)
 app.include_router(clubpay.router)
 app.include_router(tourplan.router)
+app.include_router(social.router)
 app.include_router(calendar_dates.router)
 app.include_router(marketing.router)
 app.include_router(campaigns.router)
@@ -2219,6 +2221,7 @@ calendar_sync.start(get_db, background=_background)
 backup.start(get_db, background=_background)
 safety.start(get_db, background=_background)
 ntfy.start(get_db, background=_background)
+social.start(get_db, background=_background)
 demo.start(app, get_db)   # does nothing unless DEMO_MODE=1
 
 # The desktop app serves the pages itself (Docker uses nginx for that). Registered last, so /api comes first.

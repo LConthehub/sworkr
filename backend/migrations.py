@@ -1456,6 +1456,41 @@ def _m42_tour_meals(conn):
     conn.execute("CREATE INDEX idx_tour_meals ON tour_meals(tour_id, day)")
 
 
+def _m43_social(conn):
+    """Social accounts the person connected (credentials sealed), auto-posting, and each post's numbers."""
+    conn.execute("""
+        CREATE TABLE social_accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            network TEXT NOT NULL CHECK(network IN ('bluesky', 'mastodon', 'reddit')),
+            server TEXT NOT NULL,
+            handle TEXT,
+            display TEXT,
+            client_id TEXT,
+            secret TEXT,
+            label TEXT NOT NULL DEFAULT 'none' CHECK(label IN ('none', 'suggestive', 'nudity', 'porn')),
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_social_accounts_owner ON social_accounts(owner_id)")
+    conn.execute("ALTER TABLE posts ADD COLUMN social_account_id INTEGER REFERENCES social_accounts(id) ON DELETE SET NULL")
+    conn.execute("ALTER TABLE posts ADD COLUMN remote_id TEXT")
+    conn.execute("ALTER TABLE posts ADD COLUMN auto_post INTEGER NOT NULL DEFAULT 0 CHECK(auto_post IN (0, 1))")
+    conn.execute("ALTER TABLE posts ADD COLUMN post_error TEXT")
+    conn.execute("CREATE INDEX idx_posts_auto ON posts(auto_post, scheduled_at)")
+    conn.execute("""
+        CREATE TABLE post_stats (
+            post_id INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
+            likes INTEGER,
+            reposts INTEGER,
+            replies INTEGER,
+            views INTEGER,
+            source TEXT,
+            fetched_at TEXT NOT NULL
+        )
+    """)
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1499,6 +1534,7 @@ MIGRATIONS = [
     (40, "injections: site rotation and dose steps", _m40_injections, False),
     (41, "tour planning: pack lists and budgets", _m41_tour_planning, False),
     (42, "tour meals and snacks", _m42_tour_meals, False),
+    (43, "social accounts, auto-posting and post numbers", _m43_social, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

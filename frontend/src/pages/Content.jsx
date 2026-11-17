@@ -6,12 +6,13 @@ import { PersonaSelect } from '../components/Personas';
 import { Campaigns, Toolkit, useCampaigns, usePlaces, useSnippets } from '../components/Promo';
 import Listings from '../components/Listings';
 import Customs from '../components/Customs';
+import Social, { PublishButtons, useSocialAccounts } from '../components/Social';
 import { dayLabel, formatTime, fromDateTimeInputs, money, repeatDates, toDateInput, toTimeInput } from '../colors';
 
 /** Suggestions only: any platform, ad site or your own website can be typed in. */
 export const PLATFORM_GROUPS = {
   'Ad sites': ['Tryst', 'Eros', 'Slixa', 'Private Delights', 'AdultWork', 'Scarlet Blue', 'Leolist', 'Skip the Games', 'My website'],
-  Social: ['X', 'Instagram', 'Reddit', 'TikTok', 'Bluesky', 'Threads', 'Telegram', 'Snapchat'],
+  Social: ['X', 'Instagram', 'Reddit', 'TikTok', 'Bluesky', 'Mastodon', 'Threads', 'Telegram', 'Snapchat'],
   'Fan & clip sites': ['OF', 'Fansly', 'Fanvue', 'LoyalFans', 'Patreon', 'ManyVids', 'Clips4Sale', 'Pornhub'],
 };
 export const PLATFORMS = Object.values(PLATFORM_GROUPS).flat();
@@ -27,8 +28,8 @@ const thumbUrl = (path, size = 256) => `/api/content/thumbnail?path=${encodeURIC
 const whenText = (iso) => (iso ? `${dayLabel(new Date(iso), { weekday: 'short', month: 'short', day: 'numeric' })}, ${formatTime(new Date(iso))}` : 'No time set');
 
 // Four sections. Each address still works; several lead to the same section.
-const SECTIONS = [['library', '/content', 'Library'], ['promote', '/content/campaigns', 'Promote'], ['customs', '/content/customs', 'Customs']];
-const SECTION_OF = { campaigns: 'promote', promote: 'promote', ads: 'promote', toolkit: 'promote', customs: 'customs' };
+const SECTIONS = [['library', '/content', 'Library'], ['promote', '/content/campaigns', 'Promote'], ['customs', '/content/customs', 'Customs'], ['social', '/content/social', 'Social']];
+const SECTION_OF = { campaigns: 'promote', promote: 'promote', ads: 'promote', toolkit: 'promote', customs: 'customs', social: 'social' };
 
 /** The two halves of a section, as a small switch under the main tabs. */
 function Switch({ label, options }) {
@@ -73,6 +74,7 @@ export default function Content() {
               </>
             )
               : section === 'customs' ? <Customs />
+                : section === 'social' ? <Social />
                 : <Library onPlan={plan} version={version} />}
       {modal && (
         <Modal title={modal.post.id ? 'Edit post' : 'Plan a post'} onClose={() => setModal(null)} wide>
@@ -265,6 +267,7 @@ export function Planner({ version, onEdit, onNew }) {
 /** One post, with Copy caption and Mark as posted. Also used on the dashboard. */
 export function PostRow({ post: p, campaign, onEdit, onChanged }) {
   const [copied, setCopied] = useState(false);
+  const [accounts] = useSocialAccounts();
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(p.caption || '');
@@ -308,6 +311,7 @@ export function PostRow({ post: p, campaign, onEdit, onChanged }) {
         {p.status !== 'posted' && <button onClick={posted} className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">✓ Posted</button>}
         {p.post_url && <a href={p.post_url} target="_blank" rel="noreferrer noopener" className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Open ↗</a>}
       </span>
+      <span className="basis-full flex justify-end"><PublishButtons post={p} accounts={accounts} onChanged={onChanged} /></span>
     </li>
   );
 }
