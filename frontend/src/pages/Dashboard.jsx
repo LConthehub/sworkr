@@ -162,8 +162,8 @@ function WeekAhead({ version }) {
                       {isToday ? 'Today' : dayLabel(day, { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                     {on.map((p) => (
-                      <span key={p.id} className="text-[11px] px-2 py-0.5 rounded-full"
-                        style={p.kind === 'tour' ? { background: TOUR_COLOR, color: 'white' } : { background: '#f3f4f6', color: '#4b5563' }}>
+                      <span key={p.id} className={`text-[11px] px-2 py-0.5 rounded-full ${p.kind === 'tour' ? '' : 'bg-gray-100 text-gray-600'}`}
+                        style={p.kind === 'tour' ? { background: TOUR_COLOR, color: 'white' } : undefined}>
                         {p.kind === 'tour' ? `✈ ${p.name}` : periodLabel(p)}
                       </span>
                     ))}

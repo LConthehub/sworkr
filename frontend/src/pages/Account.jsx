@@ -8,6 +8,7 @@ import MedsSettings from '../components/Meds';
 import DocumentsSettings from '../components/Documents';
 import { TestKindsSettings } from '../components/TestKinds';
 import { DiscreetSettings } from '../components/Discreet';
+import LookSettings from '../components/Look';
 import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from '../components/SignInSecurity';
 import { WorkTypesPicker } from '../components/WorkTypes';
 import { Field, inputClass, errorMessage, buttonClass, quietButtonClass, Section, Notice } from '../components/Modal';
@@ -141,6 +142,15 @@ const GROUPS = [
     ],
   },
   {
+    id: 'look', label: 'Look', icon: 'moon',
+    sections: [
+      {
+        id: 'theme', title: 'Light or dark', words: 'dark mode night theme light colours colors appearance',
+        render: () => <Section title="Light or dark" hint="How sworkr looks on this phone or computer."><LookSettings /></Section>,
+      },
+    ],
+  },
+  {
     id: 'data', label: 'Data & users', icon: 'database',
     sections: [
       { id: 'sample', title: 'Example data', words: 'demo sample', render: () => <SampleData /> },
@@ -157,6 +167,7 @@ const ICONS = {
   bell: 'M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5-6.71V4a2 2 0 0 0-4 0v.29A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z',
   link: 'M10.6 13.4a1 1 0 0 1 0-1.4l3.5-3.5a3 3 0 1 1 4.2 4.2l-2 2-1.4-1.4 2-2a1 1 0 1 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0Zm2.8-2.8a1 1 0 0 1 0 1.4l-3.5 3.5a3 3 0 1 1-4.2-4.2l2-2 1.4 1.4-2 2a1 1 0 1 0 1.4 1.4l3.5-3.5a1 1 0 0 1 1.4 0Z',
   heart: 'M12 21s-7.5-4.6-9.5-9.2C1.1 8.5 3.2 5 6.6 5c2 0 3.4 1.1 4.4 2.5C12 6.1 13.4 5 15.4 5c3.4 0 5.5 3.5 4.1 6.8C17.5 16.4 12 21 12 21Z',
+  moon: 'M20.5 14.4A8.5 8.5 0 0 1 9.6 3.5a8.5 8.5 0 1 0 10.9 10.9Z',
   database: 'M12 3c4.4 0 8 1.3 8 3v12c0 1.7-3.6 3-8 3s-8-1.3-8-3V6c0-1.7 3.6-3 8-3Zm6 9.4c-1.5.7-3.7 1.1-6 1.1s-4.5-.4-6-1.1V15c0 .5 2.3 1.5 6 1.5s6-1 6-1.5v-2.6Zm0-4.5c-1.5.7-3.7 1.1-6 1.1s-4.5-.4-6-1.1v2.6c0 .5 2.3 1.5 6 1.5s6-1 6-1.5V7.9Z',
 };
 

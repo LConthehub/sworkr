@@ -63,7 +63,7 @@ export default function BusyTimes({ year }) {
                   return (
                     <td key={h} className="w-8 h-8 rounded text-center align-middle"
                       title={c ? `${name} ${hourLabel(h)}: ${c.bookings} booking${c.bookings === 1 ? '' : 's'}, ${money(c.income)}` : `${name} ${hourLabel(h)}: none`}
-                      style={{ background: value ? `rgba(252, 76, 156, ${0.15 + 0.85 * (value / top)})` : '#f9fafb', color: value / top > 0.55 ? '#fff' : '#6b7280' }}>
+                      style={{ background: value ? `rgba(252, 76, 156, ${0.15 + 0.85 * (value / top)})` : 'rgba(107, 93, 112, 0.08)', color: value / top > 0.55 ? '#fff' : '#6b7280' }}>
                       {c ? c.bookings : ''}
                     </td>
                   );

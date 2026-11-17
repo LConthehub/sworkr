@@ -50,7 +50,7 @@ function savedView() {
 const apptColor = (a) => (a.status === 'completed' ? '#6b7280' : a.kind === 'test' ? TEST_COLOR : colorFor(a.service_type));
 const apptTitle = (a) => (a.kind === 'test' ? `🩺 ${a.service_type}` : a.client_name);
 // Grey diagonal stripes for days off and vacations.
-const TIME_OFF_BACKGROUND = 'repeating-linear-gradient(135deg, #f3f4f6 0 6px, #e5e7eb 6px 8px)';
+const TIME_OFF_BACKGROUND = 'repeating-linear-gradient(135deg, rgba(107, 93, 112, 0.1) 0 6px, rgba(107, 93, 112, 0.22) 6px 8px)'; // see-through: works light and dark
 
 /** The tour on a day (at most one) and any time off. */
 function dayPeriods(periods, day) {
