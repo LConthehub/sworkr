@@ -12,7 +12,8 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 echo "Starting sworkr. The first time takes a few minutes while it downloads what it needs..."
-if ! docker compose up -d --build; then
+docker compose pull
+if ! docker compose up -d; then
     echo
     echo "sworkr couldn't start. The lines above say why."
     exit 1

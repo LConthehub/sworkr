@@ -19,7 +19,8 @@ Then open <http://localhost:5173>. Both containers reload when you save a file.
 For everyday use there is a faster built version (same data):
 
 ```bash
-docker compose up -d --build     # then open http://localhost:8008
+docker compose up -d             # then open http://localhost:8008
+docker compose pull && docker compose up -d     # update
 docker compose down              # stop
 ```
 

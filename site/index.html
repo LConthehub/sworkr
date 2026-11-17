@@ -103,20 +103,27 @@
       <h2>Get Sworkr</h2>
       <div class="grid three">
         <article class="get">
-          <h3>Windows</h3>
-          <p>Download, unzip, double-click <em>Sworkr</em>. It opens in your browser and sits in the corner of your screen.</p>
-          <a class="button" href="/downloads/Sworkr-windows.zip">Download for Windows</a>
+          <h3>Docker: Windows, Mac, Linux</h3>
+          <p><strong>Recommended.</strong> One setup file, one command, and it runs on any computer or home server, restarting by itself.</p>
+          <ol class="fine">
+            <li>Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a> and start it.</li>
+            <li>Save <a href="/downloads/docker-compose.yml" download>docker-compose.yml</a> in a folder called <code>sworkr</code>.</li>
+            <li>In that folder, run <code>docker compose up -d</code>, then open <a href="http://localhost:8008">localhost:8008</a>.</li>
+          </ol>
+          <a class="button" href="/docs/install.html">Make my setup file</a>
+          <p class="fine">Prefer one line? <code>docker run -d --name sworkr --restart unless-stopped -p 127.0.0.1:8008:8008 -v sworkr_data:/data -v sworkr_keys:/keys -v sworkr_backups:/backups ghcr.io/lconthehub/sworkr:latest</code></p>
+        </article>
+        <article class="get">
+          <h3>Windows app</h3>
+          <p>No Docker? Download, unzip, double-click <em>Sworkr</em>. It opens in your browser and sits in the corner of your screen.</p>
+          <a class="button ghost" href="/downloads/Sworkr-windows.zip">Download for Windows</a>
           <p class="fine">Windows may say it "protected your PC" because the app is new. Choose <em>More info → Run anyway</em>.</p>
         </article>
         <article class="get">
-          <h3>Mac</h3>
-          <p>The Mac version is coming. Until then, Mac users can run Sworkr with Docker (see the next box), or try everything in the demo.</p>
-          <span class="button disabled" aria-disabled="true">Coming soon</span>
-        </article>
-        <article class="get">
-          <h3>For the techy</h3>
-          <p>Run it in Docker on any computer or home server. <a href="/docs/install.html">Pick your options</a> and get a setup file ready to copy, or use the download as it is.</p>
-          <a class="button ghost" href="/downloads/sworkr-docker.zip">Download for Docker</a>
+          <h3>The code</h3>
+          <p>Every line is public, so anyone can check what it does with your records: nothing leaves your computer.</p>
+          <a class="button ghost" href="https://github.com/LConthehub/sworkr">See it on GitHub</a>
+          <p class="fine">Free for workers, on your own or up to five sharing one setup. Companies need a license.</p>
         </article>
       </div>
       <p class="center">Not sure yet? <a href="https://demo.sworkr.com">Try the demo</a>. It's full of made-up sample data and resets every night.</p>
@@ -126,7 +133,7 @@
       <h2>Fair questions</h2>
       <details>
         <summary>Is it really free?</summary>
-        <p>Yes. There's nothing to subscribe to, because there's no service to run: it's software on your computer.</p>
+        <p>Yes, for workers. There's nothing to subscribe to, because there's no service to run: it's software on your own computer. Use it on your own or with up to five workers sharing one setup, for free. Agencies, houses, clubs and platforms need a license (<a href="https://github.com/LConthehub/sworkr/blob/main/LICENSE">the terms</a>).</p>
       </details>
       <details>
         <summary>Can you see my clients?</summary>

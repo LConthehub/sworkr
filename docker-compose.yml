@@ -1,6 +1,7 @@
 # Sworkr: your own back office, on your own computer.
 #
-#   docker compose up -d --build      start (or update after downloading a new version)
+#   docker compose up -d              start
+#   docker compose pull && docker compose up -d      update to the newest version
 #   docker compose down               stop          (never add -v: it deletes your records)
 #
 # Then open http://localhost:8008 and make your account.
@@ -10,9 +11,8 @@ name: sworkr          # keep this name: it's how Docker finds your records again
 
 services:
   sworkr:
-    build: .
-    # Once ready-made images are published, this line can replace "build: ." so nothing is built:
-    # image: ghcr.io/OWNER/sworkr:latest
+    image: ghcr.io/lconthehub/sworkr:latest      # ready-made: nothing to build
+    # build: .        # or build it yourself from the source instead (use this line, not the one above)
     ports:
       - "127.0.0.1:8008:8008"     # this computer only. For your phone, see sworkr.com/docs/phone.html
     volumes:

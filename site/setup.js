@@ -37,14 +37,15 @@
 
     var y = [];
     y.push('# Made with the setup builder at sworkr.com/docs/install.html');
-    y.push('# Start:  docker compose up -d --build     (or double-click start)');
+    y.push('# Start:   docker compose up -d');
+    y.push('# Update:  docker compose pull && docker compose up -d');
     y.push('# Stop:   docker compose down              (never add -v: it deletes your records)');
     y.push('');
     y.push('name: sworkr          # keep this name: it is how Docker finds your records again');
     y.push('');
     y.push('services:');
     y.push('  sworkr:');
-    y.push('    build: .');
+    y.push('    image: ghcr.io/lconthehub/sworkr:latest');
     y.push('    ports:');
     y.push('      - ' + q((network ? '' : '127.0.0.1:') + port + ':8008') + (network ? '      # other devices on your network can open it' : '      # this computer only'));
     y.push('    volumes:');
@@ -88,12 +89,13 @@
     var url = 'http://localhost:' + port;
     steps.innerHTML = '';
     [
-      'Download <a href="/downloads/sworkr-docker.zip">sworkr-docker.zip</a> and unzip it.',
-      'In the <code>sworkr</code> folder, open <code>docker-compose.yml</code> in a text editor, replace everything in it with the text above, and save.',
-      email ? 'Save the second box as a file called <code>.env</code> in the same folder, and type your email app password after <code>SMTP_PASSWORD=</code>.' : null,
+      'Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a> (Windows or Mac) or Docker (Linux), and start it.',
+      'Make a folder called <code>sworkr</code>, and save the text above in it as <code>docker-compose.yml</code> (or use Download).',
+      email ? 'Save the second box in the same folder as a file called <code>.env</code>, and type your email app password after <code>SMTP_PASSWORD=</code>.' : null,
       dataFolder || keysFolder || content ? 'Make sure the folders you chose exist. On Mac, Docker Desktop may ask to share them: say yes.' : null,
-      'Double-click <code>start.bat</code> (Windows) or <code>start.command</code> (Mac), or run <code>docker compose up -d --build</code> in that folder.',
+      'Open a terminal in that folder and run <code>docker compose up -d</code>. The first time, it downloads Sworkr (a few minutes).',
       'Open <a href="' + url + '">' + url + '</a> and make your account.',
+      'Later, to update: <code>docker compose pull &amp;&amp; docker compose up -d</code>. Your records stay.',
     ].filter(Boolean).forEach(function (html) {
       var li = document.createElement('li');
       li.innerHTML = html;

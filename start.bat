@@ -14,7 +14,8 @@ if errorlevel 1 (
 )
 
 echo Starting sworkr. The first time takes a few minutes while it downloads what it needs...
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 if errorlevel 1 (
     echo.
     echo sworkr couldn't start. The lines above say why.
