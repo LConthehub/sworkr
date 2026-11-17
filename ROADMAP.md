@@ -4,11 +4,12 @@ Ideas and decisions, so nothing is lost between work sessions. Newest decisions 
 
 ## Open questions for the owner
 Answer here (edit this file on GitHub, even from a phone) or in chat; answered ones move to the decisions above.
-1. Home page: is "Made by a worker, from ten years of spreadsheets." how you want to describe yourself publicly?
-2. Home page, "Tours & houses": it mentions house cuts and the office holding your cash. Too insider for the public page?
+1. Home page: is "Made by a worker, from ten years of spreadsheets." how you want to describe yourself publicly? I'm a former SW that has done multiple branches of SW including legal FSSW. I also have ADHD. I wanted the tool that I needed when I was in the industry. This started as a app idea I abandoned in 2017 and amalgmation of my disorganized spreadsheets across my years in the industry.
+
+2. Home page, "Tours & houses": it mentions house cuts and the office holding your cash. Too insider for the public page? yes too much for public page 
 3. Home page, privacy list: "On your phone, privately. Nothing is opened to the internet." Mention the own-web-address
-   option there too, or leave it to the docs?
-4. Social: which networks matter most to you after Bluesky and Mastodon (Reddit, X at a price, others)?
+   option there too, or leave it to the docs? leave it to the docs
+4. Social: which networks matter most to you after Bluesky and Mastodon (Reddit, X at a price, others)?reddit. how much is x? I mean I don't want to pay Elon,but if someone sponsored it ok.
 5. Local AI: which jobs first? Suggested: drafting replies to inquiries, summarising a client's notes, sorting expenses,
    writing post captions.
 
