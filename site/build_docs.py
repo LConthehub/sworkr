@@ -185,9 +185,10 @@ PAGES = [
 
 <h2>Good to know</h2>
 <ul>
-  <li>Your computer has to be on and awake for the phone to reach it.</li>
+  <li>The computer or home server running Sworkr has to be on and awake. A NAS or small home server is always on, which is why it's a good home for Sworkr.</li>
   <li>To stop it, run <code>tailscale serve reset</code>.</li>
-  <li>Don't forward a port on your router or point a public web address at Sworkr unless you know how to secure it: it holds your most sensitive records.</li>
+  <li>Don't forward a port on your router or point a web address at Sworkr by hand: it holds your most sensitive records. If you'd rather have your own address than Tailscale, follow <a href="/docs/web-address.html">Your own web address</a>, which sets it up safely.</li>
+  <li>Tailscale's company coordinates the connection, but your data never goes through them. If you'd rather run that part yourself too, <a href="https://headscale.net">Headscale</a> is a free replacement you can host at home.</li>
   <li>For a message on your phone without opening Sworkr, see <a href="/docs/notifications.html">Notifications</a>.</li>
 </ul>
 """),
