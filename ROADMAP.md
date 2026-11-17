@@ -11,7 +11,7 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
    option there too, or leave it to the docs? leave it to the docs
 4. Social: which networks matter most to you after Bluesky and Mastodon (Reddit, X at a price, others)?reddit. how much is x? I mean I don't want to pay Elon,but if someone sponsored it ok.
 5. Local AI: which jobs first? Suggested: drafting replies to inquiries, summarising a client's notes, sorting expenses,
-   writing post captions.
+   writing post captions. I don't want to take away the creative aspects, so I want the AI integration to be more about statistics and search than drafting writing, especially when the type of work and censors.
 
 ## Principles (2026-11-16)
 - Privacy first, "seize the means": your data stays with you. Encourage self-hosting the other services too
