@@ -62,7 +62,7 @@ export default function Customs() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm" role="group" aria-label="Show">
             {[['open', 'Open'], ['delivered', 'Delivered'], ['declined', 'Declined'], ['all', 'All']].map(([id, label]) => (
@@ -107,8 +107,8 @@ export default function Customs() {
                 </button>
                 <span className="flex flex-wrap gap-2 shrink-0">
                   {o.status === 'requested' && <button onClick={() => move(o, 'quoted')} className={quietButtonClass}>Quoted</button>}
-                  {o.status !== 'declined' && o.payment !== 'paid' && <button onClick={() => setModal({ pay: o })} className="text-xs px-2.5 py-1.5 rounded-full bg-emerald-600 text-white hover:bg-emerald-700">Got paid</button>}
-                  {o.status === 'to_make' && <button onClick={() => setModal({ deliver: o })} className="text-xs px-2.5 py-1.5 rounded-full bg-sworkr-500 text-white hover:bg-sworkr-600">Delivered</button>}
+                  {o.status !== 'declined' && o.payment !== 'paid' && <button onClick={() => setModal({ pay: o })} className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Got paid</button>}
+                  {o.status === 'to_make' && <button onClick={() => setModal({ deliver: o })} className="text-xs px-2.5 py-1.5 rounded-lg bg-sworkr-500 text-white hover:bg-sworkr-600">Delivered</button>}
                   {(o.status === 'requested' || o.status === 'quoted') && <button onClick={() => move(o, 'declined')} className={quietButtonClass}>Decline</button>}
                   {o.status === 'declined' && <button onClick={() => move(o, 'requested')} className={quietButtonClass}>Reopen</button>}
                 </span>
@@ -119,7 +119,7 @@ export default function Customs() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2 items-start">
-        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
             <h2 className="font-semibold text-gray-800">Your menu</h2>
             <span className="flex gap-2">
@@ -143,7 +143,7 @@ export default function Customs() {
         </div>
 
         {summary?.orders > 0 && (
-          <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+          <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
             <h2 className="font-semibold text-gray-800 mb-2">Customs in {year}</h2>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               {[['Orders', summary.orders], ['Delivered', summary.delivered], ['Paid to you', money(summary.paid)],
@@ -404,7 +404,7 @@ export function CustomsDue() {
   }, []);
   if (orders.length === 0) return null;
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-gray-800">Customs to make</h2>
         <Link to="/content/customs" className="text-sm text-sworkr-600 hover:text-sworkr-800">Customs →</Link>

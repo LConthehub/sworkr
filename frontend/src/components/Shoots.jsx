@@ -44,7 +44,7 @@ function ShootList({ onOpen }) {
   const load = useCallback(() => axios.get('/api/shoots', { params: { show } }).then(({ data }) => setShoots(data)).catch(() => setShoots([])), [show]);
   useEffect(() => { load(); }, [load]);
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm" role="group" aria-label="Show">
           {[['ahead', 'Coming up'], ['done', 'Shot'], ['all', 'All']].map(([id, label]) => (
@@ -117,7 +117,7 @@ function ShootPlan({ id, onBack, onOpen }) {
 
   if (!shoot) {
     return (
-      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <button onClick={onBack} className="text-sm text-sworkr-600 hover:text-sworkr-800">← All shoots</button>
         {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
       </div>
@@ -129,7 +129,7 @@ function ShootPlan({ id, onBack, onOpen }) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <button onClick={onBack} className="text-sm text-sworkr-600 hover:text-sworkr-800">← All shoots</button>
         <div className="flex flex-wrap items-start justify-between gap-3 mt-2">
           <div className="min-w-0">
@@ -176,7 +176,7 @@ function ShootPlan({ id, onBack, onOpen }) {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2 items-start">
-        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
           <div className="flex items-center justify-between gap-3 mb-1">
             <h3 className="font-semibold text-gray-800">People</h3>
             <button onClick={() => setModal({ person: {} })} className={quietButtonClass}>+ Add someone</button>
@@ -198,7 +198,7 @@ function ShootPlan({ id, onBack, onOpen }) {
                   </button>
                   <span className="flex gap-2 shrink-0">
                     {p.contact_id && <Link to={`/contacts/${p.contact_id}`} className={quietButtonClass}>Contact →</Link>}
-                    {p.fee > 0 && !p.expense_id && <button onClick={() => setModal({ pay: { person: p } })} className="text-xs px-2.5 py-1.5 rounded-full bg-emerald-600 text-white hover:bg-emerald-700">Paid</button>}
+                    {p.fee > 0 && !p.expense_id && <button onClick={() => setModal({ pay: { person: p } })} className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Paid</button>}
                   </span>
                 </li>
               ))}
@@ -206,7 +206,7 @@ function ShootPlan({ id, onBack, onOpen }) {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
           <h3 className="font-semibold text-gray-800 mb-1">Budget</h3>
           <p className="text-xs text-gray-500 mb-2">
             Planned <b>{money(s.planned)}</b> (with people's fees) · spent <b>{money(s.spent)}</b> ·{' '}
@@ -218,7 +218,7 @@ function ShootPlan({ id, onBack, onOpen }) {
                 <span className="flex-1 min-w-32 text-sm text-gray-800">{i.label}</span>
                 <span className="text-sm text-gray-600">{i.amount != null ? money(i.amount) : '—'}{i.actual != null && i.actual !== i.amount ? ` → ${money(i.actual)}` : ''}</span>
                 {i.expense_id ? <span className="text-xs text-emerald-700">Paid</span>
-                  : <button onClick={() => setModal({ pay: { item: i } })} className="text-xs px-2.5 py-1.5 rounded-full bg-emerald-600 text-white hover:bg-emerald-700">Paid</button>}
+                  : <button onClick={() => setModal({ pay: { item: i } })} className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Paid</button>}
                 <button onClick={() => run(axios.delete(`/api/shoots/items/${i.id}`))} className="text-gray-300 hover:text-red-500 text-sm" aria-label={`Remove ${i.label}`}>✕</button>
               </li>
             ))}
@@ -228,7 +228,7 @@ function ShootPlan({ id, onBack, onOpen }) {
         </div>
 
         {LISTS.map((list) => (
-          <div key={list.kind} className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+          <div key={list.kind} className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
             <div className="flex items-center justify-between gap-3 mb-1">
               <h3 className="font-semibold text-gray-800">{list.title}</h3>
               {list.kind === 'marketing' && (shoot.campaign_id
@@ -255,7 +255,7 @@ function ShootPlan({ id, onBack, onOpen }) {
 
       <div className="text-right">
         <button onClick={async () => { if (window.confirm('Delete this shoot and its lists? What you spent stays in your expenses.')) { await axios.delete(`/api/shoots/${shoot.id}`).catch(() => {}); onBack(); } }}
-          className="text-sm text-muted hover:text-sworkr-600 underline">Delete this shoot</button>
+          className="text-sm text-white/90 hover:text-white underline">Delete this shoot</button>
       </div>
 
       {modal === 'edit' && (
@@ -473,7 +473,7 @@ export function ShootsSoon() {
   }, []);
   if (shoots.length === 0) return null;
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-gray-800">Shoots coming up</h2>
         <Link to="/calendar/shoots" className="text-sm text-sworkr-600 hover:text-sworkr-800">Shoots →</Link>

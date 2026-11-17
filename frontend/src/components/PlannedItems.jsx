@@ -141,10 +141,10 @@ export function LayerToggles({ layers, onToggle }) {
 export function CalendarSwitch({ current }) {
   const tabs = [['calendar', '/calendar', 'Calendar'], ['posts', '/calendar/posts', 'Posts'], ['shoots', '/calendar/shoots', 'Shoots']];
   return (
-    <nav className="flex gap-1 overflow-x-auto rounded-full bg-white/90 border border-line p-1 backdrop-blur-sm" aria-label="Calendar and planning">
+    <nav className="flex gap-1 overflow-x-auto rounded-full bg-white/20 p-1 backdrop-blur-sm" aria-label="Calendar and planning">
       {tabs.map(([id, to, label]) => (
         <Link key={id} to={to} aria-current={current === id ? 'page' : undefined}
-          className={`whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium ${current === id ? 'bg-sworkr-600 text-white shadow-sm' : 'text-muted hover:text-sworkr-600 hover:bg-blush'}`}>
+          className={`whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium ${current === id ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'}`}>
           {label}
         </Link>
       ))}

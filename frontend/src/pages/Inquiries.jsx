@@ -38,10 +38,10 @@ const shortDay = (iso) => dayLabel(new Date(iso), { weekday: 'short', month: 'sh
 
 /** The pills at the top of Contacts, Inquiries and Gone quiet. */
 export function PeopleNav({ dark = false }) {
-  const base = dark ? 'text-gray-600 hover:bg-gray-100' : 'text-muted hover:text-sworkr-600 hover:bg-blush';
-  const active = dark ? 'bg-sworkr-500 text-white' : 'bg-sworkr-600 text-white shadow-sm';
+  const base = dark ? 'text-gray-600 hover:bg-gray-100' : 'text-white hover:bg-white/20';
+  const active = dark ? 'bg-sworkr-500 text-white' : 'bg-white text-sworkr-600 shadow';
   return (
-    <nav className={`flex gap-1 overflow-x-auto rounded-full p-1 ${dark ? 'bg-gray-50' : 'bg-white/90 border border-line backdrop-blur-sm'}`} aria-label="People">
+    <nav className={`flex gap-1 overflow-x-auto rounded-full p-1 ${dark ? 'bg-gray-50' : 'bg-white/20 backdrop-blur-sm'}`} aria-label="People">
       {[['/contacts', 'Everyone'], ['/contacts/inquiries', 'Inquiries'], ['/contacts/quiet', 'Gone quiet']].map(([to, label]) => (
         <NavLink key={to} to={to} end className={({ isActive }) => `whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium ${isActive ? active : base}`}>
           {label}
@@ -93,11 +93,11 @@ export default function Inquiries() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-night tracking-tight">Contacts</h1>
+        <h1 className="text-xl font-bold text-white">Contacts</h1>
         <PeopleNav />
       </div>
 
-      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm" role="group" aria-label="Show">
             {[['open', 'Open'], ['booked', 'Booked'], ['lost', 'Lost'], ['all', 'All']].map(([id, label]) => (
@@ -139,10 +139,10 @@ export default function Inquiries() {
                         <span className="flex flex-wrap gap-2 shrink-0">
                           {e.client_id
                             ? <Link to={`/contacts/${e.client_id}`} className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">{e.client_name} →</Link>
-                            : e.stage !== 'lost' && <button onClick={() => setModal({ contactFor: e })} className="text-xs px-2.5 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50">Make a contact</button>}
-                          {nextStage && e.stage !== 'lost' && <button onClick={() => move(e, nextStage.id)} className="text-xs px-2.5 py-1.5 rounded-full bg-emerald-600 text-white hover:bg-emerald-700">{nextStage.label} →</button>}
-                          {e.stage !== 'lost' && e.stage !== 'booked' && <button onClick={() => move(e, 'lost')} className="text-xs px-2.5 py-1.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50">Lost</button>}
-                          {e.stage === 'lost' && <button onClick={() => move(e, e.lost_from || 'new')} className="text-xs px-2.5 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50">Reopen</button>}
+                            : e.stage !== 'lost' && <button onClick={() => setModal({ contactFor: e })} className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Make a contact</button>}
+                          {nextStage && e.stage !== 'lost' && <button onClick={() => move(e, nextStage.id)} className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">{nextStage.label} →</button>}
+                          {e.stage !== 'lost' && e.stage !== 'booked' && <button onClick={() => move(e, 'lost')} className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">Lost</button>}
+                          {e.stage === 'lost' && <button onClick={() => move(e, e.lost_from || 'new')} className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">Reopen</button>}
                         </span>
                       </li>
                     );
@@ -177,7 +177,7 @@ export default function Inquiries() {
 function Summary({ data, year }) {
   const top = data.funnel[0].count || 1;
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6 space-y-4">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 space-y-4">
       <div>
         <h2 className="font-semibold text-gray-800">How {year} is going</h2>
         <p className="text-sm text-gray-500">
@@ -349,10 +349,10 @@ export function GoneQuiet() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-night tracking-tight">Contacts</h1>
+        <h1 className="text-xl font-bold text-white">Contacts</h1>
         <PeopleNav />
       </div>
-      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
           <p className="text-sm text-gray-600 max-w-xl">
             Clients you've seen at least twice who haven't booked lately and have nothing booked ahead. The ones who've paid you the most come first.
@@ -409,7 +409,7 @@ export function InquiriesWaiting() {
   }, []);
   if (rows.length === 0) return null;
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-gray-800">Inquiries to answer</h2>
         <Link to="/contacts/inquiries" className="text-sm text-sworkr-600 hover:text-sworkr-800">All inquiries →</Link>

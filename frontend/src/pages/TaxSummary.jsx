@@ -41,12 +41,12 @@ export default function TaxSummary({ year, setYear }) {
   );
 
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6 space-y-5 print:shadow-none">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 space-y-5 print:shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <button onClick={() => setYear(year - 1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 print:hidden" aria-label="Previous year">←</button>
+          <button onClick={() => setYear(year - 1)} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600 print:hidden" aria-label="Previous year">←</button>
           <h2 className="text-lg font-bold text-gray-800">{year} for taxes</h2>
-          <button onClick={() => setYear(year + 1)} disabled={year >= thisYear} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 disabled:opacity-30 print:hidden" aria-label="Next year">→</button>
+          <button onClick={() => setYear(year + 1)} disabled={year >= thisYear} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600 disabled:opacity-30 print:hidden" aria-label="Next year">→</button>
         </div>
         <span className="flex flex-wrap gap-2 print:hidden">
           <a href={`/api/tax-summary/csv?year=${year}&tz_offset=${new Date().getTimezoneOffset()}`} className={quietButtonClass}>Download as CSV</a>

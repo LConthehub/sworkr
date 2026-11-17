@@ -55,7 +55,7 @@ export default function Arrangement({ clientId, onChanged }) {
   if (a === undefined) return null;
   if (editing) {
     return (
-      <form onSubmit={save} className="bg-white rounded-2xl border border-line shadow-sm p-4 space-y-3">
+      <form onSubmit={save} className="bg-white rounded-2xl shadow-lg p-4 space-y-3">
         <h2 className="font-semibold text-gray-800">Arrangement</h2>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Allowance ($)">
@@ -85,13 +85,13 @@ export default function Arrangement({ clientId, onChanged }) {
   }
   if (!a) {
     return (
-      <button type="button" onClick={edit} className="text-sm text-muted hover:text-sworkr-600 underline-offset-2 hover:underline">
+      <button type="button" onClick={edit} className="text-sm text-white/90 hover:text-white underline-offset-2 hover:underline">
         + Set up an arrangement (a regular allowance)
       </button>
     );
   }
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 flex flex-wrap items-center gap-3">
+    <div className="bg-white rounded-2xl shadow-lg p-4 flex flex-wrap items-center gap-3">
       <div className="flex-1 min-w-48">
         <h2 className="font-semibold text-gray-800">Arrangement</h2>
         <p className="text-sm text-gray-600">

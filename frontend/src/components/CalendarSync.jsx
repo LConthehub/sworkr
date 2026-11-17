@@ -188,14 +188,14 @@ export default function CalendarSync() {
 
         {!demo && (
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={!!working} className="px-5 py-2 bg-sworkr-500 text-white rounded-full hover:bg-sworkr-600 disabled:opacity-50 text-sm">
+            <button type="submit" disabled={!!working} className="px-5 py-2 bg-sworkr-500 text-white rounded-lg hover:bg-sworkr-600 disabled:opacity-50 text-sm">
               {working === 'save' ? 'Saving…' : 'Save'}
             </button>
-            <button type="button" onClick={test} disabled={!!working} className="px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+            <button type="button" onClick={test} disabled={!!working} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
               {working === 'test' ? 'Testing…' : 'Test connection'}
             </button>
             {saved && (
-              <button type="button" onClick={syncNow} disabled={!!working || status.busy} className="px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+              <button type="button" onClick={syncNow} disabled={!!working || status.busy} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
                 Sync now
               </button>
             )}

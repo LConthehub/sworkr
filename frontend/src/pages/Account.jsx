@@ -244,15 +244,15 @@ export default function Account({ user, onLogout, onIdleChange }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-night tracking-tight">Settings</h1>
-          <p className="text-sm text-muted">Logged in as <span className="font-semibold">{user.username}</span>{user.is_admin && ' (admin)'}</p>
+          <h1 className="text-xl font-bold text-white">Settings</h1>
+          <p className="text-sm text-white/90">Logged in as <span className="font-semibold">{user.username}</span>{user.is_admin && ' (admin)'}</p>
         </div>
-        <button onClick={onLogout} className="px-4 py-2 rounded-full border border-sworkr-600/40 text-sworkr-600 hover:bg-sworkr-600 hover:text-white text-sm">Log out</button>
+        <button onClick={onLogout} className="px-4 py-2 rounded-lg bg-white/20 text-white hover:bg-white/30 text-sm">Log out</button>
       </div>
 
       {/* Phone: the list of groups, until one is picked. */}
       {!group && (
-        <div className="md:hidden bg-white rounded-2xl border border-line shadow-sm p-3 space-y-3">
+        <div className="md:hidden bg-white rounded-2xl shadow-lg p-3 space-y-3">
           {search}
           {results || (
             <ul className="divide-y divide-gray-100">
@@ -275,7 +275,7 @@ export default function Account({ user, onLogout, onIdleChange }) {
 
       <div className={`${group ? '' : 'hidden md:grid'} md:grid gap-4 items-start ${collapsed ? 'md:grid-cols-[3.5rem_1fr]' : 'md:grid-cols-[13rem_1fr]'}`}>
         {/* Wider screens: the rail. */}
-        <nav aria-label="Settings" className="hidden md:block sticky top-20 bg-white rounded-2xl border border-line shadow-sm p-2 space-y-2">
+        <nav aria-label="Settings" className="hidden md:block sticky top-20 bg-white rounded-2xl shadow-lg p-2 space-y-2">
           {!collapsed && search}
           {!collapsed && results}
           {!results && (
@@ -312,8 +312,8 @@ export default function Account({ user, onLogout, onIdleChange }) {
         </nav>
 
         <div className="space-y-4 max-w-2xl min-w-0">
-          <Link to="/account" className="md:hidden inline-flex items-center gap-1 text-sm text-sworkr-600 hover:underline">‹ All settings</Link>
-          <h2 className="text-lg font-bold text-night flex items-center gap-2"><Icon name={shown.icon} />{shown.label}</h2>
+          <Link to="/account" className="md:hidden inline-flex items-center gap-1 text-sm text-white hover:underline">‹ All settings</Link>
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2"><Icon name={shown.icon} />{shown.label}</h2>
           {shown.sections.map((s) => (
             <div key={s.id} id={s.id} className="scroll-mt-20">
               {s.render({ onIdleChange, me: user })}
@@ -950,7 +950,7 @@ function RestoreBackup() {
           <p className="text-xs text-red-800">Afterwards everyone is signed out. Sign in with the username and password that were in use when the backup was made.</p>
           <div className="flex flex-wrap gap-2">
             <button type="submit" disabled={busy || !file || form.confirm.trim() !== 'RESTORE'}
-              className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
               {busy ? 'Restoring…' : 'Replace everything with this backup'}
             </button>
             <button type="button" disabled={busy} onClick={() => setOpen(false)} className={quietButtonClass}>Cancel</button>
@@ -1045,7 +1045,7 @@ function YourData() {
               </Field>
               <div className="flex flex-wrap gap-2">
                 <button type="submit" disabled={!!busy || word.trim() !== summary.erase_word || !password}
-                  className="rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
                   {busy === 'erase' ? 'Erasing…' : 'Erase everything of mine'}
                 </button>
                 <button type="button" disabled={!!busy} onClick={() => { setErasing(false); setPassword(''); setWord(''); }} className={quietButtonClass}>Cancel</button>

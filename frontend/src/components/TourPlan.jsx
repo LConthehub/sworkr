@@ -103,7 +103,7 @@ export function TourBudget({ tourId, version }) {
             </label>
           ))}
           <div className="flex gap-2 pt-1">
-            <button type="submit" className="text-sm px-3 py-1.5 rounded-full bg-sworkr-500 text-white">Save</button>
+            <button type="submit" className="text-sm px-3 py-1.5 rounded-lg bg-sworkr-500 text-white">Save</button>
             <button type="button" onClick={() => setEditing(null)} className="text-sm px-3 py-1.5 rounded-lg text-gray-600">Cancel</button>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
@@ -203,7 +203,7 @@ export function Meals({ tour, onChanged }) {
         <input required value={form.what} onChange={set('what')} placeholder="What" aria-label="What" className={`${small} col-span-2 sm:col-span-3`} />
         <input value={form.groceries} onChange={set('groceries')} placeholder="Groceries, comma separated" aria-label="Groceries" className={`${small} col-span-2 sm:col-span-4`} />
         <input type="number" min="0" step="0.5" value={form.cost} onChange={set('cost')} placeholder="$ about" aria-label="Rough cost" className={`${small} col-span-1`} />
-        <button type="submit" className="col-span-1 text-sm px-3 py-1.5 rounded-full bg-sworkr-500 text-white">Add</button>
+        <button type="submit" className="col-span-1 text-sm px-3 py-1.5 rounded-lg bg-sworkr-500 text-white">Add</button>
       </form>
       {message && <p className="text-xs text-gray-600 mt-1">{message}</p>}
     </section>

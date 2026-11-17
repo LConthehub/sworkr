@@ -49,7 +49,7 @@ export function EmailPanel() {
 
   if (notSetUp) {
     return (
-      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
         <h2 className="font-semibold text-gray-800">Email</h2>
         <p className="text-sm text-gray-500 mt-1">
           See your unread and important emails here, reply to them, and add senders as contacts.
@@ -60,7 +60,7 @@ export function EmailPanel() {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h2 className="font-semibold text-gray-800">Email</h2>
         <div className="flex flex-wrap items-center gap-2">
@@ -78,7 +78,7 @@ export function EmailPanel() {
               </button>
             ))}
           </div>
-          <button onClick={() => load(true)} disabled={loading} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500 disabled:opacity-40" aria-label="Check for new email" title="Check for new email">
+          <button onClick={() => load(true)} disabled={loading} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-500 disabled:opacity-40" aria-label="Check for new email" title="Check for new email">
             ↻
           </button>
         </div>

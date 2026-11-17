@@ -124,7 +124,7 @@ export default function NtfySettings() {
       {!s.demo && (
         <div className="flex flex-wrap gap-2">
           <button type="submit" disabled={!!working} className={buttonClass}>{working === 'save' ? 'Saving…' : 'Save'}</button>
-          <button type="button" onClick={test} disabled={!!working || !s.topic} className="px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+          <button type="button" onClick={test} disabled={!!working || !s.topic} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
             {working === 'test' ? 'Sending…' : 'Send a test'}
           </button>
         </div>

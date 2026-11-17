@@ -33,7 +33,7 @@ export default function Listings({ sites }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
         <h2 className="font-semibold text-gray-800">Ads</h2>
         <button onClick={() => setModal({ edit: {} })} className="px-4 py-2 rounded-full text-sm font-medium bg-sworkr-500 text-white hover:bg-sworkr-600">+ New ad</button>
@@ -69,7 +69,7 @@ export default function Listings({ sites }) {
               <span className="flex flex-wrap gap-2 shrink-0">
                 {l.ad_text && <button onClick={() => copy(l)} className={quietButtonClass}>{copied === l.id ? 'Copied ✓' : 'Copy ad text'}</button>}
                 {l.link && <a href={l.link} target="_blank" rel="noreferrer noopener" className={quietButtonClass}>Open ↗</a>}
-                <button onClick={() => setModal({ renew: l })} className="text-xs px-2.5 py-1.5 rounded-full bg-emerald-600 text-white hover:bg-emerald-700">Renewed</button>
+                <button onClick={() => setModal({ renew: l })} className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Renewed</button>
               </span>
             </li>
           ))}
@@ -208,7 +208,7 @@ export function AdsExpiring() {
   }, []);
   if (rows.length === 0) return null;
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-gray-800">Ads running out</h2>
         <Link to="/content/ads" className="text-sm text-sworkr-600 hover:text-sworkr-800">Ads →</Link>

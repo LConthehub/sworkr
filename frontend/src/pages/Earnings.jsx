@@ -108,15 +108,15 @@ export default function Earnings() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-bold text-gray-800">Compare earnings</h2>
             {view && view !== 'tour' && (
               <span className="flex items-center gap-1">
-                <button onClick={() => setYear(year - 1)} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600" aria-label="Previous year">←</button>
+                <button onClick={() => setYear(year - 1)} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Previous year">←</button>
                 <span className="font-semibold text-gray-700">{year}</span>
-                <button onClick={() => setYear(year + 1)} disabled={year >= thisYear} className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-600 disabled:opacity-30" aria-label="Next year">→</button>
+                <button onClick={() => setYear(year + 1)} disabled={year >= thisYear} className="w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-600 disabled:opacity-30" aria-label="Next year">→</button>
               </span>
             )}
             {loading && <span className="w-4 h-4 animate-spin border-2 rounded-full border-sworkr-500/20 border-t-sworkr-500" role="status" aria-label="Loading" />}
@@ -476,12 +476,12 @@ function TourDetail({ tourId, version, onEdit, onAddTest, onOpenAppointment, onC
     checkIn: (a) => act(() => axios.post(`/api/appointments/${a.id}/check-in`)),
   };
 
-  if (error) return <div className="bg-white rounded-2xl border border-line shadow-sm p-5 text-sm text-red-700">{error}</div>;
-  if (!data) return <div className="bg-white rounded-2xl border border-line shadow-sm p-5 text-sm text-gray-400">Loading…</div>;
+  if (error) return <div className="bg-white rounded-2xl shadow-lg p-5 text-sm text-red-700">{error}</div>;
+  if (!data) return <div className="bg-white rounded-2xl shadow-lg p-5 text-sm text-gray-400">Loading…</div>;
   const { tour, figures: f, appointments, expenses, income = [], statement } = data;
 
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6 space-y-5">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold" style={{ color: TOUR_COLOR }}>✈ {tour.name}</h2>

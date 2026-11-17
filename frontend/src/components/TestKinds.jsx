@@ -105,7 +105,7 @@ export function TestKindsSettings() {
       {message?.ok && <p className="text-sm text-emerald-600">{message.ok}</p>}
       <div className="flex flex-wrap gap-2">
         <button type="submit" className={buttonClass}>Save</button>
-        <button type="button" onClick={() => setRows([...rows, { label: '', every_days: '', cost: '', archived: false }])} className="px-4 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:bg-gray-50">+ Add a test</button>
+        <button type="button" onClick={() => setRows([...rows, { label: '', every_days: '', cost: '', archived: false }])} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">+ Add a test</button>
       </div>
     </form>
   );
@@ -118,7 +118,7 @@ export function TestsDue() {
   const due = kinds.filter((k) => k.state === 'overdue' || k.state === 'soon');
   if (due.length === 0) return null;
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="font-semibold text-gray-800">Health tests due</h2>
         <Link to="/calendar" className="text-sm text-sworkr-600 hover:text-sworkr-800">Calendar →</Link>

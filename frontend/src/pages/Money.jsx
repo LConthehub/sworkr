@@ -187,12 +187,12 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div className="flex items-center gap-2">
-            <button onClick={() => setYear(year - 1)} className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600" aria-label="Previous year">←</button>
+            <button onClick={() => setYear(year - 1)} className="w-9 h-9 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Previous year">←</button>
             <h2 className="text-xl font-bold text-gray-800">{year}</h2>
-            <button onClick={() => setYear(year + 1)} disabled={year >= thisYear + 1} className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600 disabled:opacity-30" aria-label="Next year">→</button>
+            <button onClick={() => setYear(year + 1)} disabled={year >= thisYear + 1} className="w-9 h-9 rounded-lg hover:bg-gray-100 text-gray-600 disabled:opacity-30" aria-label="Next year">→</button>
             {loading && <span className="w-4 h-4 animate-spin border-2 rounded-full border-sworkr-500/20 border-t-sworkr-500" role="status" aria-label="Loading" />}
           </div>
           <button onClick={exportYear} className={quietButtonClass} title="One file with every payment and expense this year, for your tax return or accountant">
@@ -225,7 +225,7 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
       {overview && <GoalsGlance />}
 
       {overview && unpaid.length > 0 && (
-        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
           <h2 className="font-semibold text-gray-800 mb-3">Still owed</h2>
           <ul className="divide-y divide-gray-100">
             {unpaid.map((a) => (
@@ -235,7 +235,7 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
                 <span className="text-gray-500">{a.service_type}</span>
                 <span className="ml-auto text-amber-700 font-semibold">{money(a.rate - a.amount_paid)}</span>
                 {a.amount_paid > 0 && <span className="text-xs text-gray-400">of {money(a.rate)}</span>}
-                <button onClick={() => markPaid(a)} className="text-xs px-2.5 py-1.5 rounded-full bg-amber-50 text-amber-800 hover:bg-amber-100">$ Mark paid</button>
+                <button onClick={() => markPaid(a)} className="text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100">$ Mark paid</button>
               </li>
             ))}
           </ul>
@@ -244,7 +244,7 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
 
       {!overview && (<>
       <div className="grid gap-4 lg:grid-cols-[1fr_340px] items-start">
-        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
             <h2 className="font-semibold text-gray-800">Other income in {year}</h2>
             <button onClick={() => setModal({ income: null })} className="px-4 py-2 rounded-full text-sm font-medium bg-sworkr-500 text-white hover:bg-sworkr-600">+ Add income</button>
@@ -266,7 +266,7 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
                     </p>
                   </div>
                   {r.status === 'pending' && (
-                    <button onClick={() => markReceived(r)} className="text-xs px-2.5 py-1.5 rounded-full bg-amber-50 text-amber-800 hover:bg-amber-100" title={r.payout_date ? `Expected ${r.payout_date}` : undefined}>
+                    <button onClick={() => markReceived(r)} className="text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100" title={r.payout_date ? `Expected ${r.payout_date}` : undefined}>
                       Pending · mark paid out
                     </button>
                   )}
@@ -281,7 +281,7 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
 
         <HeldByOffice />
 
-        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
+        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-gray-800">Workplaces & platforms</h2>
             <button onClick={() => setModal({ source: null })} className="text-sm text-sworkr-600 hover:text-sworkr-800">+ Add</button>
@@ -318,7 +318,7 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-6">
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h2 className="font-semibold text-gray-800">Expenses in {year}</h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -676,7 +676,7 @@ function HeldByOffice() {
     window.dispatchEvent(new Event('sworkr:money-changed'));
   };
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
       <h2 className="font-semibold text-gray-800">Not paid out to you yet</h2>
       <p className="text-xs text-gray-500 mb-2">What each place is holding for you: everything you've earned there that's still marked "not yet".</p>
       <ul className="divide-y divide-gray-100">
@@ -691,7 +691,7 @@ function HeldByOffice() {
             </span>
             <span className="flex items-center gap-3">
               <span className="font-semibold text-gray-800">{money(r.held)}</span>
-              <button onClick={() => paid(r)} className="text-xs px-2.5 py-1.5 rounded-full bg-emerald-600 text-white hover:bg-emerald-700">Paid out</button>
+              <button onClick={() => paid(r)} className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Paid out</button>
             </span>
           </li>
         ))}

@@ -116,7 +116,7 @@ export default function Login({ setup, demoLogin, passkeyHint, onLoggedIn }) {
           )}
           {error && <p className="text-sm text-red-600">{error}</p>}
           {info && <p className="text-sm text-emerald-700">{info}</p>}
-          <button type="submit" disabled={busy} className="w-full py-2.5 rounded-full bg-gradient-to-br from-sworkr-500 to-sworkr-600 text-white font-bold hover:brightness-105 hover:shadow-[0_6px_18px_rgba(167,49,120,0.25)] disabled:opacity-50">
+          <button type="submit" disabled={busy} className="w-full py-2.5 bg-sworkr-500 text-white rounded-lg hover:bg-sworkr-600 disabled:opacity-50 font-medium">
             {busy ? 'Checking…' : 'Log in'}
           </button>
           <div className="flex justify-between text-sm">
@@ -164,7 +164,7 @@ export default function Login({ setup, demoLogin, passkeyHint, onLoggedIn }) {
           <p className="text-xs text-gray-500">Away from home? Passwords may be turned off here. Use your passkey.</p>
         )}
 
-        <button type="submit" disabled={busy} className="w-full py-2.5 rounded-full bg-gradient-to-br from-sworkr-500 to-sworkr-600 text-white font-bold hover:brightness-105 hover:shadow-[0_6px_18px_rgba(167,49,120,0.25)] disabled:opacity-50">
+        <button type="submit" disabled={busy} className="w-full py-2.5 bg-sworkr-500 text-white rounded-lg hover:bg-sworkr-600 disabled:opacity-50 font-medium">
           {busy ? 'Please wait…' : setup ? 'Create account' : 'Log in'}
         </button>
         {!setup && !demoLogin && passkeysSupported() && (

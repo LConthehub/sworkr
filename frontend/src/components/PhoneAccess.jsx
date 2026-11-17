@@ -51,7 +51,7 @@ export default function PhoneAccess() {
           <b>On this computer, open a terminal and run this once:</b>
           <span className="flex flex-wrap items-center gap-2 mt-1">
             <code className="rounded bg-gray-100 px-2 py-1 text-gray-800">{command}</code>
-            <button type="button" onClick={copy} className="text-xs px-2.5 py-1 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50">{copied ? 'Copied ✓' : 'Copy'}</button>
+            <button type="button" onClick={copy} className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">{copied ? 'Copied ✓' : 'Copy'}</button>
           </span>
           <span className="block text-xs text-gray-500 mt-1">
             Windows: right-click Start, choose <i>Terminal</i>. Mac: open <i>Terminal</i> from Applications → Utilities. If it asks you to turn on

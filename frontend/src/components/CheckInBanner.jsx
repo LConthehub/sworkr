@@ -54,7 +54,7 @@ export default function CheckInBanner() {
           <div
             key={a.id}
             role="alert"
-            className={`rounded-2xl border border-line shadow-sm px-4 py-3 flex flex-wrap items-center gap-3 ${overdue ? 'bg-red-600 text-white' : ended ? 'bg-amber-400 text-gray-900' : 'bg-white text-gray-800'}`}
+            className={`rounded-2xl shadow-lg px-4 py-3 flex flex-wrap items-center gap-3 ${overdue ? 'bg-red-600 text-white' : ended ? 'bg-amber-400 text-gray-900' : 'bg-white text-gray-800'}`}
           >
             <div className="flex-1 min-w-52">
               <p className="font-semibold">

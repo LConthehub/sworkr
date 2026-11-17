@@ -438,7 +438,7 @@ export default function AppointmentForm({
             ))}
           </ul>
           <div className="flex gap-2 mt-3">
-            <button type="button" disabled={saving} onClick={() => submit(null, true)} className="px-3 py-1.5 rounded-full bg-amber-600 text-white text-sm hover:bg-amber-700 disabled:opacity-50">
+            <button type="button" disabled={saving} onClick={() => submit(null, true)} className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-sm hover:bg-amber-700 disabled:opacity-50">
               Save anyway
             </button>
             <button type="button" onClick={() => setWarnings(null)} className={quietButtonClass}>Go back</button>

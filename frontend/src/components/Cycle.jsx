@@ -96,7 +96,7 @@ export function CycleCard({ onChanged }) {
   };
   const t = c.today;
   return (
-    <div className="bg-white rounded-2xl border border-line shadow-sm p-4 sm:p-5">
+    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-5">
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold text-gray-800">Cycle</h2>
         <button onClick={() => setHistory(true)} className="text-sm text-sworkr-600 hover:text-sworkr-800">History & edit</button>
@@ -119,7 +119,7 @@ export function CycleCard({ onChanged }) {
         {t?.open_entry ? (
           <button onClick={ended} className={quietButtonClass}>My period ended today</button>
         ) : (
-          <button onClick={started} className="px-3 py-2 rounded-full text-sm bg-rose-500 text-white hover:bg-rose-600">My period started today</button>
+          <button onClick={started} className="px-3 py-2 rounded-lg text-sm bg-rose-500 text-white hover:bg-rose-600">My period started today</button>
         )}
       </div>
       {history && (
