@@ -75,6 +75,7 @@ BUILTIN_CATEGORIES = [
     ("marketing", "Marketing", "#e67eb6", None),
     ("travel", "Travel", "#a73178", None),
     ("fitness", "Fitness & training", "#65a30d", None),
+    ("food", "Food & drink", "#d97706", None),
     ("other", "Other", "#4b86a6", None),
     ("room_rent", "Room & board", None, "workspace"),
     ("cleaning", "Cleaning & laundry", None, "workspace"),

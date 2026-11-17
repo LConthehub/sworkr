@@ -53,7 +53,7 @@ def test_everyone_starts_with_the_built_in_categories(api):
     assert [(c["key"], c["parent_key"]) for c in cats] == [
         ("workspace", None), ("room_rent", "workspace"), ("cleaning", "workspace"), ("fees", None),
         ("health", None), ("medical", "health"), ("wardrobe", None), ("gear", None), ("equipment", "gear"),
-        ("marketing", None), ("travel", None), ("fitness", None), ("other", None)]
+        ("marketing", None), ("travel", None), ("fitness", None), ("food", None), ("other", None)]
     assert all(c["builtin"] and not c["hidden"] and c["color"] for c in cats)
     # A subcategory shows its main category's colour.
     colors = {c["key"]: c["color"] for c in cats}

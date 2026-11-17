@@ -37,6 +37,7 @@ import finance
 import healthtests
 import arrangements
 import clubpay
+import tourplan
 import calendar_dates
 import blocklist
 import signin
@@ -2169,6 +2170,7 @@ app.include_router(privacy.router)
 app.include_router(offsite.router)
 app.include_router(arrangements.router)
 app.include_router(clubpay.router)
+app.include_router(tourplan.router)
 app.include_router(calendar_dates.router)
 app.include_router(marketing.router)
 app.include_router(campaigns.router)
@@ -2199,6 +2201,7 @@ taxes.setup(get_db)
 signin.setup(get_db)
 arrangements.setup(get_db)
 clubpay.setup(get_db)
+tourplan.setup(get_db)
 calendar_dates.setup(get_db)
 marketing.setup(get_db)
 campaigns.setup(get_db)

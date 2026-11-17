@@ -1405,6 +1405,57 @@ def _m40_injections(conn):
     conn.execute("ALTER TABLE med_logs ADD COLUMN dose TEXT")
 
 
+def _m41_tour_planning(conn):
+    """Planning a tour: pack list templates, each tour's checklist, and a budget per main expense category."""
+    conn.execute("""
+        CREATE TABLE pack_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            items TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE tour_pack (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            tour_id INTEGER NOT NULL REFERENCES tours(id) ON DELETE CASCADE,
+            label TEXT NOT NULL,
+            packed INTEGER NOT NULL DEFAULT 0 CHECK(packed IN (0, 1)),
+            sort_order INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    conn.execute("CREATE INDEX idx_tour_pack ON tour_pack(tour_id, sort_order)")
+    conn.execute("""
+        CREATE TABLE tour_budget (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            tour_id INTEGER NOT NULL REFERENCES tours(id) ON DELETE CASCADE,
+            category TEXT NOT NULL,
+            planned REAL NOT NULL CHECK(planned >= 0),
+            UNIQUE (tour_id, category)
+        )
+    """)
+
+
+def _m42_tour_meals(conn):
+    """Meals and snacks planned for a tour, with their groceries and a rough cost."""
+    conn.execute("""
+        CREATE TABLE tour_meals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            tour_id INTEGER NOT NULL REFERENCES tours(id) ON DELETE CASCADE,
+            day TEXT,
+            meal TEXT NOT NULL DEFAULT 'snack',
+            what TEXT NOT NULL,
+            groceries TEXT,
+            cost REAL CHECK(cost IS NULL OR cost >= 0)
+        )
+    """)
+    conn.execute("CREATE INDEX idx_tour_meals ON tour_meals(tour_id, day)")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1446,6 +1497,8 @@ MIGRATIONS = [
     (38, "push notifications", _m38_ntfy, False),
     (39, "club pay", _m39_club_pay, False),
     (40, "injections: site rotation and dose steps", _m40_injections, False),
+    (41, "tour planning: pack lists and budgets", _m41_tour_planning, False),
+    (42, "tour meals and snacks", _m42_tour_meals, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

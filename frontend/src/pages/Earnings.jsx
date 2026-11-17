@@ -6,6 +6,7 @@ import AppointmentForm from '../components/AppointmentForm';
 import { AppointmentItem } from './AppointmentCalendar';
 import { useCategories } from '../api';
 import { usePersonas } from '../components/Personas';
+import { TourPlanning } from '../components/TourPlan';
 import { useTestKinds } from '../components/TestKinds';
 import FoundViaCompare from '../components/FoundVia';
 import BusyTimes from '../components/BusyTimes';
@@ -508,6 +509,8 @@ function TourDetail({ tourId, version, onEdit, onAddTest, onOpenAppointment, onC
       </dl>
 
       {statement && <StayStatement statement={statement} />}
+
+      <TourPlanning tour={tour} version={version} />
 
       <div className="grid gap-5 lg:grid-cols-2">
         <div>

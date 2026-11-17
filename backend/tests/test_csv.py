@@ -178,11 +178,11 @@ def test_expense_problems_are_listed(api):
     text = (f"date,description,amount,category,client\n"
             f"yesterday,A {t},5,other,\n"
             f"2026-01-01,B {t},-5,other,\n"
-            f"2026-01-01,C {t},5,food,\n"
+            f"2026-01-01,C {t},5,no_such_kind,\n"
             f"2026-01-01,D {t},5,other,Nobody {t}\n")
     r = upload(api, "expenses", text)
     assert r.status_code == 400
     errors = " | ".join(r.json()["detail"]["errors"])
     assert "Line 2: date 'yesterday'" in errors and "Line 3: amount '-5'" in errors
-    assert "Line 4: category 'food'" in errors and f"Line 5: there's no client called 'Nobody {t}'" in errors
+    assert "Line 4: category 'no_such_kind'" in errors and f"Line 5: there's no client called 'Nobody {t}'" in errors
     assert not [e for e in api.get("/api/expenses", params={"limit": 500}).json() if t in e["description"]]

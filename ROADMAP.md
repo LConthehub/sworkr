@@ -34,6 +34,8 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - GitHub: user will link the account; scan history for secrets before the first public push.
 
 ## Done recently
+- Tour plan (2026-11-16): pack lists from templates, a budget by main category against actual spending,
+  and meals & snacks whose groceries go onto the pack list and whose costs become the Food & drink plan.
 - Club pay (2026-11-16): contractor or employee, house fees by arrival time, dances with the house's cut,
   VIP share, tip-outs, fines, a shift statement. Ideas for later: quotas/minimums, stage-set fees,
   pay-period summaries for employees (wage vs tips), different rules on different nights.
@@ -42,8 +44,6 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Next
-- Tour pack lists from templates, with a budget against actual spending.
-- Meal and snack planner (optional), feeding groceries into the pack list and budget.
 - Social: post to Bluesky and Mastodon; Reddit posting with the person's own app key; import stats from
   platforms' CSV exports.
 - Saved replies for inquiries.
