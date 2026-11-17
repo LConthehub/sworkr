@@ -63,7 +63,9 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Next
-- Website review page by page with the owner (home page done 2026-11-16; next: the docs pages).
+- Website review page by page with the owner: done up to Your own web address (2026-11-17). Next: Clients &
+  inquiries, Money & houses, Content & planning, Health & safety, Notifications, If something goes wrong.
+- Setup builder: option to add Caddy to the same docker-compose.yml (own web address without a separate download).
 
 ## Bigger ideas
 - Local AI: an optional assistant that talks to a model running on your own machine (LM Studio, llama.cpp,

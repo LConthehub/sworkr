@@ -204,7 +204,7 @@ PAGES = [
 
 <h2>1. Get a free address with DuckDNS</h2>
 <ol>
-  <li>Go to <a href="https://www.duckdns.org">duckdns.org</a> and sign in. Use an account you keep private.</li>
+  <li>Go to <a href="https://www.duckdns.org">duckdns.org</a> and sign in, or use <a href="https://desec.io">deSEC</a>, a privacy-focused non-profit. Use an account you keep private.</li>
   <li>Pick a name: you get <code>yourname.duckdns.org</code>. Pick something that doesn't say what it's for.</li>
   <li>Keep it pointing at your home: your home's address can change. Many routers have a <em>Dynamic DNS</em> setting with DuckDNS in the list (use your token from the DuckDNS page). If yours doesn't, the DuckDNS <em>install</em> page has a small updater for Windows, Mac and Linux.</li>
 </ol>
@@ -212,7 +212,7 @@ PAGES = [
 <h2>2. Install Caddy</h2>
 <p><a href="https://caddyserver.com/download">Caddy</a> sits in front of Sworkr and handles HTTPS by itself: it gets and renews the certificate for your address, for free.</p>
 <ol>
-  <li>Download Caddy for your computer and put it in a folder, for example <code>C:\\Caddy</code>.</li>
+  <li>Download Caddy for your computer and put it in a folder, for example <code>C:\\Caddy</code> on Windows or a <code>Caddy</code> folder in your home folder on a Mac.</li>
   <li>In that folder, make a file called <code>Caddyfile</code> (no extension) with:
 <pre><code>yourname.duckdns.org {
     reverse_proxy 127.0.0.1:8008
@@ -233,9 +233,9 @@ PAGES = [
 
 <h2>Good to know</h2>
 <ul>
-  <li>Your computer has to be on and awake.</li>
+  <li>The computer or home server running Sworkr has to be on and awake.</li>
   <li>A passkey made on your DuckDNS address only works there; one made on <code>localhost</code> only works on the computer itself.</li>
-  <li>To limit passkeys to your address, add <code>PASSKEY_ORIGINS=https://yourname.duckdns.org</code> in the <a href="/docs/install.html">setup builder</a>.</li>
+  <li>To limit passkeys to your address, put it in the <strong>Web address for passkeys</strong> box in the <a href="/docs/install.html">setup builder</a>.</li>
   <li>To close it again: remove the port forwarding on the router and stop Caddy.</li>
 </ul>
 """),
