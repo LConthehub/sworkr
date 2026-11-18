@@ -28,6 +28,7 @@ export default function ClientProfile({ clientId, onChanged }) {
       ) : (
         <p className="mt-1 text-xs text-gray-400">Languages, cultural practices, what to talk about and what to avoid.</p>
       )}
+      <ReviewHistory clientId={clientId} />
       {editing && (
         <Modal title="Getting to know them" onClose={() => setEditing(false)}>
           <ProfileForm clientId={clientId} profile={p} onSaved={(data) => { setP(data); setEditing(false); if (data.deceased) onChanged?.(); }} />
@@ -68,5 +69,80 @@ function ProfileForm({ clientId, profile, onSaved }) {
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex justify-end"><button type="submit" className={buttonClass}>Save</button></div>
     </form>
+  );
+}
+
+const RATING = { great: 'Great', fine: 'Fine', bad: 'Not good' };
+const AGAIN = { yes: 'Yes', maybe: 'Maybe', no: 'No' };
+
+function Choice({ options, value, onChange, label }) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-500 mb-1">{label}</p>
+      <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={label}>
+        {Object.entries(options).map(([v, l]) => (
+          <button key={v} type="button" role="radio" aria-checked={value === v} onClick={() => onChange(value === v ? null : v)}
+            className={`px-3 py-1.5 rounded-full text-sm border ${value === v ? 'bg-sworkr-500 text-white border-sworkr-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{l}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** After a booking: a few quick questions, saved to the client's profile. */
+export function BookingReview({ appointment, onClose }) {
+  const [form, setForm] = useState(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    axios.get(`/api/appointments/${appointment.id}/review`)
+      .then(({ data }) => setForm({ rating: data?.rating || null, again: data?.again || null, talked_about: data?.talked_about || '', notes: data?.notes || '' }))
+      .catch(() => setForm({ rating: null, again: null, talked_about: '', notes: '' }));
+  }, [appointment.id]);
+  const submit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`/api/appointments/${appointment.id}/review`, form);
+      onClose(true);
+    } catch (err) {
+      setError(errorMessage(err, "Couldn't save"));
+    }
+  };
+  return (
+    <Modal title={`How did it go${appointment.client_name ? ` with ${appointment.client_name}` : ''}?`} onClose={() => onClose(false)}>
+      {form && (
+        <form onSubmit={submit} className="space-y-3">
+          <Choice label="How it went" options={RATING} value={form.rating} onChange={(v) => setForm({ ...form, rating: v })} />
+          <Choice label="See them again?" options={AGAIN} value={form.again} onChange={(v) => setForm({ ...form, again: v })} />
+          <Field label="What you talked about"><textarea rows={2} value={form.talked_about} onChange={(e) => setForm({ ...form, talked_about: e.target.value })} placeholder="Things to remember for next time" className={inputClass} /></Field>
+          <Field label="Notes"><textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputClass} /></Field>
+          {form.again === 'no' && <p className="text-xs text-amber-800 bg-amber-50 rounded-lg px-3 py-2">If you never want to see them again, you can also tick <b>Do not see</b> on their contact.</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="flex justify-end"><button type="submit" className={buttonClass}>Save</button></div>
+        </form>
+      )}
+    </Modal>
+  );
+}
+
+/** On the client's page: how bookings with them have gone. */
+export function ReviewHistory({ clientId }) {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    axios.get(`/api/clients/${clientId}/reviews`).then(({ data: d }) => setData(d)).catch(() => {});
+  }, [clientId]);
+  if (!data || data.reviews.length === 0) return null;
+  const count = (obj, labels) => Object.entries(obj).filter(([, n]) => n).map(([k, n]) => `${n} ${labels[k].toLowerCase()}`).join(', ');
+  return (
+    <div className="mt-3 border-t border-gray-100 pt-2">
+      <p className="text-xs text-gray-500">After bookings: {count(data.ratings, RATING) || 'no ratings'} · see again: {count(data.again, AGAIN) || '–'}</p>
+      <ul className="mt-1 space-y-1 text-sm">
+        {data.reviews.slice(0, 5).filter((r) => r.talked_about || r.notes).map((r) => (
+          <li key={r.appointment_id} className="text-gray-700">
+            <span className="text-xs text-gray-400 mr-2">{r.scheduled_date?.slice(0, 10)}</span>
+            {[r.talked_about, r.notes].filter(Boolean).join(' · ')}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

@@ -63,6 +63,10 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Notes card on the dashboard (one scratch pad, saves itself).
+- After a booking: "How did it go?" (how it went, see again, talked about, notes), kept on the client's profile.
+- Contacts > Client base: bars by age, how they found you, line of work, languages, bookings, spend, see again.
+- Holidays: Settings > My work > Holidays, public holidays worked out locally (the `holidays` library).
 - Client profiles: "Getting to know them" on each client (languages, translator, culture, talk about, avoid,
   passed away: set inactive so no Ghosts or birthday reminders).
 - Routines: a dashboard card of your own checklists (morning, night, before/after a booking), four starters.
@@ -88,10 +92,6 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - persona planner. a place to keep social and work platform bios, wishlist links, social links. 
 - penetration testing
 - apple health support as an option, track health choices like water intake and food, sleep to see how these things effect income over time.
-- editable note section available as a dashboard module for quick notes
-- Holidays: subscribe to a holiday calendar so holidays show on the calendar.
-- After a booking or party: a quick questionnaire on how it went, saved to the client's profile.
-- Client demographics page: graphs of who the client base is, from the profiles.
 
 ## Bigger ideas
 - Translations: Spanish, Russian, French first. Later.

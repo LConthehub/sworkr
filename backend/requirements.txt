@@ -7,4 +7,5 @@ tzdata              # time zone names for safety alert emails
 pillow==13.0.0      # content library thumbnails, made in memory
 webauthn==2.8.0     # passkeys
 segno>=1.6,<2      # QR code for setting up an authenticator app (pure Python)
+holidays>=0.50,<1         # public holidays, worked out here (no calendar fetched from anyone)
 sqlcipher3-wheels==0.5.7   # the database file, encrypted (SQLCipher, AES-256)

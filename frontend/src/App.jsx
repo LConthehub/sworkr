@@ -53,6 +53,7 @@ const PlanningPage = lazy(() => import('./pages/PlanningPage'));
 const Account = lazy(() => import('./pages/Account'));
 const Inquiries = lazy(() => import('./pages/Inquiries'));
 const GoneQuiet = lazy(() => import('./pages/Inquiries').then((m) => ({ default: m.GoneQuiet })));
+const ClientBase = lazy(() => import('./pages/ClientBase'));
 
 /** Shoots moved under the calendar: an old link keeps working, with its shoot. */
 function ShootsRedirect() {
@@ -203,6 +204,7 @@ function App() {
             <Route path="/clients/:id" element={<OldContactLink />} />
             <Route path="/contacts/inquiries" element={<Inquiries />} />
             <Route path="/contacts/quiet" element={<GoneQuiet />} />
+            <Route path="/contacts/base" element={<ClientBase />} />
             <Route path="/inquiries" element={<Navigate to="/contacts/inquiries" replace />} />
             <Route path="/regulars" element={<Navigate to="/contacts/quiet" replace />} />
             <Route path="/content" element={<Content />} />

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ReceiptMaker } from '../components/Receipts';
+import { BookingReview } from '../components/ClientProfile';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Modal from '../components/Modal';
@@ -454,7 +455,7 @@ export default function AppointmentCalendar() {
 
 // ==================== MONTH ====================
 
-const MARKER_COLORS = { document: '#b45309', health: '#0f9488', money: '#059669' };
+const MARKER_COLORS = { document: '#b45309', health: '#0f9488', money: '#059669', holiday: '#7c3aed' };
 
 /** A small diamond per important date (hover or the day panel shows what it is). */
 function MarkerDots({ markers }) {
@@ -821,6 +822,7 @@ function CancelChooser({ appointment: a, onCancel, onClose }) {
 export function AppointmentItem({ appointment: a, actions, showDate = false, showClient = true }) {
   const [cancelling, setCancelling] = useState(false);
   const [receipt, setReceipt] = useState(false);
+  const [review, setReview] = useState(false);
   const startAt = new Date(a.scheduled_date);
   const endAt = endOf(a);
   const pay = PAYMENT_STYLES[a.payment_status];
@@ -887,6 +889,10 @@ export function AppointmentItem({ appointment: a, actions, showDate = false, sho
           <button onClick={() => setReceipt(true)} className={`${small} border border-gray-200 text-gray-600 hover:bg-gray-50`}>Receipt</button>
         )}
         {receipt && <ReceiptMaker appointment={a} onClose={() => setReceipt(false)} />}
+        {!isTest && a.status === 'completed' && (
+          <button onClick={() => setReview(true)} className={`${small} border border-gray-200 text-gray-600 hover:bg-gray-50`}>How did it go?</button>
+        )}
+        {review && <BookingReview appointment={a} onClose={() => setReview(false)} />}
         {a.status === 'scheduled' && (
           <>
             <button onClick={() => actions.status(a, 'completed')} className={`${small} bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}>✓ Done</button>

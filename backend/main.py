@@ -649,6 +649,25 @@ class DashboardLayout(BaseModel):
     hidden: List[str] = []         # card ids not to show
 
 
+class QuickNote(BaseModel):
+    text: str = ""
+
+
+@app.get("/api/quick-note")
+def get_quick_note(user: UserDep, db: DbDep):
+    """The note on the dashboard: one scratch pad, kept with the account."""
+    return {"text": get_user_setting(db, user["id"], "quick_note") or ""}
+
+
+@app.put("/api/quick-note")
+def save_quick_note(body: QuickNote, user: UserDep, db: DbDep):
+    if len(body.text) > 20000:
+        raise HTTPException(status_code=400, detail="That note is too long (20,000 characters at most)")
+    set_user_setting(db, user["id"], "quick_note", body.text)
+    db.commit()
+    return {"text": body.text}
+
+
 @app.get("/api/dashboard-layout")
 def get_dashboard_layout(user: UserDep, db: DbDep):
     """How this person has arranged their dashboard. Empty lists: the usual arrangement."""

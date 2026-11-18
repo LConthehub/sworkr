@@ -10,6 +10,7 @@ import { TestKindsSettings } from '../components/TestKinds';
 import { DiscreetSettings } from '../components/Discreet';
 import LookSettings from '../components/Look';
 import { ReceiptSettings } from '../components/Receipts';
+import HolidaySettings from '../components/Holidays';
 import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from '../components/SignInSecurity';
 import { WorkTypesPicker } from '../components/WorkTypes';
 import { Field, inputClass, errorMessage, buttonClass, quietButtonClass, Section, Notice } from '../components/Modal';
@@ -57,6 +58,10 @@ const GROUPS = [
       },
       { id: 'policy', title: 'Deposits & cancellations', words: 'deposit no-show no show cancellation fee late policy', render: () => <BookingPolicy /> },
       { id: 'categories', title: 'Expense categories', words: 'rename hide colour color', render: () => <ExpenseCategories /> },
+      {
+        id: 'holidays', title: 'Holidays', words: 'holiday public bank holidays calendar country state',
+        render: () => <Section title="Holidays" hint="Public holidays on your calendar."><HolidaySettings /></Section>,
+      },
       {
         id: 'receipts', title: 'Receipts', words: 'receipt invoice discreet business name client paid print pdf',
         render: () => <Section title="Receipts" hint="Plain receipts for clients who ask: your choice of name and wording, nothing about the work."><ReceiptSettings /></Section>,

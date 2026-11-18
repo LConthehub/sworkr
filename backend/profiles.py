@@ -90,3 +90,148 @@ def save_profile(client_id: int, body: ProfileIn, request: Request):
         return get_profile(db, owner, client_id)
     finally:
         db.close()
+
+
+# ==================== AFTER A BOOKING ====================
+
+RATINGS = ("great", "fine", "bad")
+AGAIN = ("yes", "maybe", "no")
+
+
+class ReviewIn(BaseModel):
+    rating: Optional[str] = None          # great, fine, bad
+    again: Optional[str] = None           # would see them again: yes, maybe, no
+    talked_about: Optional[str] = None
+    notes: Optional[str] = None
+
+
+def _review_row(r) -> dict:
+    d = dict(r)
+    d.pop("owner_id", None)
+    return d
+
+
+@router.get("/api/appointments/{appointment_id}/review")
+def read_review(appointment_id: int, request: Request):
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        r = db.execute("SELECT * FROM booking_reviews WHERE appointment_id = ? AND owner_id = ?", (appointment_id, owner)).fetchone()
+        return _review_row(r) if r else None
+    finally:
+        db.close()
+
+
+@router.put("/api/appointments/{appointment_id}/review")
+def save_review(appointment_id: int, body: ReviewIn, request: Request):
+    """A few quick answers about how a booking went, kept with the client."""
+    if body.rating is not None and body.rating not in RATINGS:
+        raise HTTPException(status_code=400, detail="Great, fine or not good")
+    if body.again is not None and body.again not in AGAIN:
+        raise HTTPException(status_code=400, detail="Yes, maybe or no")
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        a = db.execute("SELECT client_id FROM appointments WHERE id = ? AND owner_id = ? AND kind = 'client'",
+                       (appointment_id, owner)).fetchone()
+        if not a:
+            raise HTTPException(status_code=404, detail="Booking not found")
+        db.execute("""
+            INSERT INTO booking_reviews (appointment_id, owner_id, client_id, rating, again, talked_about, notes, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(appointment_id) DO UPDATE SET rating = excluded.rating, again = excluded.again,
+                talked_about = excluded.talked_about, notes = excluded.notes
+        """, (appointment_id, owner, a["client_id"], body.rating, body.again, _clean(body.talked_about), _clean(body.notes),
+              datetime.now(timezone.utc).isoformat(timespec="seconds")))
+        db.commit()
+        return _review_row(db.execute("SELECT * FROM booking_reviews WHERE appointment_id = ?", (appointment_id,)).fetchone())
+    finally:
+        db.close()
+
+
+@router.get("/api/clients/{client_id}/reviews")
+def client_reviews(client_id: int, request: Request):
+    """How bookings with this person have gone, newest first, with a count of each answer."""
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        _client(db, owner, client_id)
+        rows = [_review_row(r) for r in db.execute("""
+            SELECT r.*, a.scheduled_date FROM booking_reviews r JOIN appointments a ON a.id = r.appointment_id
+            WHERE r.owner_id = ? AND r.client_id = ? ORDER BY a.scheduled_date DESC LIMIT 50
+        """, (owner, client_id))]
+        return {"reviews": rows,
+                "ratings": {k: sum(1 for r in rows if r["rating"] == k) for k in RATINGS},
+                "again": {k: sum(1 for r in rows if r["again"] == k) for k in AGAIN}}
+    finally:
+        db.close()
+
+
+# ==================== CLIENT BASE ====================
+
+def _bucket(counts: dict, key: str):
+    counts[key] = counts.get(key, 0) + 1
+
+
+def _top(counts: dict, n: int = 8) -> list:
+    items = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    top, rest = items[:n], sum(v for _, v in items[n:])
+    return [{"label": k, "count": v} for k, v in top] + ([{"label": "Others", "count": rest}] if rest else [])
+
+
+def _ordered(counts: dict, order: list) -> list:
+    return [{"label": k, "count": counts.get(k, 0)} for k in order if counts.get(k)]
+
+
+AGES = ["Under 25", "25–34", "35–44", "45–54", "55–64", "65 and over", "Not known"]
+BOOKINGS = ["Never booked", "Once", "2–4 times", "5–9 times", "10 or more"]
+SPEND = ["Nothing yet", "Under $500", "$500–$2,000", "$2,000–$5,000", "$5,000 and over"]
+
+
+@router.get("/api/client-base")
+def demographics(request: Request):
+    """Who the client base is, from what's in the profiles: counts only, nothing leaves sworkr."""
+    owner = request.state.user["id"]
+    today = date.today()
+    db = _get_db()
+    try:
+        rows = db.execute("""
+            SELECT c.id, c.birthday, c.found_via, c.industry, p.languages,
+                   (SELECT COUNT(*) FROM appointments a WHERE a.client_id = c.id AND a.kind = 'client'
+                      AND (a.status = 'completed' OR (a.status != 'cancelled' AND a.amount_paid > 0))) AS bookings,
+                   (SELECT COALESCE(SUM(a.amount_paid), 0) FROM appointments a WHERE a.client_id = c.id AND a.kind = 'client') AS spent,
+                   (SELECT r.again FROM booking_reviews r JOIN appointments a ON a.id = r.appointment_id
+                      WHERE r.client_id = c.id AND r.again IS NOT NULL ORDER BY a.scheduled_date DESC LIMIT 1) AS again
+            FROM clients c LEFT JOIN client_profiles p ON p.client_id = c.id
+            WHERE c.owner_id = ? AND c.role = 'client' AND COALESCE(p.deceased, 0) = 0
+        """, (owner,)).fetchall()
+        age, found, work, langs, booked, spend, again = {}, {}, {}, {}, {}, {}, {}
+        for r in rows:
+            if r["birthday"]:
+                b = date.fromisoformat(r["birthday"][:10])
+                years = today.year - b.year - ((today.month, today.day) < (b.month, b.day))
+                _bucket(age, AGES[0] if years < 25 else AGES[1] if years < 35 else AGES[2] if years < 45
+                        else AGES[3] if years < 55 else AGES[4] if years < 65 else AGES[5])
+            else:
+                _bucket(age, AGES[6])
+            _bucket(found, (r["found_via"] or "Not noted").strip())
+            _bucket(work, (r["industry"] or "Not noted").strip())
+            for lang in [x.strip() for x in (r["languages"] or "").split(",") if x.strip()]:
+                _bucket(langs, lang[:1].upper() + lang[1:])
+            n = r["bookings"]
+            _bucket(booked, BOOKINGS[0] if n == 0 else BOOKINGS[1] if n == 1 else BOOKINGS[2] if n < 5 else BOOKINGS[3] if n < 10 else BOOKINGS[4])
+            s = r["spent"] or 0
+            _bucket(spend, SPEND[0] if s <= 0 else SPEND[1] if s < 500 else SPEND[2] if s < 2000 else SPEND[3] if s < 5000 else SPEND[4])
+            if r["again"]:
+                _bucket(again, {"yes": "Yes", "maybe": "Maybe", "no": "No"}[r["again"]])
+        return {"clients": len(rows), "groups": [
+            {"title": "Age", "bars": _ordered(age, AGES)},
+            {"title": "How they found you", "bars": _top(found)},
+            {"title": "Line of work", "bars": _top(work)},
+            {"title": "Languages", "bars": _top(langs)},
+            {"title": "How often they've booked", "bars": _ordered(booked, BOOKINGS)},
+            {"title": "What they've spent in all", "bars": _ordered(spend, SPEND)},
+            {"title": "Would see again (last answer)", "bars": _ordered(again, ["Yes", "Maybe", "No"])},
+        ]}
+    finally:
+        db.close()

@@ -1585,6 +1585,23 @@ def _m49_routines(conn):
     """)
 
 
+def _m50_booking_reviews(conn):
+    """After a booking: a few quick answers about how it went, kept with the client."""
+    conn.execute("""
+        CREATE TABLE booking_reviews (
+            appointment_id INTEGER PRIMARY KEY REFERENCES appointments(id) ON DELETE CASCADE,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            client_id INTEGER REFERENCES clients(id) ON DELETE CASCADE,
+            rating TEXT CHECK(rating IS NULL OR rating IN ('great', 'fine', 'bad')),
+            again TEXT CHECK(again IS NULL OR again IN ('yes', 'maybe', 'no')),
+            talked_about TEXT,
+            notes TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_booking_reviews_client ON booking_reviews(client_id)")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1635,6 +1652,7 @@ MIGRATIONS = [
     (47, "envelopes", _m47_envelopes, False),
     (48, "client profiles", _m48_client_profiles, False),
     (49, "routines", _m49_routines, False),
+    (50, "after-booking questions", _m50_booking_reviews, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

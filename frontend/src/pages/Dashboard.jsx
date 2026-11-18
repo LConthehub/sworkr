@@ -4,6 +4,7 @@ import axios from 'axios';
 import Modal from '../components/Modal';
 import { TaskForm, TasksPanel } from '../components/Tasks';
 import { RoutinesCard } from '../components/Routines';
+import QuickNote from '../components/QuickNote';
 import { EmailPanel } from '../components/Email';
 import GoalsGlance from '../components/GoalsGlance';
 import { CycleCard } from '../components/Cycle';
@@ -29,7 +30,7 @@ function greeting(now) {
 // Every card the dashboard can show, in the usual order.
 const CARDS = {
   week: 'This week', deposits: 'Deposits to collect', tests: 'Health tests due', inquiries: 'Inquiries to answer',
-  shoots: 'Shoots coming up', customs: 'Customs to make', ads: 'Ads running out', posts: 'Posts & ads due', tasks: 'Tasks', routines: 'Routines',
+  shoots: 'Shoots coming up', customs: 'Customs to make', ads: 'Ads running out', posts: 'Posts & ads due', tasks: 'Tasks', routines: 'Routines', note: 'Notes',
   email: 'Email', cycle: 'Period tracker', goals: 'Savings goals',
 };
 
@@ -63,6 +64,7 @@ export default function Dashboard({ user }) {
     posts: <PostsDue />,
     tasks: <TasksPanel version={version} onChanged={bump} onOpen={(task) => setTaskModal({ task })} />,
     routines: <RoutinesCard />,
+    note: <QuickNote />,
     email: <EmailPanel />,
     cycle: <CycleCard onChanged={bump} />,
     goals: <GoalsGlance version={version} />,
