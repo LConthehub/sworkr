@@ -63,6 +63,8 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Wallet: Money > Wallet (goals and envelopes), each can be shown on the dashboard's Wallet card or not.
+- Social accounts are set up in Settings > Connections; Content > Social keeps the numbers.
 - Notes card on the dashboard (one scratch pad, saves itself).
 - After a booking: "How did it go?" (how it went, see again, talked about, notes), kept on the client's profile.
 - Contacts > Client base: bars by age, how they found you, line of work, languages, bookings, spend, see again.
@@ -79,10 +81,7 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 ## Next
 - Docs review finished 2026-11-17 (last six pages in one pass; owner may veto). Troubleshooting page not re-read.
 - Setup builder: option to add Caddy to the same docker-compose.yml (own web address without a separate download). mention how other selfhosted services, like ad guard home can further protect their privacy.
-- Simplify social media integration where possible for ease of use such as including making it a part of the connection settings because duh?
 - Workers know who gets paid work card fees. This needs no language explaining. It can be tied to a workplace and to tours, so that accurateinformation is reported to the user.
-- Goals is now wallet (envelopes done 2026-11-18: an envelope can hold what a workplace keeps; still to do:
-  rename to Wallet, personal wallet, choose which envelopes show on the dashboard). You can goal envelopes, office envelope, personal wallet. Wallet can show on dashboard with choice of which envelopes are shown.
 - Local AI: an optional assistant that talks to a model running on your own machine (LM Studio, llama.cpp,
   Ollama: all speak the OpenAI-style API on localhost). Cloud AI only as an explicit opt-in, clearly marked,
   off by default. Jobs: statistics and search (ask questions of your own numbers, find things across notes), not writing.

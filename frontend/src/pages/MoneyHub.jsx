@@ -12,7 +12,7 @@ const TABS = [
   { id: 'records', to: '/money/records', label: 'Income & expenses' },
   { id: 'compare', to: '/money/compare', label: 'Compare' },
   { id: 'rates', to: '/money/rates', label: 'Rates' },
-  { id: 'goals', to: '/money/goals', label: 'Goals' },
+  { id: 'goals', to: '/money/goals', label: 'Wallet' },
   { id: 'splits', to: '/money/splits', label: 'Splits' },
   { id: 'taxes', to: '/money/taxes', label: 'Taxes' },
 ];

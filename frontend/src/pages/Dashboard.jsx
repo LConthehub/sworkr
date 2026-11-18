@@ -31,7 +31,7 @@ function greeting(now) {
 const CARDS = {
   week: 'This week', deposits: 'Deposits to collect', tests: 'Health tests due', inquiries: 'Inquiries to answer',
   shoots: 'Shoots coming up', customs: 'Customs to make', ads: 'Ads running out', posts: 'Posts & ads due', tasks: 'Tasks', routines: 'Routines', note: 'Notes',
-  email: 'Email', cycle: 'Period tracker', goals: 'Savings goals',
+  email: 'Email', cycle: 'Period tracker', goals: 'Wallet',
 };
 
 /** The home page: what needs doing, in the order and with the cards this person chose. */

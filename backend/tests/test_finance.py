@@ -362,3 +362,10 @@ def test_an_envelope_holds_what_a_workplace_is_keeping(api, admin):
     # A plain envelope: no target, money in and out.
     plain = ok(api.post("/api/goals", json={"name": "Wigs", "envelope": True}), 201)
     assert plain["held"] is None and plain["target_amount"] is None
+
+
+def test_wallet_chooses_what_the_dashboard_shows(api):
+    g = ok(api.post("/api/goals", json={"name": "My wallet", "envelope": True}), 201)
+    assert g["on_dashboard"] is True
+    g = ok(api.put(f"/api/goals/{g['id']}", json={"name": "My wallet", "envelope": True, "on_dashboard": False}))
+    assert g["on_dashboard"] is False

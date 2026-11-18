@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import { Field, inputClass, errorMessage, buttonClass, quietButtonClass } from './Modal';
 
 const NETWORKS = { bluesky: 'Bluesky', mastodon: 'Mastodon', reddit: 'Reddit' };
@@ -152,7 +153,8 @@ function AddAccount({ onAdded }) {
   );
 }
 
-function Accounts() {
+/** Connected accounts. Lives in Settings > Connections (plain: no card around it there). */
+export function SocialAccounts({ plain = false }) {
   const [accounts, load] = useSocialAccounts();
   const [adding, setAdding] = useState(false);
   const setLabel = async (a, label) => { await axios.put(`/api/social/accounts/${a.id}`, { label }).catch(() => {}); load(); };
@@ -162,9 +164,9 @@ function Accounts() {
     load();
   };
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 space-y-4">
+    <div className={plain ? 'space-y-4' : 'bg-white rounded-2xl shadow-lg p-4 sm:p-6 space-y-4'}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-semibold text-gray-800">Accounts</h2>
+        {plain ? <span /> : <h2 className="font-semibold text-gray-800">Accounts</h2>}
         {!adding && <button onClick={() => setAdding(true)} className={quietButtonClass}>+ Connect an account</button>}
       </div>
       <p className="text-sm text-gray-600">
@@ -284,7 +286,9 @@ export default function Social() {
   return (
     <div className="space-y-4">
       <Numbers />
-      <Accounts />
+      <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 text-sm text-gray-600">
+        Connect Bluesky, Mastodon or Reddit under <Link to="/account/connections" className="text-sworkr-600 underline">Settings → Connections → Social accounts</Link>.
+      </div>
     </div>
   );
 }

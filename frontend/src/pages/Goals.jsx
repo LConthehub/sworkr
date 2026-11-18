@@ -60,7 +60,7 @@ export default function Goals() {
       <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-gray-800">Goals &amp; envelopes</h2>
+            <h2 className="text-xl font-bold text-gray-800">Wallet</h2>
             <p className="text-sm text-gray-500">
               {money(saved)} set aside across {active.length} goal{active.length === 1 ? '' : 's'}
               {toSetAside > 0 && <> · <strong className="text-amber-700">{money(toSetAside)}</strong> to set aside now</>}
@@ -253,6 +253,7 @@ function GoalForm({ goal, onSaved }) {
     notes: goal?.notes || '',
     archived: !!goal?.archived,
     envelope: !!goal?.envelope,
+    on_dashboard: goal ? goal.on_dashboard !== false : true,
     source_id: goal?.source_id ? String(goal.source_id) : '',
   });
   const [sources, setSources] = useState([]);
@@ -298,7 +299,7 @@ function GoalForm({ goal, onSaved }) {
     <form onSubmit={submit} className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
         <Field label="Name *">
-          <input required autoFocus value={form.name} onChange={set('name')} placeholder="e.g. Emergency fund, New camera, Retirement goal" className={inputClass} />
+          <input required autoFocus value={form.name} onChange={set('name')} placeholder="e.g. My wallet, Emergency fund, Office envelope, New camera" className={inputClass} />
         </Field>
         <Field label="Kind">
           <select value={form.envelope ? 'envelope' : form.kind}
@@ -358,6 +359,10 @@ function GoalForm({ goal, onSaved }) {
       <Field label="Notes">
         <textarea rows={2} value={form.notes} onChange={set('notes')} className={inputClass} />
       </Field>
+      <label className="flex items-center gap-2 text-sm text-gray-700">
+        <input type="checkbox" checked={form.on_dashboard} onChange={set('on_dashboard')} />
+        Show on the dashboard
+      </label>
       {goal && (
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" checked={form.archived} onChange={set('archived')} />

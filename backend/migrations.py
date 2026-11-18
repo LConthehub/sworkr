@@ -1602,6 +1602,11 @@ def _m50_booking_reviews(conn):
     conn.execute("CREATE INDEX idx_booking_reviews_client ON booking_reviews(client_id)")
 
 
+def _m51_wallet_dashboard(conn):
+    """Each goal or envelope can be shown on the dashboard's Wallet card, or not."""
+    conn.execute("ALTER TABLE goals ADD COLUMN on_dashboard INTEGER NOT NULL DEFAULT 1 CHECK(on_dashboard IN (0, 1))")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1653,6 +1658,7 @@ MIGRATIONS = [
     (48, "client profiles", _m48_client_profiles, False),
     (49, "routines", _m49_routines, False),
     (50, "after-booking questions", _m50_booking_reviews, False),
+    (51, "wallet: choose what the dashboard shows", _m51_wallet_dashboard, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

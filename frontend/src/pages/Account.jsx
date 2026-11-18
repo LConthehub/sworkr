@@ -10,6 +10,7 @@ import { TestKindsSettings } from '../components/TestKinds';
 import { DiscreetSettings } from '../components/Discreet';
 import LookSettings from '../components/Look';
 import { ReceiptSettings } from '../components/Receipts';
+import { SocialAccounts } from '../components/Social';
 import HolidaySettings from '../components/Holidays';
 import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from '../components/SignInSecurity';
 import { WorkTypesPicker } from '../components/WorkTypes';
@@ -128,6 +129,10 @@ const GROUPS = [
       { id: 'email', title: 'Email', words: 'imap smtp mail inbox', render: () => <Section title="Email"><EmailSettings /></Section> },
       { id: 'calendar', title: 'Calendar & task sync', words: 'caldav nextcloud ical', render: () => <Section title="Calendar & task sync"><CalendarSync /></Section> },
       { id: 'content', title: 'Content library', words: 'folder photos videos webdav', render: () => <Section title="Content library"><ContentSettings /></Section> },
+      {
+        id: 'social', title: 'Social accounts', words: 'bluesky mastodon reddit social post posting accounts',
+        render: () => <Section title="Social accounts" hint="Post planned posts straight to Bluesky, Mastodon or Reddit."><SocialAccounts plain /></Section>,
+      },
     ],
   },
   {

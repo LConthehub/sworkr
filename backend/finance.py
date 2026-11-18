@@ -693,6 +693,7 @@ class GoalIn(BaseModel):
     archived: bool = False
     envelope: bool = False                # money in and out, no target needed
     source_id: Optional[int] = None       # an envelope that also holds what this workplace is keeping for you
+    on_dashboard: bool = True             # shown on the dashboard's Wallet card
 
 
 class EntryIn(BaseModel):
@@ -720,7 +721,8 @@ def _goal_values(body: GoalIn) -> tuple:
     return (body.name.strip(), body.kind.value, body.target_amount,
             body.target_date.isoformat() if body.target_date else None, body.rule_type.value, body.rule_amount,
             (body.starts_on or date.today()).isoformat(), body.priority, body.color, _clean(body.notes),
-            body.currency, int(body.archived), int(body.envelope), body.source_id if body.envelope else None)
+            body.currency, int(body.archived), int(body.envelope), body.source_id if body.envelope else None,
+            int(body.on_dashboard))
 
 
 def received_since(db, owner_id: int, since: date) -> float:
@@ -800,7 +802,7 @@ def goal_status(db, owner_id: int, goal: dict, today: Optional[date] = None) -> 
 
 
 def _goal_row(db, owner_id: int, r) -> dict:
-    goal = {**dict(r), "archived": bool(r["archived"]), "envelope": bool(r["envelope"])}
+    goal = {**dict(r), "archived": bool(r["archived"]), "envelope": bool(r["envelope"]), "on_dashboard": bool(r["on_dashboard"])}
     return {**goal, **goal_status(db, owner_id, goal)}
 
 
@@ -830,8 +832,9 @@ def create_goal(body: GoalIn, request: Request):
             raise HTTPException(status_code=404, detail="Workplace not found")
         cur = db.execute("""
             INSERT INTO goals (name, kind, target_amount, target_date, rule_type, rule_amount, starts_on, priority,
-                               color, notes, currency, archived, envelope, source_id, owner_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                               color, notes, currency, archived, envelope, source_id, on_dashboard, owner_id,
+                               created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (*_goal_values(body), owner, now, now))
         db.commit()
         return _goal_row(db, owner, _get_goal(db, cur.lastrowid, owner))
@@ -855,7 +858,7 @@ def update_goal(goal_id: int, body: GoalIn, request: Request):
         db.execute("""
             UPDATE goals SET name = ?, kind = ?, target_amount = ?, target_date = ?, rule_type = ?, rule_amount = ?,
                    starts_on = ?, priority = ?, color = ?, notes = ?, currency = ?, archived = ?, envelope = ?,
-                   source_id = ?, updated_at = ?
+                   source_id = ?, on_dashboard = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (*_goal_values(body), _now(), goal_id, owner))
         db.commit()
