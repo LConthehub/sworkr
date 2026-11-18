@@ -8,6 +8,7 @@ import { ScreeningBadge } from '../components/ClientCard';
 import { AppointmentItem } from './AppointmentCalendar';
 import { BadDateWarning } from '../components/Blocklist';
 import Arrangement from '../components/Arrangement';
+import ClientProfile from '../components/ClientProfile';
 import { colorFor, dayLabel, money, nextBirthday } from '../colors';
 
 const shortDate = (iso) => (iso ? dayLabel(new Date(iso), { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
@@ -161,6 +162,8 @@ export default function ClientDetail() {
             {client.food_preferences && <TextBlock label="Food" text={client.food_preferences} />}
           </div>
         )}
+
+        <ClientProfile clientId={client.id} onChanged={load} />
 
         {(client.references || client.screening_notes) && (
           <div className="grid sm:grid-cols-2 gap-3 mt-4">

@@ -1535,6 +1535,56 @@ def _m47_envelopes(conn):
     conn.execute("ALTER TABLE goals ADD COLUMN source_id INTEGER REFERENCES income_sources(id) ON DELETE SET NULL")
 
 
+def _m48_client_profiles(conn):
+    """Getting to know a client: languages, translator, culture, topics to talk about and avoid, deceased."""
+    conn.execute("""
+        CREATE TABLE client_profiles (
+            client_id INTEGER PRIMARY KEY REFERENCES clients(id) ON DELETE CASCADE,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            languages TEXT,
+            translator INTEGER NOT NULL DEFAULT 0 CHECK(translator IN (0, 1)),
+            culture TEXT,
+            talk_about TEXT,
+            avoid TEXT,
+            deceased INTEGER NOT NULL DEFAULT 0 CHECK(deceased IN (0, 1)),
+            deceased_on TEXT,
+            updated_at TEXT NOT NULL
+        )
+    """)
+
+
+def _m49_routines(conn):
+    """Routines: named checklists (morning, night, before and after a booking), ticked off day by day."""
+    conn.execute("""
+        CREATE TABLE routines (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            when_for TEXT NOT NULL DEFAULT 'any',
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE routine_steps (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            routine_id INTEGER NOT NULL REFERENCES routines(id) ON DELETE CASCADE,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            label TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE routine_checks (
+            step_id INTEGER NOT NULL REFERENCES routine_steps(id) ON DELETE CASCADE,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            day TEXT NOT NULL,
+            PRIMARY KEY (step_id, day)
+        )
+    """)
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1583,6 +1633,8 @@ MIGRATIONS = [
     (45, "alt text for post pictures", _m45_post_alt_text, False),
     (46, "doctor day for workplace health tests", _m46_doctor_day, False),
     (47, "envelopes", _m47_envelopes, False),
+    (48, "client profiles", _m48_client_profiles, False),
+    (49, "routines", _m49_routines, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

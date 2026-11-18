@@ -33,7 +33,10 @@ _get_db: Optional[Callable] = None
 ERASE_WORD = "ERASE"
 
 # Rows that hang off an owned row instead of carrying owner_id themselves: table -> (column, parent table).
-CHILD_TABLES = {"client_tags": ("client_id", "clients"), "agreement_parties": ("agreement_id", "split_agreements")}
+CHILD_TABLES = {"client_tags": ("client_id", "clients"), "agreement_parties": ("agreement_id", "split_agreements"),
+                "post_stats": ("post_id", "posts")}
+# Columns holding saved passwords: left out of the download, like the password settings.
+SECRET_COLUMNS = {"social_accounts": ("secret",)}
 
 # Settings that are part of how the person signs in. Erasing data must not weaken or lock the login.
 SIGN_IN_SETTINGS = ("two_step", "two_step_method", "two_step_address", "webauthn_handle", "totp_secret", "totp_last_step",
@@ -64,6 +67,10 @@ def collect(db, user_id: int) -> Dict[str, List[dict]]:
     data = {t: _rows(db, f"SELECT * FROM {t} WHERE owner_id = ?", (user_id,)) for t in owned_tables(db)}
     for table, (column, parent) in CHILD_TABLES.items():
         data[table] = _rows(db, f"SELECT * FROM {table} WHERE {column} IN (SELECT id FROM {parent} WHERE owner_id = ?)", (user_id,))
+    for table, columns in SECRET_COLUMNS.items():
+        for row in data.get(table, []):
+            for c in columns:
+                row.pop(c, None)
     data["settings"] = [r for r in _rows(db, "SELECT key, value FROM user_settings WHERE user_id = ? ORDER BY key", (user_id,))
                         if r["key"] not in PRIVATE_SETTINGS]
     data["sign_ins"] = _rows(db, "SELECT outcome, method, ip, user_agent, at FROM signin_events WHERE user_id = ? ORDER BY id", (user_id,))

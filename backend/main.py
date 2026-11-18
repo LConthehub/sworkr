@@ -40,6 +40,8 @@ import clubpay
 import tourplan
 import social
 import receipts
+import profiles
+import routines
 import calendar_dates
 import blocklist
 import signin
@@ -2187,6 +2189,8 @@ app.include_router(clubpay.router)
 app.include_router(tourplan.router)
 app.include_router(social.router)
 app.include_router(receipts.router)
+app.include_router(profiles.router)
+app.include_router(routines.router)
 app.include_router(calendar_dates.router)
 app.include_router(marketing.router)
 app.include_router(campaigns.router)
@@ -2219,6 +2223,8 @@ arrangements.setup(get_db)
 clubpay.setup(get_db)
 tourplan.setup(get_db)
 receipts.setup(get_db)
+profiles.setup(get_db)
+routines.setup(get_db)
 calendar_dates.setup(get_db)
 marketing.setup(get_db)
 campaigns.setup(get_db)

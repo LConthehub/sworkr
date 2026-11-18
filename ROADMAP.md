@@ -63,6 +63,10 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Client profiles: "Getting to know them" on each client (languages, translator, culture, talk about, avoid,
+  passed away: set inactive so no Ghosts or birthday reminders).
+- Routines: a dashboard card of your own checklists (morning, night, before/after a booking), four starters.
+- Doctor day needs tweaking: waiting on the owner to say how.
 - Doctor day: a workplace's doctor charge can say which weekday the doctor comes; tour tests land on it.
 - Envelopes: a goal can be an envelope (no target), optionally holding what a workplace keeps for you.
 - "Gone quiet" is now "Ghosts".
@@ -86,12 +90,8 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - apple health support as an option, track health choices like water intake and food, sleep to see how these things effect income over time.
 - editable note section available as a dashboard module for quick notes
 - Holidays: subscribe to a holiday calendar so holidays show on the calendar.
-- Client profiles: cultural practices to remember, language spoken and whether a translator is needed, topics to
-  talk about and to avoid; a client can be marked deceased.
 - After a booking or party: a quick questionnaire on how it went, saved to the client's profile.
 - Client demographics page: graphs of who the client base is, from the profiles.
-- Routines in tasks: reusable task lists that go together (morning, night, before a booking, after a booking),
-  fully customisable, with a little guidance on what they can be used for.
 
 ## Bigger ideas
 - Translations: Spanish, Russian, French first. Later.
