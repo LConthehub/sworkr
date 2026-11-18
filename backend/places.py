@@ -72,6 +72,7 @@ class ChargeIn(BaseModel):
     category: str = "other"              # an expense category key
     test_type: Optional[str] = None       # set: a house doctor; logged as a health test of that kind
     renews_on: Optional[date] = None      # when a yearly or one-off charge comes round again
+    weekday: Optional[int] = None         # the day it happens, 0 Monday .. 6 Sunday (the day the doctor comes)
 
 
 class LogIn(BaseModel):
@@ -204,11 +205,11 @@ def create_charge(source_id: int, body: ChargeIn, request: Request):
         now = _now()
         cur = db.execute("""
             INSERT INTO place_charges (owner_id, source_id, label, amount, cadence, category, test_type, renews_on,
-                                       sort_order, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                       weekday, sort_order, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (owner, source_id, body.label, body.amount, body.cadence.value, body.category,
               body.test_type, body.renews_on.isoformat() if body.renews_on else None,
-              order, now, now))
+              body.weekday, order, now, now))
         tasks = _sync_renewal_task(db, cur.lastrowid, owner)
         tests = _sync_stays(db, owner, source_id)
         db.commit()
@@ -229,11 +230,11 @@ def update_charge(charge_id: int, body: ChargeIn, request: Request):
         _validate(db, owner, body)
         db.execute("""
             UPDATE place_charges SET label = ?, amount = ?, cadence = ?, category = ?, test_type = ?, renews_on = ?,
-                   updated_at = ?
+                   weekday = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (body.label, body.amount, body.cadence.value, body.category,
               body.test_type, body.renews_on.isoformat() if body.renews_on else None,
-              _now(), charge_id, owner))
+              body.weekday, _now(), charge_id, owner))
         tasks = _sync_renewal_task(db, charge_id, owner)
         tests = _sync_stays(db, owner, existing["source_id"])
         db.commit()

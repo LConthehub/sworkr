@@ -60,7 +60,7 @@ export default function Goals() {
       <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-gray-800">Savings goals</h2>
+            <h2 className="text-xl font-bold text-gray-800">Goals &amp; envelopes</h2>
             <p className="text-sm text-gray-500">
               {money(saved)} set aside across {active.length} goal{active.length === 1 ? '' : 's'}
               {toSetAside > 0 && <> · <strong className="text-amber-700">{money(toSetAside)}</strong> to set aside now</>}
@@ -133,6 +133,7 @@ function GoalCard({ goal: g, onEdit, onEntry, onSetAside, onChanged }) {
           <div className="min-w-0">
             <h2 className="font-semibold text-gray-800 break-words">
               {g.name}
+              {g.envelope && <span className="ml-2 align-middle px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-semibold">Envelope</span>}
               {g.kind === 'tax' && <span className="ml-2 align-middle px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-semibold">Taxes</span>}
               {g.reached && <span className="ml-2 align-middle px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold">Reached 🎉</span>}
             </h2>
@@ -146,6 +147,7 @@ function GoalCard({ goal: g, onEdit, onEntry, onSetAside, onChanged }) {
             {money(g.balance, g.currency)}
             {g.target_amount && <span className="text-sm font-normal text-gray-500"> of {money(g.target_amount, g.currency)}</span>}
           </p>
+          {g.held != null && <p className="text-xs text-gray-500">{money(g.held, g.currency)} of it is still with the workplace</p>}
           {g.target_amount && (
             <div className="mt-2 h-2.5 bg-gray-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={Math.round(g.progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label={`${g.name}: ${Math.round(g.progress * 100)}%`}>
               <div className="h-full rounded-full" style={{ width: `${Math.max(g.progress * 100, g.balance > 0 ? 2 : 0)}%`, background: color }} />
@@ -250,7 +252,13 @@ function GoalForm({ goal, onSaved }) {
     priority: goal?.priority ?? 0,
     notes: goal?.notes || '',
     archived: !!goal?.archived,
+    envelope: !!goal?.envelope,
+    source_id: goal?.source_id ? String(goal.source_id) : '',
   });
+  const [sources, setSources] = useState([]);
+  useEffect(() => {
+    axios.get('/api/income-sources').then(({ data }) => setSources(data.filter((x) => !x.archived))).catch(() => {});
+  }, []);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
@@ -267,6 +275,7 @@ function GoalForm({ goal, onSaved }) {
       priority: Number(form.priority) || 0,
       notes: form.notes.trim() || null,
       currency: 'USD',
+      source_id: form.envelope && form.source_id ? Number(form.source_id) : null,
     };
     setSaving(true);
     try {
@@ -292,12 +301,23 @@ function GoalForm({ goal, onSaved }) {
           <input required autoFocus value={form.name} onChange={set('name')} placeholder="e.g. Emergency fund, New camera, Retirement goal" className={inputClass} />
         </Field>
         <Field label="Kind">
-          <select value={form.kind} onChange={set('kind')} className={inputClass}>
-            <option value="savings">Savings</option>
+          <select value={form.envelope ? 'envelope' : form.kind}
+            onChange={(e) => setForm({ ...form, envelope: e.target.value === 'envelope', kind: e.target.value === 'tax' ? 'tax' : 'savings' })}
+            className={inputClass}>
+            <option value="savings">Savings goal</option>
+            <option value="envelope">Envelope</option>
             <option value="tax">Taxes</option>
           </select>
         </Field>
       </div>
+      {form.envelope && (
+        <Field label="Also holds what a workplace is keeping for you (optional)">
+          <select value={form.source_id} onChange={set('source_id')} className={inputClass}>
+            <option value="">No, just what I put in</option>
+            {sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </Field>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <Field label="Target ($, optional)">
           <input type="number" min="0" step="0.01" inputMode="decimal" value={form.target_amount} onChange={set('target_amount')} className={inputClass} />

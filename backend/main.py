@@ -1608,6 +1608,18 @@ def _add_months(d: date, months: int) -> date:
             continue
 
 
+def _on_weekday(days: List[date], weekday: Optional[int], end: date) -> List[date]:
+    """Each day moved forward to the given weekday (the doctor's day), once each, within the stay."""
+    if weekday is None:
+        return days
+    out = []
+    for d in days:
+        moved = d + timedelta(days=(weekday - d.weekday()) % 7)
+        if moved <= end and moved not in out:
+            out.append(moved)
+    return out
+
+
 def _stay_days(cadence: str, start: date, end: date) -> List[date]:
     """The days in a stay that a charge falls on: every day, every 7th day from the first, the same day each
     month, or just the first day."""
@@ -1654,7 +1666,7 @@ def sync_stay_charges(db, tour_id: int, owner_id: int) -> List[int]:
     for charge in places.charges_for(db, owner_id, tour["source_id"]):
         if charge["amount"] is None or charge["cadence"] not in STAY_CADENCES:
             continue
-        for d in _stay_days(charge["cadence"], start, end):
+        for d in _on_weekday(_stay_days(charge["cadence"], start, end), charge.get("weekday"), end):
             # Midday of the day, so it lands on the right day whatever the time zone.
             when = first + timedelta(days=(d - start).days, hours=12)
             description = f"{charge['label']} – {tour['name']}"

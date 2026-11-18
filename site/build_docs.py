@@ -23,7 +23,7 @@ PAGES = [
   <a href="/docs/install.html"><b>Install with Docker</b><span>Pick your options and get a ready setup file to copy.</span></a>
   <a href="/docs/phone.html"><b>On your phone</b><span>Use it from your phone without opening anything to the internet.</span></a>
   <a href="/docs/web-address.html"><b>Your own web address</b><span>A free address with HTTPS, as an alternative to Tailscale.</span></a>
-  <a href="/docs/people.html"><b>Clients &amp; inquiries</b><span>Screening, inquiries, regulars who've gone quiet, prices by tag.</span></a>
+  <a href="/docs/people.html"><b>Clients &amp; inquiries</b><span>Screening, inquiries, ghosts (regulars who've gone quiet), prices by tag.</span></a>
   <a href="/docs/money.html"><b>Money &amp; houses</b><span>Workplaces and their rules, tips, rates and taxes.</span></a>
   <a href="/docs/content.html"><b>Content &amp; planning</b><span>The calendar, shoots, posts, campaigns, ads and custom orders.</span></a>
   <a href="/docs/health-and-safety.html"><b>Health &amp; safety</b><span>Tests on your own schedule, documents that expire, the check-in.</span></a>
@@ -253,8 +253,8 @@ PAGES = [
 <h2>Inquiries</h2>
 <p><em>Contacts → Inquiries</em> tracks everyone who got in touch: new, replied, screening, deposit, booked, or lost (with why). Move each along as it happens. Below the list: how far inquiries get, where they drop out, and which sources send people who actually book. <em>Make a contact</em> turns an inquiry into a contact when they're worth keeping. Your saved text is one tap away for replies, and can fill in {name}, {day}, {time} and {wanted} from the inquiry.</p>
 
-<h2>Gone quiet</h2>
-<p><em>Contacts → Gone quiet</em> lists regulars you've seen at least twice who haven't booked for a while and have nothing booked ahead, biggest spenders first, with how often they used to book.</p>
+<h2>Ghosts</h2>
+<p><em>Contacts → Ghosts</em> lists regulars you've seen at least twice who haven't booked for a while and have nothing booked ahead, biggest spenders first, with how often they used to book.</p>
 
 <h2>Prices by tag</h2>
 <p><em>Money → Rates → Prices by tag</em>: give a tag a percentage off, an amount off, or a <strong>locked-in rate</strong> (the client keeps paying what they last paid for that service). When you book someone with that tag for a service on your rate card, the price is worked out for you and says why. Locked-in clients don't show under "On an old rate".</p>

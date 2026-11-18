@@ -80,6 +80,10 @@ export default function NtfySettings() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Server">
             <input value={form.server} onChange={set('server')} placeholder="https://ntfy.sh" autoComplete="off" className={inputClass} />
+            {form.server !== 'https://ntfy.sh' && (
+              <button type="button" onClick={() => setForm((f) => ({ ...f, server: 'https://ntfy.sh' }))}
+                className="mt-1 text-xs px-2 py-0.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50">Use ntfy.sh (public)</button>
+            )}
           </Field>
           <Field label="Topic">
             <span className="flex gap-2">

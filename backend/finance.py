@@ -691,6 +691,8 @@ class GoalIn(BaseModel):
     notes: Optional[str] = None
     currency: str = currencies.DEFAULT
     archived: bool = False
+    envelope: bool = False                # money in and out, no target needed
+    source_id: Optional[int] = None       # an envelope that also holds what this workplace is keeping for you
 
 
 class EntryIn(BaseModel):
@@ -718,7 +720,7 @@ def _goal_values(body: GoalIn) -> tuple:
     return (body.name.strip(), body.kind.value, body.target_amount,
             body.target_date.isoformat() if body.target_date else None, body.rule_type.value, body.rule_amount,
             (body.starts_on or date.today()).isoformat(), body.priority, body.color, _clean(body.notes),
-            body.currency, int(body.archived))
+            body.currency, int(body.archived), int(body.envelope), body.source_id if body.envelope else None)
 
 
 def received_since(db, owner_id: int, since: date) -> float:
@@ -749,6 +751,12 @@ def goal_status(db, owner_id: int, goal: dict, today: Optional[date] = None) -> 
         "SELECT id, date, amount, note, created_at FROM goal_entries WHERE goal_id = ? ORDER BY date DESC, id DESC",
         (goal["id"],))]
     balance = round(sum(e["amount"] for e in entries), 2)
+    # An envelope tied to a workplace also holds what that workplace is keeping for you, as it changes.
+    held = None
+    if goal.get("source_id"):
+        held = round(db.execute("SELECT COALESCE(SUM(gross - fees), 0) FROM income WHERE owner_id = ? AND source_id = ? "
+                                "AND status = 'pending'", (owner_id, goal["source_id"])).fetchone()[0], 2)
+        balance = round(balance + held, 2)
     starts = date.fromisoformat(goal["starts_on"])
     put_in_since_start = sum(e["amount"] for e in entries if e["amount"] > 0 and e["date"] >= goal["starts_on"])
 
@@ -770,6 +778,7 @@ def goal_status(db, owner_id: int, goal: dict, today: Optional[date] = None) -> 
     target, target_date = goal["target_amount"], goal["target_date"]
     status = {
         "balance": balance,
+        "held": held,
         "progress": round(min(balance / target, 1), 4) if target else None,
         "remaining": round(max(target - balance, 0), 2) if target else None,
         "reached": bool(target and balance >= target),
@@ -791,7 +800,7 @@ def goal_status(db, owner_id: int, goal: dict, today: Optional[date] = None) -> 
 
 
 def _goal_row(db, owner_id: int, r) -> dict:
-    goal = {**dict(r), "archived": bool(r["archived"])}
+    goal = {**dict(r), "archived": bool(r["archived"]), "envelope": bool(r["envelope"])}
     return {**goal, **goal_status(db, owner_id, goal)}
 
 
@@ -817,10 +826,12 @@ def create_goal(body: GoalIn, request: Request):
     db = _db()
     try:
         now = _now()
+        if body.envelope and body.source_id is not None and not get_source(db, body.source_id, owner):
+            raise HTTPException(status_code=404, detail="Workplace not found")
         cur = db.execute("""
             INSERT INTO goals (name, kind, target_amount, target_date, rule_type, rule_amount, starts_on, priority,
-                               color, notes, currency, archived, owner_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                               color, notes, currency, archived, envelope, source_id, owner_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (*_goal_values(body), owner, now, now))
         db.commit()
         return _goal_row(db, owner, _get_goal(db, cur.lastrowid, owner))
@@ -839,9 +850,12 @@ def update_goal(goal_id: int, body: GoalIn, request: Request):
             raise HTTPException(status_code=404, detail="Goal not found")
         if body.starts_on is None:
             body.starts_on = date.fromisoformat(existing["starts_on"])
+        if body.envelope and body.source_id is not None and not get_source(db, body.source_id, owner):
+            raise HTTPException(status_code=404, detail="Workplace not found")
         db.execute("""
             UPDATE goals SET name = ?, kind = ?, target_amount = ?, target_date = ?, rule_type = ?, rule_amount = ?,
-                   starts_on = ?, priority = ?, color = ?, notes = ?, currency = ?, archived = ?, updated_at = ?
+                   starts_on = ?, priority = ?, color = ?, notes = ?, currency = ?, archived = ?, envelope = ?,
+                   source_id = ?, updated_at = ?
             WHERE id = ? AND owner_id = ?
         """, (*_goal_values(body), _now(), goal_id, owner))
         db.commit()

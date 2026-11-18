@@ -343,3 +343,22 @@ def test_choosing_a_kind_of_work_again_doesnt_add_a_renamed_place_twice(api):
     assert api.put("/api/work-profile", json={"work_types": ["brothel", "dancer"]}).status_code == 200
     names = [s["name"] for s in api.get("/api/income-sources").json() if s["kind"] == "brothel"]
     assert names == ["Cheryl's Ranch"]
+
+
+def test_an_envelope_holds_what_a_workplace_is_keeping(api, admin):
+    house = ok(api.post("/api/income-sources", json={"name": "Envelope House", "kind": "brothel"}), 201)
+    env = ok(api.post("/api/goals", json={"name": "Office envelope", "envelope": True, "source_id": house["id"]}), 201)
+    assert env["envelope"] is True and env["balance"] == 0 and env["held"] == 0
+    ok(api.post("/api/income", json={"date": "2048-05-02T12:00:00Z", "gross": 300, "fees": 100, "status": "pending",
+                                     "source_id": house["id"]}), 201)
+    ok(api.post(f"/api/goals/{env['id']}/entries", json={"amount": 20, "note": "Cash I left with them"}), 201)
+    g = next(x for x in ok(api.get("/api/goals")) if x["id"] == env["id"])
+    assert (g["held"], g["balance"]) == (200, 220)
+    ok(api.post(f"/api/income-sources/{house['id']}/paid-out", json={}))
+    g = next(x for x in ok(api.get("/api/goals")) if x["id"] == env["id"])
+    assert (g["held"], g["balance"]) == (0, 20)
+    # Another person's workplace can't be used.
+    assert admin.post("/api/goals", json={"name": "x", "envelope": True, "source_id": house["id"]}).status_code == 404
+    # A plain envelope: no target, money in and out.
+    plain = ok(api.post("/api/goals", json={"name": "Wigs", "envelope": True}), 201)
+    assert plain["held"] is None and plain["target_amount"] is None

@@ -285,3 +285,20 @@ def test_renewing_a_license_moves_its_date_and_logs_what_was_paid_to_the_authori
     assert api.post(f"/api/documents/{doc['id']}/renewed", json={"expires_on": date.today().isoformat()}).status_code == 400
     assert api.post(f"/api/documents/{doc['id']}/renewed", json={"expires_on": new, "paid": -5}).status_code == 400
     assert api.post("/api/documents/999999/renewed", json={"expires_on": new}).status_code == 404
+
+
+def test_the_doctor_comes_on_their_own_day(api):
+    house = place(api)
+    doc = charge(api, house["id"], label="Doctor", cadence="per_week", amount=60, test_type="weekly", weekday=2)   # Wednesdays
+    assert doc["weekday"] == 2
+    s = stay(api, "2044-06-01", "2044-06-14", house["id"])
+    tests = sorted(a["scheduled_date"][:10] for a in ok(api.get(f"/api/tours/{s['id']}/summary"))["appointments"] if a["kind"] == "test")
+    assert tests and all(date.fromisoformat(d).weekday() == 2 for d in tests)
+    expected = [d for d in (date(2044, 6, 1) + timedelta(days=i) for i in range(14)) if d.weekday() == 2]
+    assert tests == [d.isoformat() for d in expected]
+    # A stay that ends before the doctor's day gets no test.
+    first_wed = expected[0]
+    short_end = first_wed - timedelta(days=1)
+    if short_end >= date(2044, 6, 1):
+        s2 = stay(api, "2044-06-01", short_end.isoformat(), house["id"])
+        assert not [a for a in ok(api.get(f"/api/tours/{s2['id']}/summary"))["appointments"] if a["kind"] == "test"]

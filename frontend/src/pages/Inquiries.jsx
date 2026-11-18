@@ -36,13 +36,13 @@ const stageOf = (id) => STAGES.find((s) => s.id === id) || LOST;
 const LOST_REASONS = ["Went quiet", "Wouldn't screen", 'Wanted a discount', 'Dates didn\'t work', 'Not a fit', 'Time waster'];
 const shortDay = (iso) => dayLabel(new Date(iso), { weekday: 'short', month: 'short', day: 'numeric' });
 
-/** The pills at the top of Contacts, Inquiries and Gone quiet. */
+/** The pills at the top of Contacts, Inquiries and Ghosts. */
 export function PeopleNav({ dark = false }) {
   const base = dark ? 'text-gray-600 hover:bg-gray-100' : 'text-white hover:bg-white/20';
   const active = dark ? 'bg-sworkr-500 text-white' : 'bg-white text-sworkr-600 shadow';
   return (
     <nav className={`flex gap-1 overflow-x-auto rounded-full p-1 ${dark ? 'bg-gray-50' : 'bg-white/20 backdrop-blur-sm'}`} aria-label="People">
-      {[['/contacts', 'Everyone'], ['/contacts/inquiries', 'Inquiries'], ['/contacts/quiet', 'Gone quiet']].map(([to, label]) => (
+      {[['/contacts', 'Everyone'], ['/contacts/inquiries', 'Inquiries'], ['/contacts/quiet', 'Ghosts']].map(([to, label]) => (
         <NavLink key={to} to={to} end className={({ isActive }) => `whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium ${isActive ? active : base}`}>
           {label}
         </NavLink>
@@ -327,7 +327,7 @@ function InquiryForm({ inquiry, onDone }) {
   );
 }
 
-/** Gone quiet: regulars who haven't booked for a while and have nothing booked ahead. */
+/** Ghosts: regulars who haven't booked for a while and have nothing booked ahead. */
 export function GoneQuiet() {
   const [days, setDays] = useState(60);
   const [rows, setRows] = useState(null);
@@ -368,7 +368,7 @@ export function GoneQuiet() {
           <p className="text-xs text-gray-400 mb-2">Tip: save a "checking in" message under <Link to="/content/toolkit" className="underline">Content → Promote → Platforms & saved text</Link> and it appears here to copy.</p>
         )}
         {!rows ? null : rows.length === 0 ? (
-          <p className="text-sm text-gray-400 py-8 text-center">Nobody has gone quiet. Regulars show up here once they've been away this long.</p>
+          <p className="text-sm text-gray-400 py-8 text-center">No ghosts. Regulars show up here once they've been away this long.</p>
         ) : (
           <ul className="divide-y divide-gray-100">
             {rows.map((c) => (

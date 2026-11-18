@@ -40,6 +40,9 @@ const PROVIDERS = {
   },
 };
 
+// Well-known CalDAV addresses, one tap to fill in.
+const KNOWN_SERVERS = [['Fastmail', 'https://caldav.fastmail.com'], ['mailbox.org', 'https://dav.mailbox.org']];
+
 const guessProvider = (url) => (/icloud\.com/i.test(url || '') ? 'icloud' : url && !/cloud|nextcloud/i.test(url) ? 'other' : 'nextcloud');
 
 /** Each person's own calendar sync: their bookings, tours, time off and tasks, copied into their calendar account. */
@@ -135,7 +138,8 @@ export default function CalendarSync() {
       <form onSubmit={save} className="space-y-3">
         <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Calendar account">
           {Object.entries(PROVIDERS).map(([key, x]) => (
-            <button key={key} type="button" role="radio" aria-checked={provider === key} onClick={() => setProvider(key)}
+            <button key={key} type="button" role="radio" aria-checked={provider === key}
+              onClick={() => { setProvider(key); if (key === 'icloud') setForm((f) => ({ ...f, url: PROVIDERS.icloud.address })); }}
               className={`px-3 py-1.5 rounded-full text-sm border ${provider === key ? 'bg-sworkr-500 text-white border-sworkr-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
               {x.label}{key === 'nextcloud' && ' (recommended)'}
             </button>
@@ -145,6 +149,14 @@ export default function CalendarSync() {
         <fieldset disabled={demo} className="space-y-3 disabled:opacity-60">
           <Field label="Address">
             <input value={form.url} onChange={set('url')} placeholder={p.address} className={inputClass} />
+            {provider === 'other' && (
+              <span className="mt-1 flex flex-wrap gap-1">
+                {KNOWN_SERVERS.map(([name, url]) => (
+                  <button key={url} type="button" onClick={() => setForm((f) => ({ ...f, url }))}
+                    className="text-xs px-2 py-0.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50">Use {name}</button>
+                ))}
+              </span>
+            )}
           </Field>
           <Field label={p.username}>
             <input value={form.username} onChange={set('username')} autoComplete="off" className={inputClass} />

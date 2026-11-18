@@ -156,7 +156,8 @@ export function CategorySelect({ value, onChange, className = inputClass, ...res
 
 // ==================== CHARGES A PLACE MAKES ====================
 
-const BLANK_CHARGE = { label: '', amount: '', cadence: 'per_day', category: 'other', test_type: '', renews_on: '' };
+const BLANK_CHARGE = { label: '', amount: '', cadence: 'per_day', category: 'other', test_type: '', renews_on: '', weekday: '' };
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 // What each kind of place usually charges, offered when adding a new one. Amounts are left for you.
 const SUGGESTED_CHARGES = {
@@ -172,12 +173,13 @@ const RENEWABLE = ['per_quarter', 'per_year', 'once'];
 
 const chargeToRow = (c) => ({
   key: c.id, id: c.id, label: c.label, amount: c.amount ?? '', cadence: c.cadence, category: c.category,
-  test_type: c.test_type || '', renews_on: c.renews_on || '', original: c,
+  test_type: c.test_type || '', renews_on: c.renews_on || '', weekday: c.weekday ?? '', original: c,
 });
 
 const rowToBody = (r) => ({
   label: r.label.trim(), amount: numberOrNull(r.amount), cadence: r.cadence, category: r.category,
   test_type: r.test_type || null, renews_on: RENEWABLE.includes(r.cadence) ? (r.renews_on || null) : null,
+  weekday: r.test_type && r.weekday !== '' ? Number(r.weekday) : null,
 });
 
 /** Save a place's charges: add new rows, update changed ones, delete removed ones. Blank new rows are skipped. */
@@ -222,6 +224,15 @@ function ChargesEditor({ rows, onChange, onRemove }) {
               <select value={r.test_type} onChange={(e) => update(i, { test_type: e.target.value })} aria-label="Kind of health test" className="text-sm border border-gray-200 rounded-lg py-1 px-1 bg-white">
                 {Object.entries(TEST_TYPES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
+            ) : null}
+            {r.test_type ? (
+              <label className="flex items-center gap-1.5 text-gray-700">
+                Doctor comes
+                <select value={r.weekday} onChange={(e) => update(i, { weekday: e.target.value })} className="text-sm border border-gray-200 rounded-lg py-1 px-1 bg-white">
+                  <option value="">From the first day</option>
+                  {WEEKDAYS.map((d, n) => <option key={d} value={n}>on {d}s</option>)}
+                </select>
+              </label>
             ) : (
               <CategorySelect value={r.category} onChange={(e) => update(i, { category: e.target.value })} aria-label={`Expense category for ${r.label || 'this charge'}`} className="text-sm border border-gray-200 rounded-lg py-1 px-1 bg-white max-w-[12rem]" />
             )}

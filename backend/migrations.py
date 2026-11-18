@@ -1523,6 +1523,18 @@ def _m45_post_alt_text(conn):
     conn.execute("ALTER TABLE posts ADD COLUMN alt_text TEXT")
 
 
+def _m46_doctor_day(conn):
+    """The weekday a workplace's doctor comes (0 Monday .. 6 Sunday), so tests on a tour land on that day."""
+    conn.execute("ALTER TABLE place_charges ADD COLUMN weekday INTEGER CHECK(weekday IS NULL OR weekday BETWEEN 0 AND 6)")
+
+
+def _m47_envelopes(conn):
+    """Goals can be envelopes (money in, money out, no target), and an envelope can fill itself from what a
+    workplace is holding for you (its income not paid out yet)."""
+    conn.execute("ALTER TABLE goals ADD COLUMN envelope INTEGER NOT NULL DEFAULT 0 CHECK(envelope IN (0, 1))")
+    conn.execute("ALTER TABLE goals ADD COLUMN source_id INTEGER REFERENCES income_sources(id) ON DELETE SET NULL")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1569,6 +1581,8 @@ MIGRATIONS = [
     (43, "social accounts, auto-posting and post numbers", _m43_social, False),
     (44, "discreet receipts", _m44_receipts, False),
     (45, "alt text for post pictures", _m45_post_alt_text, False),
+    (46, "doctor day for workplace health tests", _m46_doctor_day, False),
+    (47, "envelopes", _m47_envelopes, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 
