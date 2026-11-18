@@ -64,16 +64,24 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 
 ## Next
 - Docs review finished 2026-11-17 (last six pages in one pass; owner may veto). Troubleshooting page not re-read.
-- Setup builder: option to add Caddy to the same docker-compose.yml (own web address without a separate download).
+- Setup builder: option to add Caddy to the same docker-compose.yml (own web address without a separate download). mention how other selfhosted services, like ad guard home can further protect their privacy.
 - Simplify social media integration where possible for ease of use such as including making it a part of the connection settings because duh?
 - Autofill/copy button for urls that are expected such as https://caldav.icloud.com to set up for ease of use.
 - change "gone quiet" to ghosts
 - Workers know who gets paid work card fees. This needs no language explaining. It can be tied to a workplace and to tours, so that accurateinformation is reported to the user.
 - Health tests can be tied to workplaces or not. When tied to a workplace a testing schedule occurstests can be set to a doctor day(like maybe the doctor only comes wednesday typically so thats when a test wouldoccur on a tour)
-- Make goals into envelopes or goals/envelopes, so one envelope could be the office envelope of cash that some places keep for the worker.
-
-## Bigger ideas
+- Goals is now wallet. You can goal envelopes, office envelope, personal wallet. Wallet can show on dashboard with choice of which envelopes are shown.
 - Local AI: an optional assistant that talks to a model running on your own machine (LM Studio, llama.cpp,
   Ollama: all speak the OpenAI-style API on localhost). Cloud AI only as an explicit opt-in, clearly marked,
-  off by default. Jobs: statistics and search (ask questions of your own numbers, find things across notes), not writing.
+  off by default. Jobs: statistics and search (ask questions of your own numbers, find things acro
+- Driver contact profiles can have different rates for going different places, services, customizable and links to budget when a ride type with a drive is chosen. each driver may 
+  use their own rates.
+- start planning ways to gamify posting, earnings etc.
+- persona planner. a place to keep social and work platform bios, wishlist links, social links. 
+- penetration testing
+- apple health support as an option, track health choices like water intake and food, sleep to see how these things effect income over time.
+- editable note section available as a dashboard module for quick notes
+
+## Bigger ideas
+- ss notes), not writing.
 - Translations: Spanish, Russian, French first. Later.
