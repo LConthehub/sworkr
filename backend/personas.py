@@ -134,3 +134,93 @@ def delete_persona(persona_id: int, request: Request):
         db.commit()
     finally:
         db.close()
+
+
+# ==================== A PERSONA'S KIT ====================
+# Everything that goes with a name you work under: a bio for each platform, social links, wishlist links.
+
+KINDS = ("bio", "link", "wishlist")
+
+
+class KitItemIn(BaseModel):
+    kind: str                         # bio, link, wishlist
+    platform: Optional[str] = None    # where it's for: X, Tryst, OF, my website…
+    label: Optional[str] = None
+    body: str                         # the bio text, or the link
+
+
+def _check_item(body: KitItemIn) -> KitItemIn:
+    if body.kind not in KINDS:
+        raise HTTPException(status_code=400, detail="A bio, a link or a wishlist")
+    body.body = (body.body or "").strip()[:5000]
+    if not body.body:
+        raise HTTPException(status_code=400, detail="Nothing to save")
+    if body.kind != "bio" and not body.body.startswith(("https://", "http://")):
+        raise HTTPException(status_code=400, detail="A link starts with https://")
+    body.platform = (body.platform or "").strip()[:60] or None
+    body.label = (body.label or "").strip()[:80] or None
+    return body
+
+
+def _kit(db, owner: int, persona_id: int) -> List[dict]:
+    return [dict(r) for r in db.execute(
+        "SELECT id, kind, platform, label, body FROM persona_items WHERE owner_id = ? AND persona_id = ? "
+        "ORDER BY CASE kind WHEN 'bio' THEN 0 WHEN 'link' THEN 1 ELSE 2 END, sort_order, id", (owner, persona_id))]
+
+
+def _persona(db, owner: int, persona_id: int):
+    if not db.execute("SELECT 1 FROM personas WHERE id = ? AND owner_id = ?", (persona_id, owner)).fetchone():
+        raise HTTPException(status_code=404, detail="Persona not found")
+
+
+@router.get("/{persona_id}/kit")
+def get_kit(persona_id: int, request: Request):
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        _persona(db, owner, persona_id)
+        return _kit(db, owner, persona_id)
+    finally:
+        db.close()
+
+
+@router.post("/{persona_id}/kit", status_code=201)
+def add_kit_item(persona_id: int, body: KitItemIn, request: Request):
+    _check_item(body)
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        _persona(db, owner, persona_id)
+        order = db.execute("SELECT COALESCE(MAX(sort_order), -1) + 1 FROM persona_items WHERE persona_id = ?", (persona_id,)).fetchone()[0]
+        db.execute("INSERT INTO persona_items (owner_id, persona_id, kind, platform, label, body, sort_order, created_at) "
+                   "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (owner, persona_id, body.kind, body.platform, body.label, body.body, order, _now()))
+        db.commit()
+        return _kit(db, owner, persona_id)
+    finally:
+        db.close()
+
+
+@router.put("/{persona_id}/kit/{item_id}")
+def edit_kit_item(persona_id: int, item_id: int, body: KitItemIn, request: Request):
+    _check_item(body)
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        _persona(db, owner, persona_id)
+        db.execute("UPDATE persona_items SET kind = ?, platform = ?, label = ?, body = ? WHERE id = ? AND persona_id = ? AND owner_id = ?",
+                   (body.kind, body.platform, body.label, body.body, item_id, persona_id, owner))
+        db.commit()
+        return _kit(db, owner, persona_id)
+    finally:
+        db.close()
+
+
+@router.delete("/{persona_id}/kit/{item_id}", status_code=204)
+def delete_kit_item(persona_id: int, item_id: int, request: Request):
+    db = _get_db()
+    try:
+        db.execute("DELETE FROM persona_items WHERE id = ? AND persona_id = ? AND owner_id = ?",
+                   (item_id, persona_id, request.state.user["id"]))
+        db.commit()
+    finally:
+        db.close()

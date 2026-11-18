@@ -1607,6 +1607,24 @@ def _m51_wallet_dashboard(conn):
     conn.execute("ALTER TABLE goals ADD COLUMN on_dashboard INTEGER NOT NULL DEFAULT 1 CHECK(on_dashboard IN (0, 1))")
 
 
+def _m52_persona_kit(conn):
+    """A persona's kit: a bio for each platform, social links and wishlist links."""
+    conn.execute("""
+        CREATE TABLE persona_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            persona_id INTEGER NOT NULL REFERENCES personas(id) ON DELETE CASCADE,
+            kind TEXT NOT NULL CHECK(kind IN ('bio', 'link', 'wishlist')),
+            platform TEXT,
+            label TEXT,
+            body TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_persona_items ON persona_items(persona_id)")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1659,6 +1677,7 @@ MIGRATIONS = [
     (49, "routines", _m49_routines, False),
     (50, "after-booking questions", _m50_booking_reviews, False),
     (51, "wallet: choose what the dashboard shows", _m51_wallet_dashboard, False),
+    (52, "persona kit: bios, links, wishlists", _m52_persona_kit, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

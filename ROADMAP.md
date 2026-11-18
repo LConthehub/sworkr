@@ -63,6 +63,7 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Persona kit: each persona keeps bios by platform, social links and wishlist links, one tap to copy (Settings > My work > Personas > Kit).
 - Work card fees: a license tied to a workplace puts its renewal fee on that workplace's tour (the one under way,
   else the next within 60 days). The "paid to the government" explanations are gone.
 - Setup builder: "Your own web address" adds a Caddy container for HTTPS; install page mentions AdGuard Home,
@@ -90,7 +91,6 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Driver contact profiles can have different rates for going different places, services, customizable and links to budget when a ride type with a drive is chosen. each driver may 
   use their own rates.
 - start planning ways to gamify posting, earnings etc.
-- persona planner. a place to keep social and work platform bios, wishlist links, social links. 
 - penetration testing
 - apple health support as an option, track health choices like water intake and food, sleep to see how these things effect income over time.
 

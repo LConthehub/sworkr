@@ -103,3 +103,17 @@ def test_contacts_can_be_listed_by_persona(api):
     ok(api.post("/api/clients", json={"name": "Ana"}), 201)
     assert [c["name"] for c in ok(api.get("/api/clients", params={"persona_id": lux["id"]}))] == ["Sam"]
     assert [c["name"] for c in ok(api.get("/api/clients", params={"persona_id": 0}))] == ["Ana"]
+
+
+def test_a_persona_keeps_its_bios_links_and_wishlists(api, admin):
+    p = ok(api.post("/api/personas", json={"name": "Kit Persona"}), 201)
+    ok(api.post(f"/api/personas/{p['id']}/kit", json={"kind": "link", "platform": "Bluesky", "body": "https://bsky.app/profile/me"}), 201)
+    kit = ok(api.post(f"/api/personas/{p['id']}/kit", json={"kind": "bio", "platform": "Tryst", "body": "Warm, unhurried, discreet."}), 201)
+    assert [i["kind"] for i in kit] == ["bio", "link"]                     # bios first
+    assert api.post(f"/api/personas/{p['id']}/kit", json={"kind": "wishlist", "body": "not a link"}).status_code == 400
+    item = kit[0]["id"]
+    kit = ok(api.put(f"/api/personas/{p['id']}/kit/{item}", json={"kind": "bio", "platform": "Tryst", "body": "Warm and discreet."}))
+    assert kit[0]["body"] == "Warm and discreet."
+    assert admin.get(f"/api/personas/{p['id']}/kit").status_code == 404
+    assert api.delete(f"/api/personas/{p['id']}/kit/{item}").status_code == 204
+    assert len(ok(api.get(f"/api/personas/{p['id']}/kit"))) == 1
