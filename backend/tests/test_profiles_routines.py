@@ -148,3 +148,21 @@ def test_holidays_show_on_the_calendar_for_the_chosen_country(api):
     assert api.put("/api/holidays/settings", json={"country": "US", "subdivision": "ZZ"}).status_code == 400
     ok(api.put("/api/holidays/settings", json={"country": None}))
     assert not [m for m in ok(api.get("/api/calendar/dates", params={"start": "2044-12-20", "end": "2044-12-31"})) if m["kind"] == "holiday"]
+
+
+def test_a_driver_keeps_rates_and_a_ride_becomes_a_travel_expense(api, admin):
+    driver = ok(api.post("/api/clients", json={"name": "Dee Driver", "role": "partner", "industry": "Driver"}), 201)
+    ok(api.post(f"/api/clients/{driver['id']}/rates", json={"label": "Airport run", "amount": 60}), 201)
+    rates = ok(api.post(f"/api/clients/{driver['id']}/rates", json={"label": "Waiting", "amount": 30, "unit": "hour"}), 201)
+    assert [r["label"] for r in rates] == ["Airport run", "Waiting"]
+    assert api.post(f"/api/clients/{driver['id']}/rates", json={"label": "x", "amount": 5, "unit": "furlong"}).status_code == 400
+    assert [d["name"] for d in ok(api.get("/api/drivers"))] == ["Dee Driver"]
+    c = ok(api.post("/api/clients", json={"name": "Rider client"}), 201)
+    a = ok(api.post("/api/appointments", json={"client_id": c["id"], "service_type": "Dinner", "duration_minutes": 60,
+                                               "scheduled_date": "2045-02-02T19:00:00Z", "rate": 400}), 201)
+    r = ok(api.post(f"/api/appointments/{a['id']}/ride", json={"rate_id": rates[1]["id"], "quantity": 2}), 201)
+    assert r["amount"] == 60
+    e = next(x for x in ok(api.get("/api/expenses")) if x["id"] == r["expense_id"])
+    assert e["description"] == "Ride: Waiting (2 hours) – Dee Driver" and e["appointment_id"] == a["id"]
+    assert admin.post(f"/api/appointments/{a['id']}/ride", json={"rate_id": rates[1]["id"]}).status_code == 404
+    assert admin.get(f"/api/clients/{driver['id']}/rates").status_code == 404

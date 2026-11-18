@@ -9,6 +9,7 @@ import { AppointmentItem } from './AppointmentCalendar';
 import { BadDateWarning } from '../components/Blocklist';
 import Arrangement from '../components/Arrangement';
 import ClientProfile from '../components/ClientProfile';
+import { DriverRates } from '../components/Rides';
 import { colorFor, dayLabel, money, nextBirthday } from '../colors';
 
 const shortDate = (iso) => (iso ? dayLabel(new Date(iso), { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
@@ -163,7 +164,7 @@ export default function ClientDetail() {
           </div>
         )}
 
-        <ClientProfile clientId={client.id} onChanged={load} />
+        {client.role === 'client' ? <ClientProfile clientId={client.id} onChanged={load} /> : <DriverRates contactId={client.id} />}
 
         {(client.references || client.screening_notes) && (
           <div className="grid sm:grid-cols-2 gap-3 mt-4">

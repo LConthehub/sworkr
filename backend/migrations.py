@@ -1625,6 +1625,23 @@ def _m52_persona_kit(conn):
     conn.execute("CREATE INDEX idx_persona_items ON persona_items(persona_id)")
 
 
+def _m53_driver_rates(conn):
+    """Each driver's own rates (per trip, hour, mile...), for logging rides on bookings."""
+    conn.execute("""
+        CREATE TABLE driver_rates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            contact_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+            label TEXT NOT NULL,
+            amount REAL NOT NULL CHECK(amount >= 0),
+            unit TEXT NOT NULL DEFAULT 'trip',
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_driver_rates_contact ON driver_rates(contact_id)")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1678,6 +1695,7 @@ MIGRATIONS = [
     (50, "after-booking questions", _m50_booking_reviews, False),
     (51, "wallet: choose what the dashboard shows", _m51_wallet_dashboard, False),
     (52, "persona kit: bios, links, wishlists", _m52_persona_kit, False),
+    (53, "driver rates", _m53_driver_rates, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

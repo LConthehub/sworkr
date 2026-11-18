@@ -63,6 +63,7 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Driver rates: each contact you work with keeps their own rates (per trip, hour, mile, km, day); Ride on a booking logs it as a travel expense that day.
 - Persona kit: each persona keeps bios by platform, social links and wishlist links, one tap to copy (Settings > My work > Personas > Kit).
 - Work card fees: a license tied to a workplace puts its renewal fee on that workplace's tour (the one under way,
   else the next within 60 days). The "paid to the government" explanations are gone.
@@ -88,8 +89,6 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Local AI: an optional assistant that talks to a model running on your own machine (LM Studio, llama.cpp,
   Ollama: all speak the OpenAI-style API on localhost). Cloud AI only as an explicit opt-in, clearly marked,
   off by default. Jobs: statistics and search (ask questions of your own numbers, find things across notes), not writing.
-- Driver contact profiles can have different rates for going different places, services, customizable and links to budget when a ride type with a drive is chosen. each driver may 
-  use their own rates.
 - start planning ways to gamify posting, earnings etc.
 - penetration testing
 - apple health support as an option, track health choices like water intake and food, sleep to see how these things effect income over time.

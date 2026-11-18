@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ReceiptMaker } from '../components/Receipts';
 import { BookingReview } from '../components/ClientProfile';
+import { RideLogger, fetchDrivers } from '../components/Rides';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Modal from '../components/Modal';
@@ -823,6 +824,9 @@ export function AppointmentItem({ appointment: a, actions, showDate = false, sho
   const [cancelling, setCancelling] = useState(false);
   const [receipt, setReceipt] = useState(false);
   const [review, setReview] = useState(false);
+  const [drivers, setDrivers] = useState([]);
+  const [ride, setRide] = useState(false);
+  useEffect(() => { if (a.kind !== 'test') fetchDrivers().then(setDrivers); }, [a.kind]);
   const startAt = new Date(a.scheduled_date);
   const endAt = endOf(a);
   const pay = PAYMENT_STYLES[a.payment_status];
@@ -893,6 +897,10 @@ export function AppointmentItem({ appointment: a, actions, showDate = false, sho
           <button onClick={() => setReview(true)} className={`${small} border border-gray-200 text-gray-600 hover:bg-gray-50`}>How did it go?</button>
         )}
         {review && <BookingReview appointment={a} onClose={() => setReview(false)} />}
+        {!isTest && drivers.length > 0 && a.status !== 'cancelled' && (
+          <button onClick={() => setRide(true)} className={`${small} border border-gray-200 text-gray-600 hover:bg-gray-50`}>Ride</button>
+        )}
+        {ride && <RideLogger appointment={a} drivers={drivers} onClose={() => setRide(false)} />}
         {a.status === 'scheduled' && (
           <>
             <button onClick={() => actions.status(a, 'completed')} className={`${small} bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}>✓ Done</button>
