@@ -65,9 +65,9 @@ export default function DocumentsSettings() {
       )}
       <button type="button" onClick={() => setEditing(BLANK)} className={quietButtonClass}>+ Add a document</button>
       <p className="text-xs text-gray-500">
-        A license or work card is paid to the government or licensing office, not to a workplace: add it here, and when you renew it,
-        tap Renewed to move the date on and log what you paid under Fees & licenses. Renewal dates on a place's own yearly charges show here too.
-        sworkr keeps only names and dates: there's no place for ID or license numbers, on purpose.
+        When you renew one, tap Renewed to move the date on and log what you paid. Tied to a workplace, the fee goes on your tour
+        there. Renewal dates on a place's own yearly charges show here too. Only names and dates are kept: there's no place for
+        ID or license numbers, on purpose.
       </p>
     </div>
   );

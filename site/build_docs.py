@@ -124,7 +124,9 @@ PAGES = [
     <label>Port <input name="port" type="number" min="1" max="65535" value="8008"></label>
     <label class="radio"><input type="radio" name="network" value="computer" checked> Only this computer (safest; use <a href="/docs/phone.html">Tailscale</a> for your phone)</label>
     <label class="radio"><input type="radio" name="network" value="network"> Other devices on my home network too</label>
-    <label>Web address for passkeys (optional) <input name="passkey_address" placeholder="e.g. https://you.duckdns.org"></label>
+    <label>Your own web address (optional) <input name="web_address" placeholder="e.g. you.duckdns.org"></label>
+    <p class="hint">Adds Caddy for HTTPS on that address. Read the <a href="/docs/web-address.html">web address guide</a> first: it puts your login page on the internet.</p>
+    <label>Web address for passkeys (optional) <input name="passkey_address" placeholder="Filled in from your web address"></label>
     <label>Log me out after (minutes, 0 = never) <input name="idle" type="number" min="0" max="1440" value="120"></label>
   </fieldset>
   <fieldset>
@@ -163,6 +165,7 @@ PAGES = [
   <li>To update, run <code>docker compose pull</code>, then <code>docker compose up -d</code>, in the same folder.</li>
   <li>On a Synology NAS: <em>Container Manager → Project → Create</em>, and paste this file. Other home servers (Unraid, TrueNAS, a Raspberry Pi 4 or 5) work the same way with Docker.</li>
   <li><strong>Never</strong> run <code>docker compose down -v</code>: the <code>-v</code> deletes your records.</li>
+  <li>While you're at it: other services you can run at home keep even more of your life private. <a href="https://adguard.com/en/adguard-home/overview.html">AdGuard Home</a> blocks ads and trackers for every device on your network, <a href="https://nextcloud.com">Nextcloud</a> keeps your files and calendar, and <a href="https://ntfy.sh">ntfy</a> sends your phone notifications.</li>
 </ul>
 <script src="/setup.js" defer></script>
 """),
@@ -294,7 +297,7 @@ PAGES = [
 
 <h2>Taxes</h2>
 <p><em>Money → Taxes</em> adds up the year: income by kind, fees, expenses by category, your profit, mileage and estimated payments, with quarterly due dates and reminders. <strong>Download as CSV</strong> gives your accountant a spreadsheet; <em>Print or save as PDF</em> gives a page. Sworkr adds up your records. It isn't tax advice.</p>
-<p>A <strong>license or work card</strong> is paid to the government, not to a workplace: keep it under <em>Settings → My work → Licenses &amp; documents</em>, and when you renew it press <em>Renewed</em> to move the date and log what you paid under Fees &amp; licenses.</p>
+<p>Keep a <strong>license or work card</strong> under <em>Settings → My work → Licenses &amp; documents</em>, tied to a workplace if it's for one, and when you renew it press <em>Renewed</em> to move the date and log what you paid under Fees &amp; licenses.</p>
 """),
 
 ("content", "Content & planning", "Content &amp; planning", """

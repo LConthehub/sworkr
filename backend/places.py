@@ -6,7 +6,7 @@ A charge has a cadence (per booking, shift, day, week, month, year, per stay, or
 category. Logging one adds an expense; a charge with a test_type (a house doctor) is logged as a health test
 instead, so it shows in your test history too. A yearly or one-off charge can have a renewal date (a membership,
 a yearly fee): sworkr keeps a reminder task for it two weeks before, and logging a yearly one moves the date
-on a year. (Licenses and work cards are paid to the government, not the house: they're documents, see documents.py.)
+on a year. (Licenses and work cards are documents, see documents.py; one tied to a workplace puts its fee on that tour.)
 
 Stays (tours linked to a place) log the per-day, per-week and per-stay charges by themselves; see main.py.
 """

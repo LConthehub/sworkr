@@ -5,7 +5,7 @@ insurance. sworkr keeps one reminder task for each, some days before it runs out
 Only what's needed to remember a renewal is kept: a name, dates and notes. There's deliberately no field for
 an ID or license number; keep those in the document itself, not here.
 
-A license or work card is paid to the government or a licensing office, not to a workplace, so it lives here. Renewing
+A license or work card can be tied to a workplace: renewing it then puts the fee on that workplace's tour. Renewing
 one moves its date and, if it cost something, logs that as an ordinary expense under Fees & licenses.
 
 The list also shows the renewal dates set on a place's own yearly charges, so everything that runs out is in one
@@ -195,6 +195,23 @@ class RenewedIn(BaseModel):
     paid: Optional[float] = None        # what the renewal cost
     paid_to: Optional[str] = None       # who was paid: the county, the state board
     paid_on: Optional[dt.date] = None   # left out: today
+    tour_id: Optional[int] = None       # the tour the fee belongs to; left out: worked out from the workplace
+
+
+def tour_for_fee(db, owner: int, source_id: Optional[int], paid_on: date) -> Optional[int]:
+    """The tour at the document's workplace that a fee belongs to: the one under way that day, else the next one
+    there within 60 days. None when the document has no workplace or there's no such tour."""
+    if not source_id:
+        return None
+    day = paid_on.isoformat()
+    r = db.execute("SELECT id FROM tours WHERE owner_id = ? AND source_id = ? AND start_date <= ? AND end_date >= ? "
+                   "ORDER BY start_date LIMIT 1", (owner, source_id, day, day)).fetchone()
+    if r:
+        return r["id"]
+    until = (paid_on + dt.timedelta(days=60)).isoformat()
+    r = db.execute("SELECT id FROM tours WHERE owner_id = ? AND source_id = ? AND start_date > ? AND start_date <= ? "
+                   "ORDER BY start_date LIMIT 1", (owner, source_id, day, until)).fetchone()
+    return r["id"] if r else None
 
 
 @router.post("/{doc_id}/renewed")
@@ -213,19 +230,26 @@ def renewed(doc_id: int, body: RenewedIn, request: Request):
             raise HTTPException(status_code=400, detail="What you paid must be 0 or more")
         db.execute("UPDATE documents SET issued_on = ?, expires_on = ?, updated_at = ? WHERE id = ? AND owner_id = ?",
                    (paid_on.isoformat(), body.expires_on.isoformat(), _now(), doc_id, owner))
+        tour_id = None
         if body.paid:
+            if body.tour_id is not None:
+                if not db.execute("SELECT 1 FROM tours WHERE id = ? AND owner_id = ?", (body.tour_id, owner)).fetchone():
+                    raise HTTPException(status_code=404, detail="Tour not found")
+                tour_id = body.tour_id
+            else:
+                tour_id = tour_for_fee(db, owner, d.get("source_id"), paid_on)
             lookup = finance.category_lookup(db, owner)
             category = lookup.get("licenses & permits") or lookup.get("fees & licenses > licenses & permits") or "fees"
             to = (body.paid_to or "").strip()[:80]
             db.execute("""
-                INSERT INTO expenses (description, amount, category, date, notes, owner_id, created_at, currency)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'USD')
+                INSERT INTO expenses (description, amount, category, date, notes, owner_id, created_at, currency, tour_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'USD', ?)
             """, (f"{d['name']} renewal", round(body.paid, 2), category, f"{paid_on.isoformat()}T12:00:00+00:00",
-                  f"Paid to {to}" if to else None, owner, _now()))
+                  f"Paid to {to}" if to else None, owner, _now(), tour_id))
         tasks = _sync_task(db, doc_id, owner)
         db.commit()
         _after(owner, tasks)
-        return _get(db, doc_id, owner)
+        return {**_get(db, doc_id, owner), "fee_tour_id": tour_id}
     finally:
         db.close()
 

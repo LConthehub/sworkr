@@ -83,3 +83,20 @@ def test_documents_are_checked_and_private(api, admin):
     doc = ok(api.post("/api/documents", json={"name": "Mine"}), 201)
     assert admin.put(f"/api/documents/{doc['id']}", json={"name": "Theirs"}).status_code == 404
     assert ok(admin.get("/api/documents"))["documents"] == []
+
+
+def test_a_work_card_fee_goes_on_the_tour_at_its_workplace(api):
+    house = place(api, name="Card House")
+    doc = ok(api.post("/api/documents", json={"name": "Work card", "kind": "work_card", "expires_on": "2045-06-01",
+                                              "source_id": house["id"]}), 201)
+    t = ok(api.post("/api/tours", json={"kind": "tour", "name": "June stint", "start_date": "2045-06-10", "end_date": "2045-06-20",
+                                        "starts_at": "2045-06-10T00:00:00Z", "ends_at": "2045-06-21T00:00:00Z",
+                                        "source_id": house["id"]}), 201)
+    # Renewed a week before the stint: the fee belongs to that stint.
+    r = ok(api.post(f"/api/documents/{doc['id']}/renewed", json={"expires_on": "2046-06-01", "paid": 75, "paid_on": "2045-06-03"}))
+    assert r["fee_tour_id"] == t["id"]
+    fee = next(e for e in ok(api.get("/api/expenses")) if e["description"] == "Work card renewal")
+    assert fee["tour_id"] == t["id"] and fee["amount"] == 75
+    # No tour there soon: the fee is just an expense.
+    r = ok(api.post(f"/api/documents/{doc['id']}/renewed", json={"expires_on": "2047-06-01", "paid": 75, "paid_on": "2046-05-01"}))
+    assert r["fee_tour_id"] is None

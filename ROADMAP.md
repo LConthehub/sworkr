@@ -63,6 +63,10 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Work card fees: a license tied to a workplace puts its renewal fee on that workplace's tour (the one under way,
+  else the next within 60 days). The "paid to the government" explanations are gone.
+- Setup builder: "Your own web address" adds a Caddy container for HTTPS; install page mentions AdGuard Home,
+  Nextcloud and ntfy for more privacy.
 - Wallet: Money > Wallet (goals and envelopes), each can be shown on the dashboard's Wallet card or not.
 - Social accounts are set up in Settings > Connections; Content > Social keeps the numbers.
 - Notes card on the dashboard (one scratch pad, saves itself).
@@ -80,8 +84,6 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 
 ## Next
 - Docs review finished 2026-11-17 (last six pages in one pass; owner may veto). Troubleshooting page not re-read.
-- Setup builder: option to add Caddy to the same docker-compose.yml (own web address without a separate download). mention how other selfhosted services, like ad guard home can further protect their privacy.
-- Workers know who gets paid work card fees. This needs no language explaining. It can be tied to a workplace and to tours, so that accurateinformation is reported to the user.
 - Local AI: an optional assistant that talks to a model running on your own machine (LM Studio, llama.cpp,
   Ollama: all speak the OpenAI-style API on localhost). Cloud AI only as an explicit opt-in, clearly marked,
   off by default. Jobs: statistics and search (ask questions of your own numbers, find things across notes), not writing.

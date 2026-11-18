@@ -474,7 +474,7 @@ export function SourceForm({ source, onSaved }) {
       </fieldset>
       <h3 className="text-sm font-semibold text-gray-700 pt-1">Charges you pay them</h3>
       <p className="text-xs text-gray-500 -mt-2">
-        Room & board, a house doctor, room hire: anything you pay this place as well. (Licenses go to the government, not the house: add them under Account → Licenses & documents.) Log each one from the
+        Room & board, a house doctor, room hire: anything you pay this place as well. Log each one from the
         place's card when you pay it; a stay at this place logs its daily and weekly charges for you.
       </p>
       {charges === null ? <p className="text-sm text-gray-400">Loading…</p> : (

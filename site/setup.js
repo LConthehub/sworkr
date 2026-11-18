@@ -30,7 +30,8 @@
     var backups = path(val('backups')) || './backups';
     var content = path(val('content'));
     var network = val('network') === 'network';
-    var passkeys = val('passkey_address').replace(/\/+$/, '');
+    var web = val('web_address').replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
+    var passkeys = val('passkey_address').replace(/\/+$/, '') || (web ? 'https://' + web : '');
     var idle = num('idle', 120, 0, 1440);
     var keep = num('keep', 14, 1, 365);
     var email = val('email');
@@ -64,11 +65,25 @@
       });
     }
     y.push('    restart: unless-stopped');
-    if (!dataFolder || !keysFolder) {
+    if (web) {
+      y.push('');
+      y.push('  # Your own web address, with HTTPS: Caddy gets and renews the certificate by itself.');
+      y.push('  caddy:');
+      y.push('    image: caddy:2');
+      y.push('    command: caddy reverse-proxy --from ' + web + ' --to sworkr:8008');
+      y.push('    ports:');
+      y.push('      - "80:80"      # forward 80 and 443 on your router to this computer');
+      y.push('      - "443:443"');
+      y.push('    volumes:');
+      y.push('      - caddy_data:/data                  # its certificates');
+      y.push('    restart: unless-stopped');
+    }
+    if (!dataFolder || !keysFolder || web) {
       y.push('');
       y.push('volumes:');
       if (!dataFolder) y.push('  sworkr_data:');
       if (!keysFolder) y.push('  sworkr_keys:');
+      if (web) y.push('  caddy_data:');
     }
     out.value = y.join('\n') + '\n';
 
@@ -95,6 +110,7 @@
       dataFolder || keysFolder || content ? 'Make sure the folders you chose exist. On Mac, Docker Desktop may ask to share them: say yes.' : null,
       'Open a terminal in that folder and run <code>docker compose up -d</code>. The first time, it downloads Sworkr (a few minutes).',
       'Open <a href="' + url + '">' + url + '</a> and make your account.',
+      web ? 'For <code>' + web + '</code>: point it at your home (DuckDNS or deSEC), forward ports 80 and 443 on your router to this computer, then open <code>https://' + web + '</code>. Add a passkey on each device and turn on <em>Away from home → passkeys only</em>. The <a href="/docs/web-address.html">web address guide</a> has the details.' : null,
       'Later, to update: <code>docker compose pull &amp;&amp; docker compose up -d</code>. Your records stay.',
     ].filter(Boolean).forEach(function (html) {
       var li = document.createElement('li');
