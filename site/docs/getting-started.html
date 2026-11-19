@@ -52,7 +52,7 @@
   <li>The first start downloads Sworkr (a few minutes), then your browser opens it.</li>
 </ol>
 <p>The same folder has <em>Update sworkr</em> and <em>Stop sworkr</em>. Your records stay through both.</p>
-<p>Prefer a terminal, or want a different port, your content folder or your own web address? <a href="/docs/install.html">Make your setup file</a>: it's the same thing, with your choices in it.</p>
+<p>Want a different port, your content folder or your own web address? <a href="/docs/install.html">Make your setup file</a>: it's the same thing, with your choices in it. It uses a terminal, and the page <a href="/docs/install.html#terminal">teaches the few commands</a> if you've never opened one.</p>
 
 <h2>Windows without Docker</h2>
 <ol>
@@ -61,15 +61,16 @@
   <li>Your browser opens Sworkr. A small icon appears by the clock: click it to open Sworkr again, open your backups folder, or quit.</li>
 </ol>
 <p>Your records are kept in <code>%LOCALAPPDATA%\Sworkr</code>, your backups in <code>Documents\Sworkr backups</code>.</p>
+<p><strong>The Windows app can't update itself.</strong> It has no update button and won't tell you when a new version is out. To update, download the new zip yourself and unzip it over the old folder (see <a href="#updating">Updating</a>). If you'd rather update with one double-click, use the Docker way above.</p>
 
-<h2>Your first minutes</h2>
+<h2>What's next?</h2>
 <p>Create your account. <strong>That first account is yours and is the admin.</strong> Use a password of 12 or more characters and keep it somewhere safe. Then tick the kinds of work you do, and Sworkr sets itself up to match (expense categories, workplaces and their usual charges). You can change it any time under <em>Settings → My work</em>. Prefer it dark? <em>Settings → Look</em>.</p>
 <p>A new copy has a few made-up clients so you can look around. Remove them under <em>Settings → Data &amp; users → Example data</em>.</p>
 
-<h2>Do these three things on day one</h2>
+<h2>Three Things To Keep Your Data Secure Immediately</h2>
 <ol>
   <li><strong>Turn on backups.</strong> <em>Settings → Data &amp; users → Backups</em>. Choose a passphrase and tick automatic daily backups. Write the passphrase down: without it nobody can read a backup, and neither can you.</li>
-  <li><strong>Turn on two-step sign-in.</strong> <em>Settings → Security &amp; privacy → Two-step sign-in</em>, with an authenticator app. Save the recovery codes on paper.</li>
+  <li><strong>Add a passkey.</strong> <em>Settings → Security &amp; privacy → Passkeys</em>. A passkey signs you in with your phone's or computer's face, fingerprint or PIN. It's the strongest choice: there's no code to type, and a fake login page can't steal it. Add one on each device you use. If a device can't do passkeys, use <em>Two-step sign-in</em> with an authenticator app instead, and save the recovery codes on paper.</li>
   <li><strong>Encrypt your computer's disk</strong> (BitLocker on Windows, FileVault on a Mac) and use a locked user account.</li>
 </ol>
 
@@ -89,8 +90,8 @@
   <li><strong>Ask your numbers</strong>, if you turn on the assistant: questions about your own totals, answered by an AI model running on your own computer.</li>
 </ul>
 
-<h2>Updating</h2>
-<p>Docker: double-click <em>Update sworkr</em> in your sworkr folder (or run <code>docker compose pull</code>, then <code>docker compose up -d</code> there). Windows app: quit it, unzip the new version over the old folder, start it. Either way your records are upgraded by themselves, and a copy is saved first.</p>
+<h2 id="updating">Updating</h2>
+<p>Docker: double-click <em>Update sworkr</em> in your sworkr folder (or run <code>docker compose pull</code>, then <code>docker compose up -d</code> there). Windows app: it can't update itself, so check the <a href="/#get">home page</a> now and then; when there's a new version, quit the app, unzip the new version over the old folder, and start it. Either way your records are upgraded by themselves, and a copy is saved first.</p>
 
     </main>
   </div>

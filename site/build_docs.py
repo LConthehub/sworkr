@@ -45,7 +45,7 @@ PAGES = [
   <li>The first start downloads Sworkr (a few minutes), then your browser opens it.</li>
 </ol>
 <p>The same folder has <em>Update sworkr</em> and <em>Stop sworkr</em>. Your records stay through both.</p>
-<p>Prefer a terminal, or want a different port, your content folder or your own web address? <a href="/docs/install.html">Make your setup file</a>: it's the same thing, with your choices in it.</p>
+<p>Want a different port, your content folder or your own web address? <a href="/docs/install.html">Make your setup file</a>: it's the same thing, with your choices in it. It uses a terminal, and the page <a href="/docs/install.html#terminal">teaches the few commands</a> if you've never opened one.</p>
 
 <h2>Windows without Docker</h2>
 <ol>
@@ -54,15 +54,16 @@ PAGES = [
   <li>Your browser opens Sworkr. A small icon appears by the clock: click it to open Sworkr again, open your backups folder, or quit.</li>
 </ol>
 <p>Your records are kept in <code>%LOCALAPPDATA%\\Sworkr</code>, your backups in <code>Documents\\Sworkr backups</code>.</p>
+<p><strong>The Windows app can't update itself.</strong> It has no update button and won't tell you when a new version is out. To update, download the new zip yourself and unzip it over the old folder (see <a href="#updating">Updating</a>). If you'd rather update with one double-click, use the Docker way above.</p>
 
-<h2>Your first minutes</h2>
+<h2>What's next?</h2>
 <p>Create your account. <strong>That first account is yours and is the admin.</strong> Use a password of 12 or more characters and keep it somewhere safe. Then tick the kinds of work you do, and Sworkr sets itself up to match (expense categories, workplaces and their usual charges). You can change it any time under <em>Settings → My work</em>. Prefer it dark? <em>Settings → Look</em>.</p>
 <p>A new copy has a few made-up clients so you can look around. Remove them under <em>Settings → Data &amp; users → Example data</em>.</p>
 
-<h2>Do these three things on day one</h2>
+<h2>Three Things To Keep Your Data Secure Immediately</h2>
 <ol>
   <li><strong>Turn on backups.</strong> <em>Settings → Data &amp; users → Backups</em>. Choose a passphrase and tick automatic daily backups. Write the passphrase down: without it nobody can read a backup, and neither can you.</li>
-  <li><strong>Turn on two-step sign-in.</strong> <em>Settings → Security &amp; privacy → Two-step sign-in</em>, with an authenticator app. Save the recovery codes on paper.</li>
+  <li><strong>Add a passkey.</strong> <em>Settings → Security &amp; privacy → Passkeys</em>. A passkey signs you in with your phone's or computer's face, fingerprint or PIN. It's the strongest choice: there's no code to type, and a fake login page can't steal it. Add one on each device you use. If a device can't do passkeys, use <em>Two-step sign-in</em> with an authenticator app instead, and save the recovery codes on paper.</li>
   <li><strong>Encrypt your computer's disk</strong> (BitLocker on Windows, FileVault on a Mac) and use a locked user account.</li>
 </ol>
 
@@ -82,8 +83,8 @@ PAGES = [
   <li><strong>Ask your numbers</strong>, if you turn on the assistant: questions about your own totals, answered by an AI model running on your own computer.</li>
 </ul>
 
-<h2>Updating</h2>
-<p>Docker: double-click <em>Update sworkr</em> in your sworkr folder (or run <code>docker compose pull</code>, then <code>docker compose up -d</code> there). Windows app: quit it, unzip the new version over the old folder, start it. Either way your records are upgraded by themselves, and a copy is saved first.</p>
+<h2 id="updating">Updating</h2>
+<p>Docker: double-click <em>Update sworkr</em> in your sworkr folder (or run <code>docker compose pull</code>, then <code>docker compose up -d</code> there). Windows app: it can't update itself, so check the <a href="/#get">home page</a> now and then; when there's a new version, quit the app, unzip the new version over the old folder, and start it. Either way your records are upgraded by themselves, and a copy is saved first.</p>
 """),
 
 ("privacy-and-backups", "Privacy & backups", "Privacy &amp; backups", """
@@ -192,6 +193,29 @@ PAGES = [
 <ol id="steps"></ol>
 </div>
 
+<h2 id="terminal">New to the terminal?</h2>
+<p>A terminal is a window where you type a command and press Enter. You only need it for the setup-file way above; the zip with <em>Start sworkr</em> never asks for it. Three things cover everything on this page.</p>
+<p><strong>1. Open a terminal in your Sworkr folder.</strong></p>
+<ul>
+  <li><strong>Windows 11:</strong> open the folder in File Explorer, right-click an empty spot inside it, and choose <em>Open in Terminal</em>.</li>
+  <li><strong>Windows 10:</strong> open the folder, hold <kbd>Shift</kbd>, right-click an empty spot, and choose <em>Open PowerShell window here</em>. Or click the address bar at the top of the folder, type <code>powershell</code>, and press Enter.</li>
+  <li><strong>Mac:</strong> open the <em>Terminal</em> app (press <kbd>⌘</kbd> + <kbd>Space</kbd> and type "Terminal"), type <code>cd</code> and a space, drag the folder from Finder onto the window, and press Enter.</li>
+  <li><strong>Linux:</strong> right-click inside the folder in your file manager and choose <em>Open in Terminal</em>.</li>
+</ul>
+<p><strong>2. The two commands for folders.</strong> They're the same on Windows, Mac and Linux.</p>
+<ul>
+  <li><code>mkdir sworkr</code> makes a new folder called <em>sworkr</em> inside the folder you're in. ("mkdir" is short for "make directory"; a directory is a folder.)</li>
+  <li><code>cd sworkr</code> goes into it. ("cd" is "change directory".) <code>cd ..</code> goes back up one folder.</li>
+  <li>A folder name with a space needs quotes: <code>cd "My Stuff"</code>.</li>
+  <li>Lost? <code>pwd</code> shows the folder you're in. <code>ls</code> (Windows also takes <code>dir</code>) lists what's in it.</li>
+</ul>
+<p>So, starting from scratch, this makes a folder for Sworkr in Documents and goes into it:</p>
+<pre><code>cd Documents
+mkdir sworkr
+cd sworkr</code></pre>
+<p>Put your <code>docker-compose.yml</code> in that folder, and run the commands from the steps above there.</p>
+<p><strong>3. Good habits.</strong> Copy a command exactly and press Enter once. Nothing happens until you press Enter. If it prints an error, read the last line: it usually says what's wrong. You can't break your computer with the commands on this site.</p>
+
 <h2>Good to know</h2>
 <ul>
   <li>You need <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a> (Windows or Mac) or Docker on Linux. Don't want Docker? The <a href="/docs/getting-started.html">Windows app</a> needs nothing else.</li>
@@ -216,7 +240,7 @@ PAGES = [
 <h2>Make it feel like an app</h2>
 <p>Do this from the address you'll really use: the Tailscale address (or your own web address), not <code>localhost</code>.</p>
 <ul>
-  <li><strong>A plain name and icon:</strong> under <em>Settings → Look → Home screen name &amp; icon</em>, choose a name like "Notes" and any picture. Phones that add Sworkr from then on show that instead of Sworkr. (Already on your home screen? Remove it and add it again.)</li>
+  <li><strong>A plain name and icon:</strong> under <em>Settings → Look → Home screen name &amp; icon</em>, choose a name like "Notes" and any picture. Everyone on a shared Sworkr chooses their own. Sign in on the phone first, then add Sworkr to the home screen, and it shows your name and picture instead of Sworkr. (Already on your home screen? Remove it and add it again.)</li>
   <li><strong>iPhone:</strong> in Safari, tap Share, then <em>Add to Home Screen</em>. <strong>Android:</strong> in Chrome, open the menu and tap <em>Add to Home screen</em>.</li>
   <li>Add a <strong>passkey</strong> on the phone (<em>Settings → Security &amp; privacy → Passkeys</em>) so you sign in with your face or fingerprint.</li>
   <li>Consider <em>Away from home → passkeys only</em>, so a password alone can't sign in from anywhere but your computer.</li>
@@ -324,6 +348,7 @@ PAGES = [
 
 <h2>Getting to know them</h2>
 <p>Each client's page has a card for what's worth remembering about the person: the languages they speak and whether a translator is needed, cultural practices to respect, what's good to talk about and what to avoid. A client can be marked as passed away: their history stays, and the reminders stop.</p>
+<p>If one of your houses allows <strong>outdates</strong> (set under <em>House rules</em>), the card also asks whether this client does them, with a line for what they like.</p>
 <p>After a finished booking, <em>How did it go?</em> asks a few quick questions (how it went, would you see them again, what you talked about). The answers are kept on the client's page.</p>
 
 <h2>Client base</h2>
@@ -359,6 +384,21 @@ PAGES = [
 
 <h2>Rates &amp; deposits</h2>
 <p><em>Money → Rates</em> is your rate card. Pick a service when you book and its length and price fill in. <em>Copy as text</em> gives you something to send. <strong>Deposits to collect</strong> lists bookings ahead whose deposit hasn't come in; <strong>On an old rate</strong> lists clients whose last booking cost less than your card says now.</p>
+
+<h2>House rules</h2>
+<p>Every house and agency works its own way. When you add a brothel or an agency, your dashboard shows <em>Set up your workplace</em> and asks a few plain questions:</p>
+<ul>
+  <li><strong>Which day does the doctor come?</strong> Tests on a stay land on that day, and a party is warned about until the result is clear.</li>
+  <li><strong>Does it allow outdates?</strong> With its rules: the minimum, the house's share, signing out.</li>
+  <li><strong>Are there shifts?</strong> None, the same every day (say 5am to 5pm), or a few to choose from (days, nights, swing). There are ready-made starts for two 12-hour or three 8-hour shifts.</li>
+  <li><strong>Will it store a bin for you?</strong> With its rules: how long, the size, the fee.</li>
+</ul>
+<p>Skip what you don't know yet; the card stays until each question has an answer. Change them any time under <em>Settings → My work → House rules</em>. Clubs and studios are there too, for shifts and storage.</p>
+<p><strong>Shifts on a stay:</strong> when you add a tour at a place with shifts, choose <em>Your shift on this stay</em>. Booking a client outside it then asks you to check first.</p>
+
+<h2>Storage bins</h2>
+<p><em>Settings → My work → Storage bins</em> lists what's in each bin a place keeps for you between stays: the place, where exactly, the day you left it, and every item. <em>Which bin is it in?</em> finds a thing across all of them.</p>
+<p><em>Label</em> gives you a QR code to print and tape to the bin. The code holds only a link: scanning it opens that bin's list in Sworkr, and only for you, after you log in. Anyone else who scans it sees a login page. Make the label while Sworkr is open at its Tailscale or web address, so your phone can open it.</p>
 
 <h2>Tours</h2>
 <p>A tour (<em>Calendar → + New → Tour</em>) gets its own <strong>tour statement</strong>: income, fees, costs, health tests, and what you kept. Its <strong>tour plan</strong> holds a pack list (from your own templates), a budget against what you actually spend, and meals &amp; snacks whose groceries go onto the pack list. <em>Money → Compare → By tour</em> sets tours side by side, per working day.</p>

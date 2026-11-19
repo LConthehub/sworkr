@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Field, inputClass, errorMessage, buttonClass } from './Modal';
 import { useCycleDays } from './Cycle';
+import { StayShiftPicker } from './House';
 import { CADENCES, daysBetween, money, periodTimes, SOURCE_KINDS, TIME_OFF_LABELS, toDateInput } from '../colors';
 
 /**
@@ -33,6 +34,11 @@ export default function TourForm({ period, defaultKind = 'tour', defaultDate, on
   }, [form.kind]);
   const stayCharges = charges.filter((c) => String(c.source_id) === form.source_id
     && ['per_day', 'per_week', 'per_month', 'per_stay'].includes(c.cadence));
+  // Which shift you're on, for a stay at a place that has shifts. Saved after the tour itself.
+  const [shift, setShift] = useState(null);
+  useEffect(() => {
+    if (period?.id && period.kind === 'tour') axios.get(`/api/tours/${period.id}/shift`).then(({ data }) => setShift(data.shift)).catch(() => {});
+  }, [period?.id, period?.kind]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const set = (k) => (e) => {
@@ -76,6 +82,10 @@ export default function TourForm({ period, defaultKind = 'tour', defaultDate, on
       const { data } = period
         ? await axios.put(`/api/tours/${period.id}`, body)
         : await axios.post('/api/tours', body);
+      if (isTour) {
+        const keep = body.source_id && shift ? { label: shift.label, start: shift.start, end: shift.end } : {};
+        await axios.put(`/api/tours/${data.id}/shift`, keep).catch(() => {});
+      }
       onSaved(data);
     } catch (err) {
       setError(errorMessage(err, 'Could not save'));
@@ -168,6 +178,7 @@ export default function TourForm({ period, defaultKind = 'tour', defaultDate, on
               {stayCharges.some((c) => c.test_type) && ' The doctor is added as a health test.'}
             </p>
           )}
+          <div className="mt-3"><StayShiftPicker sourceId={form.source_id} value={shift} onChange={setShift} /></div>
         </div>
       )}
       {isTour && (

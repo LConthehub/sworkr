@@ -1891,6 +1891,59 @@ def _m68_order_shipping(conn):
     conn.execute("ALTER TABLE custom_orders ADD COLUMN tracking TEXT")
 
 
+def _m69_house_rules(conn):
+    """A workplace's own rules (outdates, shifts, storage), the shift on a stay, and outdates on a client's profile."""
+    conn.execute("""
+        CREATE TABLE place_rules (
+            source_id INTEGER PRIMARY KEY REFERENCES income_sources(id) ON DELETE CASCADE,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            outdates_allowed INTEGER CHECK(outdates_allowed IS NULL OR outdates_allowed IN (0, 1)),
+            outdate_rules TEXT,
+            shift_pattern TEXT CHECK(shift_pattern IS NULL OR shift_pattern IN ('none', 'fixed', 'varied')),
+            shifts TEXT,
+            storage_allowed INTEGER CHECK(storage_allowed IS NULL OR storage_allowed IN (0, 1)),
+            storage_rules TEXT,
+            other_rules TEXT,
+            no_doctor INTEGER NOT NULL DEFAULT 0 CHECK(no_doctor IN (0, 1)),
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("ALTER TABLE tours ADD COLUMN shift_label TEXT")
+    conn.execute("ALTER TABLE tours ADD COLUMN shift_start TEXT")
+    conn.execute("ALTER TABLE tours ADD COLUMN shift_end TEXT")
+    conn.execute("ALTER TABLE client_profiles ADD COLUMN outdates TEXT CHECK(outdates IS NULL OR outdates IN ('yes', 'no'))")
+    conn.execute("ALTER TABLE client_profiles ADD COLUMN outdate_notes TEXT")
+
+
+def _m70_bins(conn):
+    """Bins a workplace stores for you, and what's in them."""
+    conn.execute("""
+        CREATE TABLE storage_bins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            source_id INTEGER REFERENCES income_sources(id) ON DELETE SET NULL,
+            label TEXT NOT NULL,
+            where_kept TEXT,
+            stored_on TEXT,
+            notes TEXT,
+            code TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_storage_bins_owner ON storage_bins(owner_id)")
+    conn.execute("""
+        CREATE TABLE bin_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            bin_id INTEGER NOT NULL REFERENCES storage_bins(id) ON DELETE CASCADE,
+            label TEXT NOT NULL,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            sort_order INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    conn.execute("CREATE INDEX idx_bin_items_bin ON bin_items(bin_id)")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1960,6 +2013,8 @@ MIGRATIONS = [
     (66, "platform tax forms", _m66_tax_forms, False),
     (67, "payout days", _m67_payout_rules, False),
     (68, "orders that are posted", _m68_order_shipping, False),
+    (69, "house rules, shifts on a stay, outdates", _m69_house_rules, False),
+    (70, "storage bins", _m70_bins, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

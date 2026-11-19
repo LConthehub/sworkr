@@ -17,6 +17,8 @@ import { ProgressSettings } from '../components/Progress';
 import { Incidents, PrivacyCheckup } from '../components/Everyday';
 import DecoyPassword from '../components/Decoy';
 import HomeScreenSettings from '../components/HomeScreen';
+import { HouseRulesSettings } from '../components/House';
+import Bins from '../components/Bins';
 import { NutritionSettings } from '../components/MealPlanner';
 import { reloadFeatures } from '../features';
 import HolidaySettings from '../components/Holidays';
@@ -54,6 +56,14 @@ const GROUPS = [
         ),
       },
       { id: 'policy', title: 'Deposits & cancellations', words: 'deposit no-show no show cancellation fee late policy', render: () => <BookingPolicy /> },
+      {
+        id: 'house', title: 'House rules', words: 'house rules brothel agency doctor day outdates shifts storage workplace club',
+        render: () => <Section title="House rules" hint="How each place works: the doctor's day, outdates, shifts and storage."><HouseRulesSettings /></Section>,
+      },
+      {
+        id: 'bins', title: 'Storage bins', words: 'bin bins storage tote locker stored left behind qr label',
+        render: () => <Section title="Storage bins" hint="What's in each bin a place keeps for you, with a label to print."><Bins /></Section>,
+      },
       {
         id: 'documents', title: 'Licenses & documents', words: 'license work card id passport verification expiry expire renew insurance',
         render: () => (
@@ -207,7 +217,7 @@ const GROUPS = [
       },
       {
         id: 'homescreen', title: 'Home screen name & icon', words: 'icon home screen app name favicon discreet phone shortcut',
-        render: ({ me }) => <Section title="Home screen name & icon" hint="What a phone shows when sworkr is on its home screen."><HomeScreenSettings isAdmin={!!me?.is_admin} /></Section>,
+        render: ({ me }) => <Section title="Home screen name & icon" hint="What a phone shows when sworkr is on its home screen."><HomeScreenSettings /></Section>,
       },
       {
         id: 'progress', title: 'Progress', words: 'streaks goals badges bests gamify progress',

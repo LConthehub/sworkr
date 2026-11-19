@@ -158,9 +158,8 @@ def test_the_home_screen_name_and_icon_can_be_plain(api, admin):
     buf = _io.BytesIO()
     Image.new("RGB", (300, 200), (10, 120, 200)).save(buf, "PNG")
     picture = "data:image/png;base64," + _b64.b64encode(buf.getvalue()).decode()
-    assert api.put("/api/branding", json={"name": "Notes", "icon": picture}).status_code == 403     # admins only
     r = ok(admin.put("/api/branding", json={"name": "Notes", "icon": picture}))
-    assert r == {"name": "Notes", "custom_icon": True}
+    assert r["name"] == "Notes" and r["custom_icon"] is True and r["shared"] is True
     m = anyone.get("/api/branding/manifest.json").json()
     assert m["short_name"] == "Notes" and [x["url"] for x in m["shortcuts"]] == ["/calendar", "/money", "/contacts"]
     icon = Image.open(_io.BytesIO(anyone.get("/api/branding/icon-512.png").content))

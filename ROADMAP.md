@@ -72,6 +72,14 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   (Nye and Lyon are covered by the Nevada house set: the owner confirmed what's there is fine.)
 
 ## Done 2026-11-19
+- House rules for each brothel, agency, club and studio (the doctor's day, outdates, shifts, storage), with a
+  "Set up your workplace" guide on the dashboard until they're answered. A stay remembers its shift, and a
+  booking outside it is warned about. Clients get an "outdates" answer once a house allows them.
+- Storage bins: what's in each, where, since when, a search across them, and a QR label that opens the bin
+  (login needed; the code holds only a link).
+- Everyone chooses their own home-screen name and icon (an admin's is the shared default).
+- Docs: terminal basics (mkdir, cd, opening a terminal in a folder), the Windows app can't update itself,
+  "What's next?", "Three Things To Keep Your Data Secure Immediately" with passkeys first.
 - Content > Protect: paperwork for everyone on camera or behind it (ID check and release dates, where the copies
   are, a blank release to copy), and stolen content with a takedown notice to copy and a chase after 10 days.
 - Decoy password (Settings > Security & privacy): a second password opens a separate, harmless account under the

@@ -46,6 +46,7 @@ import rides
 import assistant
 import wellness
 import leaks
+import house
 import payouts
 import decoy
 import bank
@@ -1128,6 +1129,8 @@ def _booking_warnings(db, owner_id: int, client: Optional[dict], starts: List[da
         if client:
             for message in clearance_warnings(db, owner_id, start):
                 warnings.append({"type": "clearance", "starts_at": to_utc_iso(start), "message": message})
+            for message in house.shift_warnings(db, owner_id, start, tz_offset):
+                warnings.append({"type": "shift", "starts_at": to_utc_iso(start), "message": message})
         for other in find_overlaps(db, owner_id, start, minutes, exclude_id):
             who = other["client_name"] or other["service_type"] or "another appointment"
             warnings.append({
@@ -2316,6 +2319,7 @@ app.include_router(branding.router)
 app.include_router(meals.router)
 app.include_router(calendar_dates.router)
 app.include_router(leaks.router)
+app.include_router(house.router)
 app.include_router(payouts.router)
 app.include_router(decoy.router)
 app.include_router(marketing.router)
@@ -2362,6 +2366,7 @@ branding.setup(get_db)
 meals.setup(get_db)
 calendar_dates.setup(get_db)
 leaks.setup(get_db)
+house.setup(get_db)
 payouts.setup(get_db)
 decoy.setup(get_db, remove_user, lambda: demo.ENABLED)
 marketing.setup(get_db)

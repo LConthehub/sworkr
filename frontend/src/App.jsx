@@ -10,6 +10,7 @@ import { DecoyScreen, useDiscreet, usePanicKey } from './components/Discreet';
 import Reminders from './components/Reminders';
 import { WorkTypesFirstRun } from './components/WorkTypes';
 import { useFeatures } from './features';
+import { BinPage } from './components/Bins';
 import { clearCaches, setDemoMode } from './api';
 
 const navClass = ({ isActive }) =>
@@ -68,6 +69,20 @@ function App() {
   const has = useFeatures();   // which parts fit this person's kinds of work
   const [idleMinutes, setIdleMinutes] = useState(0);
   const [notice, setNotice] = useState('');
+
+  // The home-screen name and icon are each person's own: once signed in, point the page's links at theirs.
+  const userId = auth.user?.id;
+  useEffect(() => {
+    if (!userId) return undefined;
+    const point = () => axios.get('/api/branding').then(({ data }) => {
+      const k = `?k=${encodeURIComponent(data.key)}`;
+      document.querySelector('link[rel="manifest"]')?.setAttribute('href', `/api/branding/manifest.json${k}`);
+      document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute('href', `/api/branding/icon-180.png${k}&v=${Date.now()}`);
+    }).catch(() => {});
+    point();
+    window.addEventListener('sworkr-branding', point);
+    return () => window.removeEventListener('sworkr-branding', point);
+  }, [userId]);
 
   const checkAuth = useCallback(async () => {
     try {
@@ -211,6 +226,7 @@ function App() {
             <Route path="/contacts/base" element={<ClientBase />} />
             <Route path="/inquiries" element={<Navigate to="/contacts/inquiries" replace />} />
             <Route path="/regulars" element={<Navigate to="/contacts/quiet" replace />} />
+            <Route path="/bins/:code" element={<BinPage />} />
             <Route path="/content" element={<Content />} />
             <Route path="/content/:tab" element={<Content />} />
             <Route path="/money" element={<MoneyHub />} />

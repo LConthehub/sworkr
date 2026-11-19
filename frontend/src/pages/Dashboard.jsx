@@ -9,6 +9,7 @@ import { AskCard } from '../components/Assistant';
 import { WellnessCard } from '../components/Wellness';
 import { ProgressCard, TourWrapUp } from '../components/Progress';
 import Today from '../components/Today';
+import { HouseGuide } from '../components/House';
 import { SuppliesCard } from '../components/Everyday';
 import { useFeatures } from '../features';
 
@@ -117,6 +118,7 @@ export default function Dashboard({ user }) {
         </div>
       )}
       <Today onLogged={bump} />
+      <HouseGuide />
       <div className="lg:columns-2 gap-4">
         {order.filter((id) => !hidden.includes(id) && fits(id)).map((id) => (
           <div key={id} className="mb-4 break-inside-avoid empty:hidden">{card(id)}</div>

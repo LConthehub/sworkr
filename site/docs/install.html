@@ -110,6 +110,29 @@
 <ol id="steps"></ol>
 </div>
 
+<h2 id="terminal">New to the terminal?</h2>
+<p>A terminal is a window where you type a command and press Enter. You only need it for the setup-file way above; the zip with <em>Start sworkr</em> never asks for it. Three things cover everything on this page.</p>
+<p><strong>1. Open a terminal in your Sworkr folder.</strong></p>
+<ul>
+  <li><strong>Windows 11:</strong> open the folder in File Explorer, right-click an empty spot inside it, and choose <em>Open in Terminal</em>.</li>
+  <li><strong>Windows 10:</strong> open the folder, hold <kbd>Shift</kbd>, right-click an empty spot, and choose <em>Open PowerShell window here</em>. Or click the address bar at the top of the folder, type <code>powershell</code>, and press Enter.</li>
+  <li><strong>Mac:</strong> open the <em>Terminal</em> app (press <kbd>⌘</kbd> + <kbd>Space</kbd> and type "Terminal"), type <code>cd</code> and a space, drag the folder from Finder onto the window, and press Enter.</li>
+  <li><strong>Linux:</strong> right-click inside the folder in your file manager and choose <em>Open in Terminal</em>.</li>
+</ul>
+<p><strong>2. The two commands for folders.</strong> They're the same on Windows, Mac and Linux.</p>
+<ul>
+  <li><code>mkdir sworkr</code> makes a new folder called <em>sworkr</em> inside the folder you're in. ("mkdir" is short for "make directory"; a directory is a folder.)</li>
+  <li><code>cd sworkr</code> goes into it. ("cd" is "change directory".) <code>cd ..</code> goes back up one folder.</li>
+  <li>A folder name with a space needs quotes: <code>cd "My Stuff"</code>.</li>
+  <li>Lost? <code>pwd</code> shows the folder you're in. <code>ls</code> (Windows also takes <code>dir</code>) lists what's in it.</li>
+</ul>
+<p>So, starting from scratch, this makes a folder for Sworkr in Documents and goes into it:</p>
+<pre><code>cd Documents
+mkdir sworkr
+cd sworkr</code></pre>
+<p>Put your <code>docker-compose.yml</code> in that folder, and run the commands from the steps above there.</p>
+<p><strong>3. Good habits.</strong> Copy a command exactly and press Enter once. Nothing happens until you press Enter. If it prints an error, read the last line: it usually says what's wrong. You can't break your computer with the commands on this site.</p>
+
 <h2>Good to know</h2>
 <ul>
   <li>You need <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a> (Windows or Mac) or Docker on Linux. Don't want Docker? The <a href="/docs/getting-started.html">Windows app</a> needs nothing else.</li>

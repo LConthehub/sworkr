@@ -532,6 +532,17 @@ def _fill(api):
     _ok(api.post("/api/leaks", json={"found_on": day(-1).isoformat(), "site": "A tube site", "what": "The 5 minute video"}))
     _ok(api.put(f"/api/payouts/rules/{onlyfans}", json={"every": "weekly", "day": 4}))
 
+    # ---------- the house's own rules, and a bin it keeps ----------
+    ranch_id = next(p["id"] for p in _ok(api.get("/api/income-sources")) if p["name"] == "Cheryl's Ranch")
+    _ok(api.put(f"/api/income-sources/{ranch_id}/rules", json={
+        "outdates_allowed": True, "outdate_rules": "Two hours at least. The house keeps half. Sign out at the office.",
+        "shift_pattern": "varied", "shifts": [{"label": "Days", "start": "05:00", "end": "17:00"}, {"label": "Nights", "start": "17:00", "end": "05:00"}],
+        "storage_allowed": True, "storage_rules": "One bin with a lid. Kept 60 days, then $20 a month."}))
+    _ok(api.post("/api/bins", json={"label": "Blue tote", "source_id": ranch_id, "where_kept": "Storage room, top shelf",
+                                    "stored_on": day(-20).isoformat(),
+                                    "items": [{"label": "Heels", "quantity": 3}, {"label": "Curling iron"}, {"label": "Robe"},
+                                              {"label": "Makeup bag"}, {"label": "Sheets", "quantity": 2}]}))
+
     # ---------- the rate card ----------
     for label, minutes, price, notes in (("One hour", 60, 450, None), ("Dinner date", 120, 800, "Dinner is on you"),
                                          ("Extended evening", 240, 1400, None), ("Overnight", 720, 3200, "8pm to 8am"),

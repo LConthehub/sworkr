@@ -136,6 +136,8 @@ footer p { margin: .3rem 0; }
 .doc p, .doc li { font-size: 1.02rem; }
 .doc li { margin: .3rem 0; }
 .doc code { background: var(--blush); border: 1px solid var(--line); padding: .05rem .35rem; border-radius: .35rem; font-size: .9em; word-break: break-word; }
+.doc pre { background: #2c2030; color: #f2e7ee; border-radius: .6rem; padding: .8rem 1rem; overflow-x: auto; line-height: 1.6; }
+.doc pre code { background: none; border: 0; color: inherit; padding: 0; }
 .doc kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: .3rem; padding: 0 .35rem; font-size: .85em; background: #fff; color: var(--ink); }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .9rem; margin-top: 1.5rem; }
 .cards a { display: grid; gap: .3rem; padding: 1rem 1.1rem; border: 1px solid var(--line); border-radius: .9rem; text-decoration: none; color: var(--ink); background: #fff; }

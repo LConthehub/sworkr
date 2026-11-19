@@ -10,7 +10,7 @@ export default function ClientProfile({ clientId, onChanged }) {
     axios.get(`/api/clients/${clientId}/profile`).then(({ data }) => setP(data)).catch(() => {});
   }, [clientId]);
   if (!p) return null;
-  const filled = p.languages || p.translator || p.culture || p.talk_about || p.avoid || p.deceased;
+  const filled = p.languages || p.translator || p.culture || p.talk_about || p.avoid || p.deceased || p.outdates || p.outdate_notes;
   return (
     <div className="mt-4 rounded-xl border border-gray-100 p-3">
       <div className="flex items-center justify-between gap-2">
@@ -24,6 +24,7 @@ export default function ClientProfile({ clientId, onChanged }) {
           {p.culture && <><dt className="text-gray-500">Culture</dt><dd className="text-gray-800 whitespace-pre-wrap">{p.culture}</dd></>}
           {p.talk_about && <><dt className="text-gray-500">Talk about</dt><dd className="text-gray-800 whitespace-pre-wrap">{p.talk_about}</dd></>}
           {p.avoid && <><dt className="text-gray-500">Avoid</dt><dd className="text-gray-800 whitespace-pre-wrap">{p.avoid}</dd></>}
+          {(p.outdates || p.outdate_notes) && <><dt className="text-gray-500">Outdates</dt><dd className="text-gray-800 whitespace-pre-wrap">{p.outdates === 'yes' ? 'Yes' : p.outdates === 'no' ? 'No' : ''}{p.outdates && p.outdate_notes ? ': ' : ''}{p.outdate_notes}</dd></>}
         </dl>
       ) : (
         <p className="mt-1 text-xs text-gray-400">Languages, cultural practices, what to talk about and what to avoid.</p>
@@ -40,13 +41,14 @@ export default function ClientProfile({ clientId, onChanged }) {
 
 function ProfileForm({ clientId, profile, onSaved }) {
   const [form, setForm] = useState({ ...profile, languages: profile.languages || '', culture: profile.culture || '',
-    talk_about: profile.talk_about || '', avoid: profile.avoid || '', deceased_on: profile.deceased_on || '' });
+    talk_about: profile.talk_about || '', avoid: profile.avoid || '', deceased_on: profile.deceased_on || '',
+    outdates: profile.outdates || '', outdate_notes: profile.outdate_notes || '' });
   const [error, setError] = useState('');
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   const submit = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await axios.put(`/api/clients/${clientId}/profile`, { ...form, deceased_on: form.deceased && form.deceased_on ? form.deceased_on : null });
+      const { data } = await axios.put(`/api/clients/${clientId}/profile`, { ...form, outdates: form.outdates || null, deceased_on: form.deceased && form.deceased_on ? form.deceased_on : null });
       onSaved(data);
     } catch (err) {
       setError(errorMessage(err, "Couldn't save"));
@@ -61,6 +63,18 @@ function ProfileForm({ clientId, profile, onSaved }) {
       <Field label="Cultural practices to remember"><textarea rows={2} value={form.culture} onChange={set('culture')} placeholder="e.g. Shoes off indoors, doesn't drink, prays at sunset" className={inputClass} /></Field>
       <Field label="Good to talk about"><textarea rows={2} value={form.talk_about} onChange={set('talk_about')} placeholder="e.g. Football, their dog, travel" className={inputClass} /></Field>
       <Field label="Avoid"><textarea rows={2} value={form.avoid} onChange={set('avoid')} placeholder="e.g. Their work, their ex" className={inputClass} /></Field>
+      {(profile.outdates_possible || profile.outdates || profile.outdate_notes) && (
+        <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-3 border-t border-gray-100 pt-3">
+          <Field label="Outdates">
+            <select value={form.outdates} onChange={set('outdates')} className={inputClass}>
+              <option value="">Not asked</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </Field>
+          <Field label="About their outdates"><input value={form.outdate_notes} onChange={set('outdate_notes')} placeholder="e.g. Dinner in town, likes four hours" className={inputClass} /></Field>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-3 border-t border-gray-100 pt-3">
         <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={form.deceased} onChange={set('deceased')} /> Passed away</label>
         {form.deceased && <input type="date" value={form.deceased_on} onChange={set('deceased_on')} aria-label="When" className={`${inputClass} !w-auto`} />}
