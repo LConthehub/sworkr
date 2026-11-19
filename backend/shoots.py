@@ -472,6 +472,9 @@ def update_person(person_id: int, body: PersonIn, request: Request):
         person = _person(db, owner, person_id)
         db.execute("UPDATE shoot_people SET name = ?, contact_id = ?, role = ?, fee = ?, agreement = ?, id_checked = ?, release_signed = ?, "
                    "confirmed = ?, notes = ? WHERE id = ?", (*_person_values(db, owner, body), person_id))
+        # Unticking takes the date with it.
+        db.execute("UPDATE shoot_people SET id_checked_on = CASE WHEN id_checked = 1 THEN id_checked_on END, "
+                   "release_signed_on = CASE WHEN release_signed = 1 THEN release_signed_on END WHERE id = ?", (person_id,))
         db.commit()
         return _full(db, owner, person["shoot_id"])
     finally:
@@ -509,5 +512,96 @@ def pay_person(person_id: int, body: PayIn, request: Request):
         db.execute("UPDATE shoot_people SET fee = ?, expense_id = ? WHERE id = ?", (round(amount, 2), expense_id, person_id))
         db.commit()
         return _full(db, owner, person["shoot_id"])
+    finally:
+        db.close()
+
+
+# ==================== PAPERWORK ====================
+# Who needs what: anyone on camera needs their ID checked (that they're an adult) and a signed release; whoever
+# held the camera needs a release too, because the pictures are theirs until they sign them over.
+
+ON_CAMERA = ("co-star",)
+NEEDS_RELEASE = ("co-star", "photographer", "videographer")
+
+RELEASE_TEXT = """MODEL RELEASE
+
+Date of the shoot: ____________     Place: ____________
+
+I, ____________ (legal name), also known as ____________ (stage name), confirm that:
+
+1. I am 18 or older, and I showed a government photo ID today to prove it.
+2. I took part in this shoot freely, and agreed beforehand to everything that was filmed or photographed.
+3. I agree that ____________ may publish and sell the photos and videos from this shoot on these sites:
+   ____________________________________________
+4. We agreed to share the money like this: ____________________________________________
+5. If I ask for a piece to be taken down later, this is what we agreed: ____________________________________________
+
+Signed: ____________        Date: ____________
+Signed (the other person): ____________        Date: ____________
+
+A copy of each person's ID is kept with this release."""
+
+
+class PaperworkIn(BaseModel):
+    id_checked_on: Optional[date] = None        # the day you saw their ID
+    release_signed_on: Optional[date] = None    # the day the release was signed
+    records_kept: Optional[str] = None          # where the copies are, in your own words
+
+
+def _missing(p: dict) -> List[str]:
+    out = []
+    if p["role"] in ON_CAMERA and not p["id_checked"]:
+        out.append("ID check")
+    if p["role"] in NEEDS_RELEASE and not p["release_signed"]:
+        out.append("release")
+    if p["role"] in NEEDS_RELEASE and (p["id_checked"] or p["release_signed"]) and not p["records_kept"]:
+        out.append("where the copies are")
+    return out
+
+
+@router.put("/api/shoots/people/{person_id}/paperwork")
+def save_paperwork(person_id: int, body: PaperworkIn, request: Request):
+    """The dates and where the records are. A date ticks the box; no date unticks it."""
+    owner = _owner(request)
+    db = _get_db()
+    try:
+        person = _person(db, owner, person_id)
+        db.execute("UPDATE shoot_people SET id_checked_on = ?, id_checked = ?, release_signed_on = ?, release_signed = ?, records_kept = ? "
+                   "WHERE id = ?",
+                   (body.id_checked_on.isoformat() if body.id_checked_on else None, int(bool(body.id_checked_on)),
+                    body.release_signed_on.isoformat() if body.release_signed_on else None, int(bool(body.release_signed_on)),
+                    _clean(body.records_kept, 500), person_id))
+        db.commit()
+        return _full(db, owner, person["shoot_id"])
+    finally:
+        db.close()
+
+
+@router.get("/api/paperwork")
+def paperwork(request: Request):
+    """Everyone from every shoot who needs paperwork, the ones with something missing first."""
+    owner = _owner(request)
+    db = _get_db()
+    try:
+        people = []
+        for r in db.execute("""
+            SELECT p.*, c.display_name AS contact_name, s.title AS shoot_title, s.shoot_date, s.status AS shoot_status
+            FROM shoot_people p JOIN shoots s ON s.id = p.shoot_id LEFT JOIN clients c ON c.id = p.contact_id
+            WHERE p.owner_id = ? AND s.status != 'cancelled' ORDER BY s.shoot_date DESC, p.id
+        """, (owner,)):
+            d = dict(r)
+            if d["role"] not in NEEDS_RELEASE:
+                continue
+            people.append({
+                "id": d["id"], "shoot_id": d["shoot_id"], "shoot_title": d["shoot_title"], "shoot_date": d["shoot_date"],
+                "released": d["shoot_status"] == "released", "name": d["contact_name"] or d["name"] or "Someone", "role": d["role"],
+                "id_checked": bool(d["id_checked"]), "id_checked_on": d["id_checked_on"],
+                "release_signed": bool(d["release_signed"]), "release_signed_on": d["release_signed_on"],
+                "records_kept": d["records_kept"], "missing": _missing(d)})
+        people.sort(key=lambda p: (not p["missing"], not p["released"]))
+        return {"people": people, "incomplete": sum(1 for p in people if p["missing"]),
+                # Already out, with paperwork missing: the ones to fix first.
+                "released_incomplete": sum(1 for p in people if p["missing"] and p["released"]),
+                "release_text": RELEASE_TEXT}
     finally:
         db.close()

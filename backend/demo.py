@@ -520,6 +520,18 @@ def _fill(api):
     _ok(api.post(f"/api/shoots/{shoot['id']}/campaign"))
     _ok(api.post("/api/shoots", json={"title": "Beach day", "status": "idea", "concept": "Golden hour, the white set."}))
 
+    # ---------- an order that goes in the post, stolen content, and a payout day ----------
+    parcel = _ok(api.post("/api/customs", json={"source_id": onlyfans, "persona_id": kitty["id"], "buyer": "@collector", "title": "Signed print",
+                                                "price": 35, "status": "to_make", "requested_at": at(-2, 18)}))
+    _ok(api.post(f"/api/customs/{parcel['id']}/payment", json={"amount": 35, "log_income": False}))
+    _ok(api.put(f"/api/customs/{parcel['id']}/shipping", json={"is_item": True, "packed_on": day(0).isoformat()}))
+    _ok(api.put("/api/leaks/settings", json={"sign_as": "K. Kam Media", "contact": "takedowns@example.com"}))
+    leak = _ok(api.post("/api/leaks", json={"found_on": day(-16).isoformat(), "site": "A leak forum", "url": "https://forum.example/thread/123",
+                                            "what": "The red lace set, 12 photos", "original_url": "https://fans.example/kittykam"}))
+    _ok(api.post(f"/api/leaks/{leak['id']}/status", json={"status": "sent", "on": day(-14).isoformat(), "sent_to": "The forum's copyright form"}))
+    _ok(api.post("/api/leaks", json={"found_on": day(-1).isoformat(), "site": "A tube site", "what": "The 5 minute video"}))
+    _ok(api.put(f"/api/payouts/rules/{onlyfans}", json={"every": "weekly", "day": 4}))
+
     # ---------- the rate card ----------
     for label, minutes, price, notes in (("One hour", 60, 450, None), ("Dinner date", 120, 800, "Dinner is on you"),
                                          ("Extended evening", 240, 1400, None), ("Overnight", 720, 3200, "8pm to 8am"),

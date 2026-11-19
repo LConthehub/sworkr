@@ -99,6 +99,10 @@ PAGES = [
 </ul>
 <p><strong>What this does not do:</strong> protect against someone who can use your computer while you're signed in. Disk encryption, a locked computer account and discreet mode matter too.</p>
 
+<h2>Decoy password</h2>
+<p><em>Settings → Security &amp; privacy → Decoy password</em> sets a second password for the moment someone makes you unlock Sworkr: a border check, a search, someone standing over you. Type it instead of your real one and Sworkr opens a separate account, under the same username, with none of your records in it. Log in with it once beforehand and add a few plain things, so it doesn't look unused.</p>
+<p>If the decoy password is ever used, your real account's sign-in history says so. <strong>What it doesn't do:</strong> hide your records from someone who takes the computer Sworkr runs on and has its key. It protects against someone looking at the screen.</p>
+
 <h2>Discreet mode</h2>
 <p><em>Settings → Security &amp; privacy → Discreet mode</em> gives the browser tab a plain name like "Notes" and adds a panic switch: press <kbd>Esc</kbd> three times, or tap <em>Hide</em> at the top on a phone, to hide Sworkr and sign out.</p>
 
@@ -345,6 +349,7 @@ PAGES = [
 
 <h2>Pay you haven't received yet</h2>
 <p>On <em>Income &amp; expenses</em>, <strong>Not paid out to you yet</strong> shows what each workplace owes you. When they pay, press <em>Paid out</em> and say how: it marks everything received.</p>
+<p><em>Money → Payouts</em> is the calendar for that money. Tell Sworkr when each place pays (every Friday, the 1st and 15th, a day of the month, or so many days after you earn it) and everything pending gets the day it should land, with late ones marked.</p>
 
 <h2>How it was paid</h2>
 <p>Every income entry can say how it was paid: cash, bank transfer, check, a payment app. It shows in the list and in your records.</p>
@@ -375,6 +380,7 @@ PAGES = [
 
 <h2>Taxes</h2>
 <p><em>Money → Taxes</em> adds up the year: income by kind, fees, expenses by category, your profit, mileage and estimated payments, with quarterly due dates and reminders. <strong>Download as CSV</strong> gives your accountant a spreadsheet; <em>Print or save as PDF</em> gives a page. Sworkr adds up your records. It isn't tax advice.</p>
+<p><strong>Tax forms from platforms:</strong> at the bottom of <em>Money → Taxes</em>, type in the amount on each form a platform sent you (a 1099 in the US). Sworkr puts it next to what you recorded for that place and says whether they match, so you find a gap before the tax office does.</p>
 <p>Keep a <strong>license or work card</strong> under <em>Settings → My work → Licenses &amp; documents</em>, tied to a workplace if it's for one, and when you renew it press <em>Renewed</em> to move the date and log what you paid under Fees &amp; licenses.</p>
 """),
 
@@ -404,6 +410,13 @@ PAGES = [
 
 <h2>Customs</h2>
 <p><em>Content → Customs</em> follows made-to-order content from request to delivery: who asked, what they want, the price, what's paid, when it's due. <em>Got paid</em> adds the payment to your income as a sale (minus the platform's fee) and says how it was paid. Sworkr flags customs being made before they're fully paid for, and late ones. <em>Your menu</em> keeps your usual prices and copies as text.</p>
+<p>Selling something that goes in the post? Press <em>By post?</em> on the order. It then tracks packed, posted, the carrier and the tracking number, and shows what's paid for and still waiting to be sent. Use a PO box or a mail service as the return address, never your home.</p>
+
+<h2>Paperwork</h2>
+<p><em>Content → Protect</em> lists everyone from your shoots who needs paperwork: co-stars need their ID checked and a signed release, and whoever held the camera needs a release too. Tap a name to set the dates and where you keep the copies. Sworkr keeps the dates only, never the ID. People in content that's already out, with something missing, are flagged first. <em>Copy a blank release</em> gives you a starting point to print.</p>
+
+<h2>Stolen content</h2>
+<p>Also under <em>Content → Protect</em>: when your content turns up somewhere it shouldn't be, press <em>Found one</em> and note the site and the link. <em>Write the notice</em> gives you a copyright takedown notice to copy and send yourself; Sworkr never contacts anyone. Then follow it: sent, gone, refused, or back again. A notice with no answer after 10 days is marked to chase. A notice normally needs a real name or an agent's, so someone you trust or a takedown service can send it for you.</p>
 """),
 
 ("health-and-safety", "Health & safety", "Health &amp; safety", """

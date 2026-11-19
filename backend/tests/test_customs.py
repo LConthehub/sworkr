@@ -98,7 +98,7 @@ def test_the_list_counts_what_needs_attention(api):
 
     data = ok(api.get("/api/customs"))
     assert [o["title"] for o in data["orders"]] == ["Late and paid", "Started unpaid", "Just asked"]     # soonest due first
-    assert data["attention"] == {"to_make": 2, "late": 1, "not_paid": 1, "paid_waiting": 100, "to_answer": 1}
+    assert data["attention"] == {"to_make": 2, "late": 1, "not_paid": 1, "paid_waiting": 100, "to_answer": 1, "to_post": 0}
     assert data["orders"][0]["late"] is True and ok(api.get("/api/income")) == []
     assert [o["title"] for o in ok(api.get("/api/customs", params={"show": "delivered"}))["orders"]] == ["Sent"]
     assert [o["title"] for o in ok(api.get("/api/customs", params={"show": "declined"}))["orders"]] == ["No thanks"]

@@ -6,6 +6,7 @@ import { PersonaSelect } from '../components/Personas';
 import { Campaigns, Toolkit, useCampaigns, usePlaces, useSnippets } from '../components/Promo';
 import Listings from '../components/Listings';
 import Customs from '../components/Customs';
+import Protect from '../components/Protect';
 import Social, { PublishButtons, useSocialAccounts } from '../components/Social';
 import { useFeatures } from '../features';
 import { dayLabel, formatTime, fromDateTimeInputs, money, repeatDates, toDateInput, toTimeInput } from '../colors';
@@ -30,8 +31,8 @@ const thumbUrl = (path, size = 256) => `/api/content/thumbnail?path=${encodeURIC
 const whenText = (iso) => (iso ? `${dayLabel(new Date(iso), { weekday: 'short', month: 'short', day: 'numeric' })}, ${formatTime(new Date(iso))}` : 'No time set');
 
 // Four sections. Each address still works; several lead to the same section.
-const SECTIONS = [['library', '/content', 'Library'], ['promote', '/content/campaigns', 'Promote'], ['customs', '/content/customs', 'Customs'], ['social', '/content/social', 'Social']];
-const SECTION_OF = { campaigns: 'promote', promote: 'promote', ads: 'promote', toolkit: 'promote', customs: 'customs', social: 'social' };
+const SECTIONS = [['library', '/content', 'Library'], ['promote', '/content/campaigns', 'Promote'], ['customs', '/content/customs', 'Customs'], ['social', '/content/social', 'Social'], ['protect', '/content/protect', 'Protect']];
+const SECTION_OF = { campaigns: 'promote', promote: 'promote', ads: 'promote', toolkit: 'promote', customs: 'customs', social: 'social', protect: 'protect' };
 
 /** The two halves of a section, as a small switch under the main tabs. */
 function Switch({ label, options }) {
@@ -79,6 +80,7 @@ export default function Content() {
             )
               : section === 'customs' ? <Customs />
                 : section === 'social' ? <Social />
+                : section === 'protect' ? <Protect />
                 : <Library onPlan={plan} version={version} />}
       {modal && (
         <Modal title={modal.post.id ? 'Edit post' : 'Plan a post'} onClose={() => setModal(null)} wide>

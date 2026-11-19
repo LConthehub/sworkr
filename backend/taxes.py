@@ -407,3 +407,83 @@ def set_rate(year: int, body: RateIn, request: Request):
         return mileage_for_year(db, owner, year)
     finally:
         db.close()
+
+
+# ==================== PLATFORM TAX FORMS ====================
+# A platform's form (a 1099 in the US) says what it reported paying you. This puts that next to what you
+# recorded for the same place and year, so a gap is found before the tax office finds it.
+
+class FormIn(BaseModel):
+    year: int
+    source_id: Optional[int] = None
+    label: Optional[str] = None       # the form's name, or the payer when it isn't one of your places
+    amount: float
+
+
+@router.get("/forms")
+def list_forms(request: Request, year: int = Query(..., ge=2000, le=2100), tz_offset: int = Query(0, ge=-840, le=840)):
+    owner = request.state.user["id"]
+    start, end = _year_bounds(year, tz_offset)
+    db = _get_db()
+    try:
+        recorded = {r["source_id"]: (r["gross"] or 0, r["net"] or 0) for r in db.execute(
+            "SELECT source_id, SUM(gross) AS gross, SUM(gross - fees) AS net FROM income "
+            "WHERE owner_id = ? AND date >= ? AND date < ? AND source_id IS NOT NULL GROUP BY source_id", (owner, start, end))}
+        out = []
+        for r in db.execute("SELECT f.*, s.name AS source_name FROM tax_forms f LEFT JOIN income_sources s ON s.id = f.source_id "
+                            "WHERE f.owner_id = ? AND f.year = ? ORDER BY f.id", (owner, year)):
+            d = dict(r)
+            gross, net = recorded.get(d["source_id"], (0, 0)) if d["source_id"] else (None, None)
+            d["recorded_gross"] = round(gross, 2) if gross is not None else None
+            d["recorded_net"] = round(net, 2) if net is not None else None
+            if gross is None:
+                d["verdict"], d["gap"] = "no_place", None
+            else:
+                # Forms differ: some report everything customers paid (before the platform's cut), some what was paid out.
+                gap_gross, gap_net = round(d["amount"] - gross, 2), round(d["amount"] - net, 2)
+                d["gap"] = gap_gross if abs(gap_gross) <= abs(gap_net) else gap_net
+                d["matches"] = "before fees" if abs(gap_gross) <= abs(gap_net) else "after fees"
+                d["verdict"] = "match" if abs(d["gap"]) <= max(1.0, d["amount"] * 0.01) else "form_higher" if d["gap"] > 0 else "form_lower"
+            out.append(d)
+        with_form = {d["source_id"] for d in out if d["source_id"]}
+        names = {r["id"]: r["name"] for r in db.execute("SELECT id, name FROM income_sources WHERE owner_id = ?", (owner,))}
+        return {"year": year, "forms": out,
+                # Places that paid you this year and have no form entered yet.
+                "without_form": [{"source_id": sid, "name": names.get(sid, "?"), "recorded_gross": round(g, 2)}
+                                 for sid, (g, _) in sorted(recorded.items(), key=lambda kv: -kv[1][0]) if sid not in with_form and g > 0]}
+    finally:
+        db.close()
+
+
+@router.post("/forms", status_code=201)
+def add_form(body: FormIn, request: Request):
+    if not 2000 <= body.year <= 2100:
+        raise HTTPException(status_code=400, detail="Choose a year")
+    if not 0 <= body.amount < 1e9:
+        raise HTTPException(status_code=400, detail="Enter the amount on the form")
+    label = (body.label or "").strip()[:120] or None
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        if body.source_id is not None and not db.execute(
+                "SELECT 1 FROM income_sources WHERE id = ? AND owner_id = ?", (body.source_id, owner)).fetchone():
+            raise HTTPException(status_code=400, detail="That place doesn't exist")
+        if body.source_id is None and not label:
+            raise HTTPException(status_code=400, detail="Choose the place, or say who the form is from")
+        cur = db.execute("INSERT INTO tax_forms (owner_id, year, source_id, label, amount, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                         (owner, body.year, body.source_id, label, round(body.amount, 2),
+                          datetime.now(timezone.utc).isoformat(timespec="seconds")))
+        db.commit()
+        return dict(db.execute("SELECT * FROM tax_forms WHERE id = ?", (cur.lastrowid,)).fetchone())
+    finally:
+        db.close()
+
+
+@router.delete("/forms/{form_id}", status_code=204)
+def delete_form(form_id: int, request: Request):
+    db = _get_db()
+    try:
+        db.execute("DELETE FROM tax_forms WHERE id = ? AND owner_id = ?", (form_id, request.state.user["id"]))
+        db.commit()
+    finally:
+        db.close()

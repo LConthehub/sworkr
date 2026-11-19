@@ -49,7 +49,7 @@ def ask_new_secret(what: str, minimum: int) -> str:
 
 def list_users(args):
     db = connect()
-    rows = db.execute("SELECT id, username, is_admin, created_at FROM users ORDER BY id").fetchall()
+    rows = db.execute("SELECT id, username, is_admin, created_at FROM users WHERE username NOT LIKE '~%' ORDER BY id").fetchall()
     if not rows:
         print("No accounts yet. Open sworkr in the browser to create the first one.")
     for r in rows:
@@ -58,7 +58,7 @@ def list_users(args):
 
 def reset_password(args):
     db = connect()
-    users = db.execute("SELECT id, username FROM users ORDER BY id").fetchall()
+    users = db.execute("SELECT id, username FROM users WHERE username NOT LIKE '~%' ORDER BY id").fetchall()
     if not users:
         sys.exit("No accounts yet. Open sworkr in the browser to create the first one.")
     username = (args.username or "").strip().lower()

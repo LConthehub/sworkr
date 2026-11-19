@@ -15,6 +15,7 @@ import { AssistantSettings } from '../components/Assistant';
 import { WellnessSettings } from '../components/Wellness';
 import { ProgressSettings } from '../components/Progress';
 import { Incidents, PrivacyCheckup } from '../components/Everyday';
+import DecoyPassword from '../components/Decoy';
 import HomeScreenSettings from '../components/HomeScreen';
 import { NutritionSettings } from '../components/MealPlanner';
 import { reloadFeatures } from '../features';
@@ -119,6 +120,10 @@ const GROUPS = [
             <DiscreetSettings />
           </Section>
         ),
+      },
+      {
+        id: 'decoy', noDemo: true, title: 'Decoy password', words: 'decoy duress second password forced unlock border search hide panic fake',
+        render: () => <Section title="Decoy password" hint="A second password that opens a harmless account, for when someone makes you unlock Sworkr."><DecoyPassword /></Section>,
       },
       {
         id: 'checkup', title: 'Privacy check-up', words: 'privacy checklist check-up work phone location photos data brokers',

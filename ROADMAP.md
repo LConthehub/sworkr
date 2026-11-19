@@ -72,6 +72,14 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   (Nye and Lyon are covered by the Nevada house set: the owner confirmed what's there is fine.)
 
 ## Done 2026-11-19
+- Content > Protect: paperwork for everyone on camera or behind it (ID check and release dates, where the copies
+  are, a blank release to copy), and stolen content with a takedown notice to copy and a chase after 10 days.
+- Decoy password (Settings > Security & privacy): a second password opens a separate, harmless account under the
+  same username; the real account's sign-in history notes when it was used.
+- Money > Payouts: a payout day for each place, and pending money on the day it should land.
+- Money > Taxes: platform tax forms checked against what was recorded.
+- Customs: orders that go in the post (packed, posted, carrier, tracking).
+- Clip stores are a starter platform for content creators as well as fetish work.
 - "Wellness log" is now "Daily check-in"; Supplies is a dashboard card of its own.
 - Quick fixes: auto log-out 5 min choice and 15 min default; no sign-in history on the demo; supplies starters.
 - Settings regrouped (Money and Safety groups; tests under Health; backups first).

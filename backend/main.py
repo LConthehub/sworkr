@@ -45,6 +45,9 @@ import routines
 import rides
 import assistant
 import wellness
+import leaks
+import payouts
+import decoy
 import bank
 import progress
 import worklog
@@ -607,7 +610,7 @@ def auth_login(creds: Credentials, request: Request, response: Response, db: DbD
     user = auth.check_login(db, username, creds.password)
     # "Passkeys only away from home": from the internet, even the right password is answered exactly like a wrong
     # one, so a guesser learns nothing, not even that they guessed it.
-    blocked = bool(user) and access.password_blocked(db, user["id"], request)
+    blocked = bool(user) and access.password_blocked(db, user.get("decoy_of") or user["id"], request)
     if not user or blocked:
         known = user or db.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
         if known:
@@ -623,6 +626,9 @@ def auth_login(creds: Credentials, request: Request, response: Response, db: DbD
     if signin.two_step_on(db, user["id"]):
         # The password was right; the session waits for the code (POST /api/auth/login/code).
         return signin.start_login_code(db, user)
+    if user.get("decoy_of"):
+        # The decoy password was used: the real account's history keeps a note of it.
+        access.record(db, user["decoy_of"], "decoy", "password", request)
     access.sign_in(db, user["id"], request, response, "password")
     return {"id": user["id"], "username": user["username"], "is_admin": bool(user["is_admin"])}
 
@@ -640,7 +646,8 @@ def auth_change_password(body: PasswordChange, request: Request, db: DbDep):
         raise HTTPException(status_code=403, detail="Changing the password is turned off in the demo, so everyone can keep logging in.")
     if len(body.new_password) < auth.MIN_PASSWORD_LENGTH:
         raise HTTPException(status_code=400, detail=f"Password must be at least {auth.MIN_PASSWORD_LENGTH} characters")
-    if not auth.check_login(db, user["username"], body.current_password):
+    found = auth.check_login(db, user["username"], body.current_password)
+    if not found or found["id"] != user["id"]:
         raise HTTPException(status_code=400, detail="Current password is wrong")
     db.execute("UPDATE users SET password_hash = ? WHERE id = ?", (auth.hash_password(body.new_password), user["id"]))
     db.commit()
@@ -727,7 +734,7 @@ def list_users(admin: AdminDep, db: DbDep):
              "clients": r["clients"]}
             for r in db.execute("""
                 SELECT u.*, (SELECT COUNT(*) FROM clients c WHERE c.owner_id = u.id) AS clients
-                FROM users u ORDER BY u.id
+                FROM users u WHERE u.id NOT IN (SELECT decoy_user_id FROM decoys) ORDER BY u.id
             """)]
 
 
@@ -766,7 +773,18 @@ def delete_user(user_id: int, admin: AdminDep, db: DbDep):
         raise HTTPException(status_code=400, detail="You can't delete the account you're logged in with")
     if not db.execute("SELECT 1 FROM users WHERE id = ?", (user_id,)).fetchone():
         raise HTTPException(status_code=404, detail="User not found")
-    appointment_ids = [r[0] for r in db.execute("SELECT id FROM appointments WHERE owner_id = ?", (user_id,))]
+    appointment_ids = remove_user(db, user_id)
+    db.commit()
+    for appointment_id in appointment_ids:
+        calendar_sync.queue_appointment(appointment_id)
+
+
+def remove_user(db, user_id: int) -> List[int]:
+    """Delete a login, its decoy if it has one, and everything that belongs to them. The caller commits.
+    Returns the ids of the bookings that went, for the calendar sync."""
+    decoy_row = db.execute("SELECT decoy_user_id FROM decoys WHERE user_id = ?", (user_id,)).fetchone()
+    appointment_ids = remove_user(db, decoy_row["decoy_user_id"]) if decoy_row else []
+    appointment_ids += [r[0] for r in db.execute("SELECT id FROM appointments WHERE owner_id = ?", (user_id,))]
     db.execute("DELETE FROM appointments WHERE owner_id = ?", (user_id,))
     db.execute("DELETE FROM expenses WHERE owner_id = ?", (user_id,))
     db.execute("DELETE FROM tours WHERE owner_id = ?", (user_id,))
@@ -779,9 +797,7 @@ def delete_user(user_id: int, admin: AdminDep, db: DbDep):
     db.execute("DELETE FROM user_settings WHERE user_id = ?", (user_id,))
     db.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
     db.execute("DELETE FROM users WHERE id = ?", (user_id,))
-    db.commit()
-    for appointment_id in appointment_ids:
-        calendar_sync.queue_appointment(appointment_id)
+    return appointment_ids
 
 
 # ==================== CLIENTS ====================
@@ -2299,6 +2315,9 @@ app.include_router(everyday.router)
 app.include_router(branding.router)
 app.include_router(meals.router)
 app.include_router(calendar_dates.router)
+app.include_router(leaks.router)
+app.include_router(payouts.router)
+app.include_router(decoy.router)
 app.include_router(marketing.router)
 app.include_router(campaigns.router)
 app.include_router(inquiries.router)
@@ -2342,6 +2361,9 @@ everyday.setup(get_db)
 branding.setup(get_db)
 meals.setup(get_db)
 calendar_dates.setup(get_db)
+leaks.setup(get_db)
+payouts.setup(get_db)
+decoy.setup(get_db, remove_user, lambda: demo.ENABLED)
 marketing.setup(get_db)
 campaigns.setup(get_db)
 inquiries.setup(get_db)

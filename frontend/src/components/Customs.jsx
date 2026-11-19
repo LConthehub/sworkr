@@ -74,12 +74,13 @@ export default function Customs() {
         <p className="text-xs text-gray-500 mb-3">
           Custom photos and videos people order from you. Taking a payment here adds it to your income as a sale, with the platform's fee taken off.
         </p>
-        {(a.to_make > 0 || a.to_answer > 0) && (
+        {(a.to_make > 0 || a.to_answer > 0 || a.to_post > 0) && (
           <p className="text-sm text-gray-700 mb-3">
             {a.to_make > 0 && <><b>{a.to_make}</b> to make{a.paid_waiting > 0 && ` (${money(a.paid_waiting)} already paid for)`}. </>}
             {a.late > 0 && <span className="text-red-600">{a.late} late. </span>}
             {a.not_paid > 0 && <span className="text-red-600">{a.not_paid} not fully paid: get paid before you film. </span>}
-            {a.to_answer > 0 && <>{a.to_answer} to answer.</>}
+            {a.to_answer > 0 && <>{a.to_answer} to answer. </>}
+            {a.to_post > 0 && <>{a.to_post} paid for and waiting to be posted.</>}
           </p>
         )}
         {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
@@ -95,6 +96,7 @@ export default function Customs() {
                     <span className={`text-[10px] px-2 py-0.5 rounded-full ${STATUS[o.status].badge}`}>{STATUS[o.status].label}</span>
                     {PAYMENT[o.payment] && o.status !== 'declined' && <span className={`text-[10px] px-2 py-0.5 rounded-full ${PAYMENT[o.payment].badge}`}>{PAYMENT[o.payment].label}</span>}
                     {o.can_resell && <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Can resell</span>}
+                    {o.is_item && <span className={`text-[10px] px-2 py-0.5 rounded-full ${o.to_post ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'}`}>{o.posted_on ? 'Posted' : o.to_post ? (o.packed_on ? 'Packed, to post' : 'To pack and post') : 'By post'}</span>}
                   </span>
                   <span className="block text-xs text-gray-500">
                     {o.buyer}{o.source_name && ` · ${o.source_name}`}
@@ -108,7 +110,8 @@ export default function Customs() {
                 <span className="flex flex-wrap gap-2 shrink-0">
                   {o.status === 'requested' && <button onClick={() => move(o, 'quoted')} className={quietButtonClass}>Quoted</button>}
                   {o.status !== 'declined' && o.payment !== 'paid' && <button onClick={() => setModal({ pay: o })} className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Got paid</button>}
-                  {o.status === 'to_make' && <button onClick={() => setModal({ deliver: o })} className="text-xs px-2.5 py-1.5 rounded-lg bg-sworkr-500 text-white hover:bg-sworkr-600">Delivered</button>}
+                  {o.status === 'to_make' && !o.is_item && <button onClick={() => setModal({ deliver: o })} className="text-xs px-2.5 py-1.5 rounded-lg bg-sworkr-500 text-white hover:bg-sworkr-600">Delivered</button>}
+                  {o.status !== 'declined' && <button onClick={() => setModal({ ship: o })} className={o.is_item && o.status === 'to_make' ? 'text-xs px-2.5 py-1.5 rounded-lg bg-sworkr-500 text-white hover:bg-sworkr-600' : quietButtonClass}>{o.is_item ? (o.posted_on ? 'Tracking' : 'Pack & post') : 'By post?'}</button>}
                   {(o.status === 'requested' || o.status === 'quoted') && <button onClick={() => move(o, 'declined')} className={quietButtonClass}>Decline</button>}
                   {o.status === 'declined' && <button onClick={() => move(o, 'requested')} className={quietButtonClass}>Reopen</button>}
                 </span>
@@ -182,6 +185,11 @@ export default function Customs() {
           <DeliverForm order={modal.deliver} onDone={done} />
         </Modal>
       )}
+      {modal?.ship && (
+        <Modal title={`By post: ${modal.ship.title}`} onClose={() => setModal(null)}>
+          <ShipForm order={modal.ship} onDone={done} />
+        </Modal>
+      )}
       {modal?.menu && (
         <Modal title={modal.menu.id ? 'Edit menu item' : 'Add to your menu'} onClose={() => setModal(null)}>
           <MenuForm item={modal.menu} onDone={done} />
@@ -253,6 +261,57 @@ function DeliverForm({ order, onDone }) {
       <Field label="How you sent it (optional)"><input autoFocus value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. DM on OF, private link" className={inputClass} /></Field>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex justify-end"><button type="submit" className={buttonClass}>Mark as delivered</button></div>
+    </form>
+  );
+}
+
+/** An order that goes in the post: packed, posted, carrier and tracking. */
+function ShipForm({ order, onDone }) {
+  const [form, setForm] = useState({
+    is_item: true, packed_on: order.packed_on || '', posted_on: order.posted_on || '', carrier: order.carrier || '', tracking: order.tracking || '',
+  });
+  const [error, setError] = useState('');
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const today = toDateInput(new Date());
+  const save = async (body) => {
+    try {
+      await axios.put(`/api/customs/${order.id}/shipping`, { ...body, packed_on: body.packed_on || null, posted_on: body.posted_on || null });
+      onDone();
+    } catch (err) {
+      setError(errorMessage(err, 'Could not save'));
+    }
+  };
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); save(form); }} className="space-y-3">
+      {order.owed > 0 && (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
+          {money(order.owed)} of this hasn't been paid yet. Get paid before it goes in the post.
+        </p>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Packed on">
+          <input type="date" value={form.packed_on} onChange={set('packed_on')} className={inputClass} />
+          {!form.packed_on && <button type="button" onClick={() => setForm({ ...form, packed_on: today })} className="mt-1 text-xs text-sworkr-600">Today</button>}
+        </Field>
+        <Field label="Posted on">
+          <input type="date" value={form.posted_on} onChange={set('posted_on')} className={inputClass} />
+          {!form.posted_on && <button type="button" onClick={() => setForm({ ...form, posted_on: today })} className="mt-1 text-xs text-sworkr-600">Today</button>}
+        </Field>
+        <Field label="Carrier"><input list="order-carriers" value={form.carrier} onChange={set('carrier')} className={inputClass} />
+          <datalist id="order-carriers">{['USPS', 'UPS', 'FedEx', 'DHL', 'Royal Mail', 'Canada Post', 'Australia Post'].map((c) => <option key={c} value={c} />)}</datalist>
+        </Field>
+        <Field label="Tracking number"><input value={form.tracking} onChange={set('tracking')} className={inputClass} /></Field>
+      </div>
+      <ul className="text-xs text-gray-500 list-disc pl-5 space-y-1">
+        <li>Never put your home address on the parcel. Use a PO box or a mail service as the return address, and a name that isn't your legal one.</li>
+        <li>Buy the label online if you can, so your face isn't at a counter with it.</li>
+        <li>Setting a posted date marks the order as delivered.</li>
+      </ul>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="flex items-center justify-between">
+        {order.is_item && !order.posted_on ? <button type="button" onClick={() => save({ is_item: false })} className="text-sm text-gray-500 hover:text-gray-700">Not by post after all</button> : <span />}
+        <button type="submit" className={buttonClass}>Save</button>
+      </div>
     </form>
   );
 }

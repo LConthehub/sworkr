@@ -4,6 +4,7 @@ import { errorMessage, quietButtonClass } from '../components/Modal';
 import { money } from '../colors';
 import QuarterlyTaxes from '../components/QuarterlyTaxes';
 import Mileage from '../components/Mileage';
+import TaxForms from '../components/TaxForms';
 
 const PERCENT_KEY = 'sworkr:set-aside-percent';
 const readPercent = () => { try { return localStorage.getItem(PERCENT_KEY) ?? ''; } catch { return ''; } };
@@ -123,6 +124,8 @@ export default function TaxSummary({ year, setYear }) {
           <QuarterlyTaxes year={year} percent={percent} />
 
           <Mileage year={year} onChanged={() => setReload((n) => n + 1)} />
+
+          <TaxForms year={year} />
 
           <p className="text-xs text-gray-500 max-w-xl">
             Your part only: shares you pay partners are left out. Gifts count at what they're worth, with a house's share of

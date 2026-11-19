@@ -81,7 +81,7 @@ def test_demo_reset_builds_a_complete_sample():
     assert out["clients_kept_phones"] >= 5            # adding personas kept the contacts' details
     assert out["stay"] == [True, True, "Cheryl's Ranch"]
     assert out["arrangements"] == ["Robert"] and out["documents"] == 3 and out["miles"] > 0
-    assert out["marketing"] == [2, 7, 3, 4, 2, 5]      # campaigns (one made from the shoot), inquiries, ads, customs, shoots, menu
+    assert out["marketing"] == [2, 7, 3, 5, 2, 5]      # campaigns (one made from the shoot), inquiries, ads, customs (one by post), shoots, menu
     assert "Tryst" in out["found_via"] and "Referral" in out["found_via"]
     assert ["Two-week panel", 14] in out["test_kinds"]
 

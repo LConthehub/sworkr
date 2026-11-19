@@ -105,6 +105,9 @@ def _row(r, today: date) -> dict:
     d["payment"] = "none" if price is None and not paid else "paid" if price is None or paid >= price else "part" if paid > 0 else "unpaid"
     d["days_left"] = (date.fromisoformat(d["due_date"]) - today).days if d["due_date"] else None
     d["late"] = d["status"] in OPEN and d["days_left"] is not None and d["days_left"] < 0
+    d["is_item"] = bool(d["is_item"])
+    # Paid for and not yet in the post: the parcel that's waiting on you.
+    d["to_post"] = d["is_item"] and d["status"] in OPEN and not d["posted_on"] and d["payment"] in ("paid", "none")
     return d
 
 
@@ -172,7 +175,38 @@ def list_orders(request: Request, show: str = Query("open", description="open, d
         "to_make": len(making), "late": sum(o["late"] for o in open_orders),
         "not_paid": sum(o["payment"] in ("unpaid", "part") for o in making),       # being made before it's paid for
         "paid_waiting": round(sum(o["amount_paid"] or 0 for o in making), 2),        # money taken for work not yet delivered
-        "to_answer": sum(o["status"] == "requested" for o in open_orders)}}
+        "to_answer": sum(o["status"] == "requested" for o in open_orders),
+        "to_post": sum(o["to_post"] for o in open_orders)}}
+
+
+class ShippingIn(BaseModel):
+    is_item: bool = True                  # something that goes in the post, not a file
+    packed_on: Optional[date] = None
+    posted_on: Optional[date] = None
+    carrier: Optional[str] = None
+    tracking: Optional[str] = None
+
+
+@router.put("/api/customs/{order_id}/shipping")
+def save_shipping(order_id: int, body: ShippingIn, request: Request):
+    """Packed, posted, carrier and tracking. Posting an order that's being made marks it delivered."""
+    owner = _owner(request)
+    db = _get_db()
+    try:
+        order = _need(db, order_id, owner)
+        posted = body.posted_on.isoformat() if body.posted_on and body.is_item else None
+        packed = body.packed_on.isoformat() if body.is_item and body.packed_on else posted
+        carrier, tracking = _clean(body.carrier, 80), _clean(body.tracking, 120)
+        db.execute("UPDATE custom_orders SET is_item = ?, packed_on = ?, posted_on = ?, carrier = ?, tracking = ?, updated_at = ? "
+                   "WHERE id = ? AND owner_id = ?", (int(body.is_item), packed, posted, carrier, tracking, _now(), order_id, owner))
+        if posted and not order["posted_on"] and order["status"] in OPEN:
+            note = " ".join(x for x in ("Posted", f"with {carrier}" if carrier else "", f"({tracking})" if tracking else "") if x)
+            db.execute("UPDATE custom_orders SET status = 'delivered', delivered_at = ?, delivery_note = COALESCE(delivery_note, ?) "
+                       "WHERE id = ?", (posted + "T12:00:00+00:00", note, order_id))
+        db.commit()
+        return _get(db, order_id, owner)
+    finally:
+        db.close()
 
 
 @router.post("/api/customs", status_code=201)

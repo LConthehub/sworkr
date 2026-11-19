@@ -332,6 +332,7 @@ const OUTCOMES = {
   wrong_password: 'Wrong password',
   wrong_code: 'Wrong code',
   password_off: 'Password refused (passkeys only)',
+  decoy: 'The decoy password was used',
 };
 
 /** Where this account is signed in, and what has happened at the front door lately. */

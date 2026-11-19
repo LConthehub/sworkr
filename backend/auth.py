@@ -52,12 +52,24 @@ def verify_password(password: str, stored: str) -> bool:
 _DUMMY_HASH = hash_password(secrets.token_hex(8))
 
 
+DECOY_PREFIX = "~decoy-"      # the hidden internal name of a decoy account (see decoy.py); never a name anyone can type
+
+
 def check_login(db, username: str, password: str) -> Optional[dict]:
-    row = db.execute("SELECT * FROM users WHERE username = ?", (username.strip().lower(),)).fetchone()
-    if not row:
-        verify_password(password, _DUMMY_HASH)
-        return None
-    return dict(row) if verify_password(password, row["password_hash"]) else None
+    """The account a username and password open, or None. A decoy password opens that person's decoy account,
+    shown under the same username (with "decoy_of" set to the real account's id). The password is always checked
+    twice, against the real account and the decoy (or a dummy), so the time taken says nothing about either."""
+    name = username.strip().lower()
+    row = None if name.startswith(DECOY_PREFIX) else db.execute("SELECT * FROM users WHERE username = ?", (name,)).fetchone()
+    decoy = db.execute("SELECT u.* FROM decoys d JOIN users u ON u.id = d.decoy_user_id WHERE d.user_id = ?",
+                       (row["id"],)).fetchone() if row else None
+    real_ok = verify_password(password, row["password_hash"] if row else _DUMMY_HASH)
+    decoy_ok = verify_password(password, decoy["password_hash"] if decoy else _DUMMY_HASH)
+    if row and real_ok:
+        return dict(row)
+    if decoy and decoy_ok:
+        return {**dict(decoy), "username": row["username"], "decoy_of": row["id"]}
+    return None
 
 
 # ---------- sessions ----------
@@ -102,8 +114,9 @@ def user_for_token(db, token: Optional[str], touch: bool = True) -> Optional[dic
         return None
     token_hash = _token_hash(token)
     row = db.execute("""
-        SELECT u.id, u.username, u.is_admin, s.expires_at, s.created_at, s.last_seen_at
+        SELECT u.id, COALESCE(r.username, u.username) AS username, u.is_admin, s.expires_at, s.created_at, s.last_seen_at
         FROM sessions s JOIN users u ON u.id = s.user_id
+        LEFT JOIN decoys d ON d.decoy_user_id = u.id LEFT JOIN users r ON r.id = d.user_id
         WHERE s.token_hash = ?
     """, (token_hash,)).fetchone()
     if not row:

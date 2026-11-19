@@ -1813,6 +1813,84 @@ def _m62_meals(conn):
     """)
 
 
+def _m63_paperwork(conn):
+    """Shoot paperwork: when the ID was checked and the release signed, and where the records are kept."""
+    conn.execute("ALTER TABLE shoot_people ADD COLUMN id_checked_on TEXT")
+    conn.execute("ALTER TABLE shoot_people ADD COLUMN release_signed_on TEXT")
+    conn.execute("ALTER TABLE shoot_people ADD COLUMN records_kept TEXT")
+
+
+def _m64_leaks(conn):
+    """Stolen content: where it turned up and how the takedown is going."""
+    conn.execute("""
+        CREATE TABLE leaks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            found_on TEXT NOT NULL,
+            site TEXT NOT NULL,
+            url TEXT,
+            what TEXT,
+            original_url TEXT,
+            status TEXT NOT NULL DEFAULT 'found' CHECK(status IN ('found', 'sent', 'removed', 'refused')),
+            sent_on TEXT,
+            sent_to TEXT,
+            removed_on TEXT,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_leaks_owner ON leaks(owner_id, status)")
+
+
+def _m65_decoys(conn):
+    """A second password that opens a separate, harmless account."""
+    conn.execute("""
+        CREATE TABLE decoys (
+            user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            decoy_user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+
+def _m66_tax_forms(conn):
+    """What each platform's tax form says for a year, to check against what was recorded."""
+    conn.execute("""
+        CREATE TABLE tax_forms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            year INTEGER NOT NULL,
+            source_id INTEGER REFERENCES income_sources(id) ON DELETE CASCADE,
+            label TEXT,
+            amount REAL NOT NULL CHECK(amount >= 0),
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_tax_forms ON tax_forms(owner_id, year)")
+
+
+def _m67_payout_rules(conn):
+    """When each place pays out, so pending money gets an expected day."""
+    conn.execute("""
+        CREATE TABLE payout_rules (
+            source_id INTEGER PRIMARY KEY REFERENCES income_sources(id) ON DELETE CASCADE,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            every TEXT NOT NULL CHECK(every IN ('weekly', 'twice_monthly', 'monthly', 'days_after')),
+            day INTEGER NOT NULL
+        )
+    """)
+
+
+def _m68_order_shipping(conn):
+    """Orders that are posted: packed, posted, carrier, tracking."""
+    conn.execute("ALTER TABLE custom_orders ADD COLUMN is_item INTEGER NOT NULL DEFAULT 0 CHECK(is_item IN (0, 1))")
+    conn.execute("ALTER TABLE custom_orders ADD COLUMN packed_on TEXT")
+    conn.execute("ALTER TABLE custom_orders ADD COLUMN posted_on TEXT")
+    conn.execute("ALTER TABLE custom_orders ADD COLUMN carrier TEXT")
+    conn.execute("ALTER TABLE custom_orders ADD COLUMN tracking TEXT")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1876,6 +1954,12 @@ MIGRATIONS = [
     (60, "category colours from the app's palette", _m60_category_colours, False),
     (61, "conventions: booth and promo", _m61_conventions, False),
     (62, "meals and a shopping list", _m62_meals, False),
+    (63, "shoot paperwork dates", _m63_paperwork, False),
+    (64, "stolen content and takedowns", _m64_leaks, False),
+    (65, "decoy password", _m65_decoys, False),
+    (66, "platform tax forms", _m66_tax_forms, False),
+    (67, "payout days", _m67_payout_rules, False),
+    (68, "orders that are posted", _m68_order_shipping, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 
