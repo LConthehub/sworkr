@@ -6,6 +6,7 @@ import { TaskForm, TasksPanel } from '../components/Tasks';
 import { RoutinesCard } from '../components/Routines';
 import QuickNote from '../components/QuickNote';
 import { AskCard } from '../components/Assistant';
+import { WellnessCard } from '../components/Wellness';
 import { EmailPanel } from '../components/Email';
 import GoalsGlance from '../components/GoalsGlance';
 import { CycleCard } from '../components/Cycle';
@@ -31,7 +32,7 @@ function greeting(now) {
 // Every card the dashboard can show, in the usual order.
 const CARDS = {
   week: 'This week', deposits: 'Deposits to collect', tests: 'Health tests due', inquiries: 'Inquiries to answer',
-  shoots: 'Shoots coming up', customs: 'Customs to make', ads: 'Ads running out', posts: 'Posts & ads due', tasks: 'Tasks', routines: 'Routines', note: 'Notes', ask: 'Ask your numbers',
+  shoots: 'Shoots coming up', customs: 'Customs to make', ads: 'Ads running out', posts: 'Posts & ads due', tasks: 'Tasks', routines: 'Routines', note: 'Notes', ask: 'Ask your numbers', wellness: "Today's check-in",
   email: 'Email', cycle: 'Period tracker', goals: 'Wallet',
 };
 
@@ -67,6 +68,7 @@ export default function Dashboard({ user }) {
     routines: <RoutinesCard />,
     note: <QuickNote />,
     ask: <AskCard />,
+    wellness: <WellnessCard />,
     email: <EmailPanel />,
     cycle: <CycleCard onChanged={bump} />,
     goals: <GoalsGlance version={version} />,

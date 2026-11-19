@@ -63,6 +63,7 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Wellness log (Settings > Health): a daily check-in card (sleep, water, food, energy) and how earnings compare on better and worse days.
 - Assistant (AI): Settings > Connections > Assistant; LM Studio / Ollama / llama.cpp on your own computer
   (cloud only with an explicit tick); dashboard card "Ask your numbers". Gets totals only, never names or
   notes, and won't write posts or messages. Tested against a pretend model only: try it with a real one.
@@ -105,7 +106,7 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   without a login; Python dependencies audited clean (pip-audit). Frontend: 2 moderate react-router advisories
   that don't apply here (no outside redirect targets, no server rendering); upgrade to react-router 7 to clear
   them (a breaking upgrade). Still to do: an outside tester before launch.
-- apple health support as an option, track health choices like water intake and food, sleep to see how these things effect income over time.
+- Apple Health: import the Health app's export file (export.zip) to fill in sleep and water. A website can't read Health directly.
 
 ## Bigger ideas
 - Translations: Spanish, Russian, French first. Later.

@@ -12,6 +12,7 @@ import LookSettings from '../components/Look';
 import { ReceiptSettings } from '../components/Receipts';
 import { SocialAccounts } from '../components/Social';
 import { AssistantSettings } from '../components/Assistant';
+import { WellnessSettings } from '../components/Wellness';
 import HolidaySettings from '../components/Holidays';
 import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from '../components/SignInSecurity';
 import { WorkTypesPicker } from '../components/WorkTypes';
@@ -150,6 +151,10 @@ const GROUPS = [
             <CycleSettings />
           </Section>
         ),
+      },
+      {
+        id: 'wellness', title: 'Wellness log', words: 'sleep water food energy wellness health apple health',
+        render: () => <Section title="Wellness log (optional)" hint="Sleep, water, food and energy, and how they line up with your earnings."><WellnessSettings /></Section>,
       },
       {
         id: 'meds', title: 'Birth control & regular meds', words: 'contraception pill patch ring shot depo implant iud prep doxypep hormones hrt',

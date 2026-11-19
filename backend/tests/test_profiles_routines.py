@@ -214,3 +214,22 @@ def test_asking_sends_totals_only_never_names(api, monkeypatch):
     sent = next(x for x in m.seen if x.url.path.endswith("/chat/completions")).content.decode()
     assert "Secret Sam" not in sent and "555-0100" not in sent
     assert "Tryst" in sent and "Dinner" in sent and _json.loads(sent)["model"] == "qwen-local"
+
+
+def test_wellness_days_line_up_with_money(api, admin):
+    from datetime import timedelta as _td
+    today = date.today()
+    c = ok(api.post("/api/clients", json={"name": "Well client"}), 201)
+    for i, (sleep, paid) in enumerate([(8, 600), (8, 400), (5, 100), (5, 0)]):
+        day = today - _td(days=i + 1)
+        ok(api.put("/api/wellness", json={"day": day.isoformat(), "sleep_hours": sleep, "water_glasses": 8, "energy": 4}))
+        if paid:
+            ok(api.post("/api/appointments", json={"client_id": c["id"], "service_type": "Dinner", "duration_minutes": 60,
+                                                   "scheduled_date": f"{day.isoformat()}T15:00:00Z", "rate": paid, "amount_paid": paid}), 201)
+    ok(api.put("/api/wellness", json={"day": (today - _td(days=1)).isoformat(), "sleep_hours": 9}))   # changing a day, not adding
+    assert len(ok(api.get("/api/wellness", params={"days": 10}))) == 4
+    r = ok(api.get("/api/wellness/vs-money"))
+    sleep = next(x for x in r["comparisons"] if x["title"] == "Sleep")
+    assert (sleep["better_days"], sleep["better_avg"], sleep["worse_days"], sleep["worse_avg"]) == (2, 500, 2, 50)
+    assert api.put("/api/wellness", json={"day": today.isoformat(), "energy": 9}).status_code == 400
+    assert ok(admin.get("/api/wellness/vs-money"))["days_logged"] == 0

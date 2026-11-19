@@ -1642,6 +1642,23 @@ def _m53_driver_rates(conn):
     conn.execute("CREATE INDEX idx_driver_rates_contact ON driver_rates(contact_id)")
 
 
+def _m54_wellness(conn):
+    """A quick daily wellness log: sleep, water, food, energy (optional, private)."""
+    conn.execute("""
+        CREATE TABLE wellness_days (
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            day TEXT NOT NULL,
+            sleep_hours REAL,
+            water_glasses INTEGER,
+            food INTEGER CHECK(food IS NULL OR food BETWEEN 1 AND 5),
+            energy INTEGER CHECK(energy IS NULL OR energy BETWEEN 1 AND 5),
+            note TEXT,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (owner_id, day)
+        )
+    """)
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1696,6 +1713,7 @@ MIGRATIONS = [
     (51, "wallet: choose what the dashboard shows", _m51_wallet_dashboard, False),
     (52, "persona kit: bios, links, wishlists", _m52_persona_kit, False),
     (53, "driver rates", _m53_driver_rates, False),
+    (54, "wellness log", _m54_wellness, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

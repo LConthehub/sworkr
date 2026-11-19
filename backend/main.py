@@ -44,6 +44,7 @@ import profiles
 import routines
 import rides
 import assistant
+import wellness
 import calendar_dates
 import blocklist
 import signin
@@ -2214,6 +2215,7 @@ app.include_router(profiles.router)
 app.include_router(routines.router)
 app.include_router(rides.router)
 app.include_router(assistant.router)
+app.include_router(wellness.router)
 app.include_router(calendar_dates.router)
 app.include_router(marketing.router)
 app.include_router(campaigns.router)
@@ -2250,6 +2252,7 @@ profiles.setup(get_db)
 routines.setup(get_db)
 rides.setup(get_db)
 assistant.setup(get_db)
+wellness.setup(get_db)
 calendar_dates.setup(get_db)
 marketing.setup(get_db)
 campaigns.setup(get_db)
