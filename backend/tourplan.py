@@ -20,7 +20,7 @@ import collab
 router = APIRouter()
 _get_db: Optional[Callable] = None
 STARTER = ["ID", "Phone + charger", "Work phone + charger", "Lingerie & outfits", "Heels", "Makeup bag", "Toiletries",
-           "Condoms & lube", "Wipes & towels", "Sheets / linen", "Cash float", "Card reader", "Meds & health papers",
+           "Condoms & lube", "Toy cleaner", "Wipes & towels", "Sheets / linen", "Cash float", "Card reader", "Meds & health papers", "VPN on the phone and laptop",
            "Snacks & water"]
 
 

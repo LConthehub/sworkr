@@ -28,6 +28,7 @@ PAGES = [
   <a href="/docs/content.html"><b>Content &amp; planning</b><span>The calendar, shoots, posts, campaigns, ads and custom orders.</span></a>
   <a href="/docs/health-and-safety.html"><b>Health &amp; safety</b><span>Tests on your own schedule, documents that expire, the check-in.</span></a>
   <a href="/docs/notifications.html"><b>Notifications</b><span>Messages on your phone with ntfy.</span></a>
+  <a href="/docs/own-your-data.html"><b>Own your data</b><span>Why self-hosting matters, what else to run yourself, and when a VPN helps.</span></a>
   <a href="/docs/troubleshooting.html"><b>If something goes wrong</b><span>Forgot your password, lost your phone, won't start.</span></a>
 </div>
 """),
@@ -36,13 +37,15 @@ PAGES = [
 <p>Sworkr runs on <strong>your own computer</strong>. There is no account with us and nothing is sent to us. Pick one way to run it.</p>
 
 <h2>Docker (recommended: Windows, Mac, Linux or a home server)</h2>
+<p>Never used Docker? That's fine: you won't need to type any commands.</p>
 <ol>
-  <li>Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>, open it, and wait for <em>Engine running</em>. (On Linux or a home server, Docker Engine is enough.)</li>
-  <li>Make a folder called <code>sworkr</code> and save <a href="/downloads/docker-compose.yml" download>docker-compose.yml</a> in it.</li>
-  <li>Open a terminal in that folder and run <code>docker compose up -d</code>. The first start downloads Sworkr and takes a few minutes.</li>
-  <li>Open <a href="http://localhost:8008">localhost:8008</a>.</li>
+  <li>Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>, open it, and wait until it says <em>Engine running</em>. (<a href="/docs/install.html#first-time">More help with this step</a>.)</li>
+  <li>Download <a href="/downloads/sworkr-start.zip" download>sworkr-start.zip</a> and unzip it somewhere you'll keep it, like Documents.</li>
+  <li><strong>Windows:</strong> double-click <em>Start sworkr</em>. <strong>Mac:</strong> right-click <em>Start sworkr.command</em>, choose <em>Open</em>, then <em>Open</em> again (only the first time: the Mac asks because the file didn't come from the App Store). <strong>Linux:</strong> run <code>./start.sh</code>.</li>
+  <li>The first start downloads Sworkr (a few minutes), then your browser opens it.</li>
 </ol>
-<p>Want a different port, your content folder, or your own web address? <a href="/docs/install.html">Make your setup file</a> and use that one instead.</p>
+<p>The same folder has <em>Update sworkr</em> and <em>Stop sworkr</em>. Your records stay through both.</p>
+<p>Prefer a terminal, or want a different port, your content folder or your own web address? <a href="/docs/install.html">Make your setup file</a>: it's the same thing, with your choices in it.</p>
 
 <h2>Windows without Docker</h2>
 <ol>
@@ -80,7 +83,7 @@ PAGES = [
 </ul>
 
 <h2>Updating</h2>
-<p>Docker: in your <code>sworkr</code> folder, run <code>docker compose pull</code>, then <code>docker compose up -d</code>. Windows app: quit it, unzip the new version over the old folder, start it. Either way your records are upgraded by themselves, and a copy is saved first.</p>
+<p>Docker: double-click <em>Update sworkr</em> in your sworkr folder (or run <code>docker compose pull</code>, then <code>docker compose up -d</code> there). Windows app: quit it, unzip the new version over the old folder, start it. Either way your records are upgraded by themselves, and a copy is saved first.</p>
 """),
 
 ("privacy-and-backups", "Privacy & backups", "Privacy &amp; backups", """
@@ -117,6 +120,17 @@ PAGES = [
 
 ("install", "Install with Docker", "Install with Docker", """
 <p class="lead">Pick your options, copy one file, start it. This page writes the setup file for you.</p>
+
+<h2 id="first-time">First time with Docker</h2>
+<p>Docker runs Sworkr in a sealed box on your computer, the same way on Windows, Mac and Linux. You install it once.</p>
+<ul>
+  <li><strong>Windows 10 or 11:</strong> install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>. It may ask to install or update "WSL" (a part of Windows it needs): say yes, and restart if it asks. Open Docker Desktop and wait for <em>Engine running</em> at the bottom left. You can skip signing in to Docker.</li>
+  <li><strong>Mac:</strong> download the Docker Desktop that matches your Mac: <em>Apple chip</em> for M1 and newer, <em>Intel chip</em> for older ones (Apple menu, About This Mac shows which). Drag it to Applications, open it, and wait for <em>Engine running</em>.</li>
+  <li><strong>Linux or a home server:</strong> Docker Engine is enough; your distribution's instructions are at <a href="https://docs.docker.com/engine/install/">docs.docker.com/engine/install</a>.</li>
+  <li><strong>A NAS:</strong> Synology's Container Manager, Unraid and TrueNAS all run it (see below).</li>
+</ul>
+<p>Then the easy way: download <a href="/downloads/sworkr-start.zip" download>sworkr-start.zip</a>, unzip it, and double-click <em>Start sworkr</em>. Or carry on below to make a setup file with your own choices.</p>
+<p><strong>If it doesn't start:</strong> "Docker isn't running" means Docker Desktop isn't open yet, or is still starting. "Port is already allocated" means something else uses 8008: change the port below. On a Mac, "can't be opened because it is from an unidentified developer": right-click the file and choose <em>Open</em> instead of double-clicking.</p>
 <p>Sworkr's Docker setup is one file, <code>docker-compose.yml</code>: where your records live, which folders it can see, and who can open it. Fill in what you want below; the file updates as you type. <strong>Nothing you type here leaves your browser.</strong></p>
 <p id="no-script">This builder needs JavaScript. Without it, use the ready-made <a href="/downloads/docker-compose.yml" download>docker-compose.yml</a> as it is: it works without changes.</p>
 
@@ -196,10 +210,20 @@ PAGES = [
 </ol>
 
 <h2>Make it feel like an app</h2>
+<p>Do this from the address you'll really use: the Tailscale address (or your own web address), not <code>localhost</code>.</p>
 <ul>
+  <li><strong>A plain name and icon:</strong> under <em>Settings → Look → Home screen name &amp; icon</em>, choose a name like "Notes" and any picture. Phones that add Sworkr from then on show that instead of Sworkr. (Already on your home screen? Remove it and add it again.)</li>
   <li><strong>iPhone:</strong> in Safari, tap Share, then <em>Add to Home Screen</em>. <strong>Android:</strong> in Chrome, open the menu and tap <em>Add to Home screen</em>.</li>
   <li>Add a <strong>passkey</strong> on the phone (<em>Settings → Security &amp; privacy → Passkeys</em>) so you sign in with your face or fingerprint.</li>
   <li>Consider <em>Away from home → passkeys only</em>, so a password alone can't sign in from anywhere but your computer.</li>
+</ul>
+
+<h2>Android</h2>
+<ul>
+  <li>Chrome offers <em>Install app</em> or <em>Add to Home screen</em> in its menu; Sworkr then opens in its own window, like on an iPhone.</li>
+  <li>The <a href="https://ntfy.sh">ntfy</a> app works better on Android than on iPhone: it can show messages instantly even from your own ntfy server.</li>
+  <li>Tailscale and a VPN app can't both be on at once on most phones. Tailscale can send your internet through a VPN (an "exit node", or its Mullvad add-on) if you want both.</li>
+  <li>Passkeys are kept by your Google account (or your password manager); add one on the phone under <em>Settings → Security &amp; privacy → Passkeys</em>.</li>
 </ul>
 
 <h2>Good to know</h2>
@@ -223,10 +247,18 @@ PAGES = [
 
 <h2>1. Get a free address with DuckDNS</h2>
 <ol>
-  <li>Go to <a href="https://www.duckdns.org">duckdns.org</a> and sign in, or use <a href="https://desec.io">deSEC</a>, a privacy-focused non-profit. Use an account you keep private.</li>
+  <li>Go to <a href="https://www.duckdns.org">duckdns.org</a> and sign in, or use <a href="https://desec.io">deSEC</a> (a privacy-focused non-profit) or <a href="https://www.noip.com">No-IP</a> (its free plan asks you to confirm your name once a month). Use an account you keep private.</li>
   <li>Pick a name: you get <code>yourname.duckdns.org</code>. Pick something that doesn't say what it's for.</li>
   <li>Keep it pointing at your home: your home's address can change. Many routers have a <em>Dynamic DNS</em> setting with DuckDNS in the list (use your token from the DuckDNS page). If yours doesn't, the DuckDNS <em>install</em> page has a small updater for Windows, Mac and Linux.</li>
 </ol>
+
+<h2>Or use a domain you own</h2>
+<p>If you already have a domain, or buy one, you don't need a free address: use the domain itself or a subdomain of it, like <code>planner.yourdomain.com</code>. Pick a name that doesn't say what it's for.</p>
+<ul>
+  <li>At your domain's DNS settings, add a <strong>CNAME</strong> record for the subdomain pointing to your free address (say <code>yourname.duckdns.org</code>), so it follows your home's address when it changes. Or an <strong>A</strong> record with your home's address, if it never changes.</li>
+  <li>Then use your own name everywhere below instead of <code>yourname.duckdns.org</code>.</li>
+  <li>Buy it with <strong>WHOIS privacy</strong> (most registrars include it now) so your name and address aren't shown on the public record. A registrar that accepts adult sites and doesn't ask why you want it is worth choosing.</li>
+</ul>
 
 <h2>2. Install Caddy</h2>
 <p><a href="https://caddyserver.com/download">Caddy</a> sits in front of Sworkr and handles HTTPS by itself: it gets and renews the certificate for your address, for free.</p>
@@ -420,11 +452,55 @@ PAGES = [
 </ul>
 """),
 
+("own-your-data", "Own your data", "Own your data", """
+<p class="lead">Sworkr runs on your computer so that your records are yours: no company holds them, reads them, sells them, or hands them over. The same idea works for much more of your life.</p>
+
+<h2>Why it matters for this work</h2>
+<ul>
+  <li>Apps and payment services close accounts of people in this work without warning, and take the records with them.</li>
+  <li>Anything a company holds can be lost in a breach, sold, or handed over when asked. What's only on your computer can't be.</li>
+  <li>Your client list, your money and your health are the most private things you have. They're safest where only you hold the key.</li>
+</ul>
+
+<h2>Other things you can run yourself</h2>
+<p>All free, and all fine to set up later, one at a time. Each replaces a company that would otherwise hold that part of your life.</p>
+<ul>
+  <li><strong><a href="https://nextcloud.com">Nextcloud</a></strong>: files, photos, calendar and contacts (instead of iCloud or Google). Sworkr syncs its calendar and reads your content from it.</li>
+  <li><strong><a href="https://adguard.com/en/adguard-home/overview.html">AdGuard Home</a></strong>: blocks ads and trackers for every device on your home network.</li>
+  <li><strong><a href="https://github.com/dani-garcia/vaultwarden">Vaultwarden</a></strong>: a password manager (works with the Bitwarden apps).</li>
+  <li><strong><a href="https://immich.app">Immich</a></strong>: a photo library with phone backup, like Google Photos.</li>
+  <li><strong><a href="https://ntfy.sh">ntfy</a></strong>: notifications to your phone, from your own server.</li>
+  <li><strong>A local AI</strong> (LM Studio, Ollama): Sworkr's assistant can use it, so your questions never leave home.</li>
+  <li><strong><a href="https://headscale.net">Headscale</a></strong>: run the part of Tailscale that connects your devices.</li>
+</ul>
+<p>A small always-on computer (a NAS, a mini PC, a Raspberry Pi 4 or 5) can run all of these together, and Sworkr with them.</p>
+
+<h2>A VPN, and when it helps</h2>
+<p>A VPN hides what you do online from the network you're on, and hides where you are from the sites you visit. It's worth turning on:</p>
+<ul>
+  <li>On hotel, Airbnb, café and airport Wi-Fi, especially on tour.</li>
+  <li>When you look up a client, a venue or an address, so searches can't be tied back to your home.</li>
+  <li>When you post or log in to work accounts from somewhere you don't want linked to them.</li>
+</ul>
+<p>Choose one that doesn't keep logs and lets you pay without your name (<a href="https://mullvad.net">Mullvad</a> and <a href="https://proton.me/vpn">Proton VPN</a> are widely trusted). On a phone, only one VPN-type app runs at a time, and Tailscale is one: use Tailscale's exit-node or Mullvad option to have both. A VPN can slow Docker's first download: pause it for that.</p>
+
+<h2>Small habits that add up</h2>
+<ul>
+  <li>Go through <em>Settings → Security &amp; privacy → Privacy check-up</em> once, and again every few months.</li>
+  <li>Keep a copy of your backups somewhere other than this computer (<a href="/docs/privacy-and-backups.html">how</a>).</li>
+  <li>Update Sworkr when there's a new version: double-click <em>Update sworkr</em>.</li>
+</ul>
+"""),
+
 ("troubleshooting", "If something goes wrong", "If something goes wrong", """
 <h2>Sworkr won't start</h2>
 <ul>
   <li><strong>Windows app:</strong> if a message says Sworkr couldn't start, it gives the file with the details (<code>sworkr.log</code> in the Sworkr data folder). If another program is using port 8765, close it, or start Sworkr with the <code>SWORKR_PORT</code> setting set to another number.</li>
-  <li><strong>Docker:</strong> "Docker Desktop isn't running": open Docker Desktop and wait for <em>Engine running</em>.</li>
+  <li><strong>Docker:</strong> "Docker isn't running": open Docker Desktop and wait for <em>Engine running</em>.</li>
+  <li><strong>"Port is already allocated":</strong> something else uses port 8008. Make a setup file with another port in the <a href="/docs/install.html">setup builder</a>.</li>
+  <li><strong>Windows, "WSL" messages:</strong> Docker Desktop needs Windows' Linux part. Let it install or update it, then restart the computer.</li>
+  <li><strong>Mac, "unidentified developer":</strong> right-click <em>Start sworkr.command</em> and choose <em>Open</em>.</li>
+  <li><strong>The download stalls:</strong> a VPN can get in Docker's way. Pause it while Sworkr downloads the first time, then turn it back on.</li>
 </ul>
 
 <h2>I forgot my password</h2>

@@ -49,6 +49,7 @@ import bank
 import progress
 import worklog
 import everyday
+import branding
 import calendar_dates
 import blocklist
 import signin
@@ -485,7 +486,9 @@ def set_user_setting(db, user_id: int, key: str, value: Optional[str]):
 # ==================== AUTH ====================
 
 PUBLIC_PATHS = {"/api/health", "/api/auth/status", "/api/auth/setup", "/api/auth/login", "/api/auth/logout",
-                "/api/auth/login/code", "/api/auth/login/code/resend", "/api/auth/passkey/begin", "/api/auth/passkey/finish"}
+                "/api/auth/login/code", "/api/auth/login/code/resend", "/api/auth/passkey/begin", "/api/auth/passkey/finish",
+                # The home-screen name and icon: the phone fetches them before anyone signs in.
+                "/api/branding/manifest.json", "/api/branding/icon-180.png", "/api/branding/icon-192.png", "/api/branding/icon-512.png"}
 
 
 def is_background(request: Request) -> bool:
@@ -2283,6 +2286,7 @@ app.include_router(bank.router)
 app.include_router(progress.router)
 app.include_router(worklog.router)
 app.include_router(everyday.router)
+app.include_router(branding.router)
 app.include_router(calendar_dates.router)
 app.include_router(marketing.router)
 app.include_router(campaigns.router)
@@ -2324,6 +2328,7 @@ bank.setup(get_db)
 progress.setup(get_db)
 worklog.setup(get_db)
 everyday.setup(get_db)
+branding.setup(get_db)
 calendar_dates.setup(get_db)
 marketing.setup(get_db)
 campaigns.setup(get_db)

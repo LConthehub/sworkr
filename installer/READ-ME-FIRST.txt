@@ -1,0 +1,15 @@
+Sworkr: your back office, on your own computer.
+
+1. Install Docker Desktop (docker.com/products/docker-desktop), open it, and wait until it says "Engine running".
+2. Keep this folder somewhere you'll find it again, like Documents.
+3. Windows: double-click "Start sworkr".
+   Mac: right-click "Start sworkr.command", choose Open (only the first time), then Open again.
+   Linux: run ./start.sh in this folder.
+4. Your browser opens sworkr. Make your account: the first one is yours, and it's the admin.
+
+Later:
+- "Update sworkr" gets the newest version. Your records stay, and a copy is saved before any upgrade.
+- "Stop sworkr" stops it. Your records stay.
+- Never run "docker compose down -v": the -v deletes your records.
+
+Help: sworkr.com/docs

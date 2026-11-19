@@ -34,6 +34,7 @@
       <li><a href="/docs/content.html">Content &amp; planning</a></li>
       <li><a href="/docs/health-and-safety.html">Health &amp; safety</a></li>
       <li><a href="/docs/notifications.html">Notifications</a></li>
+      <li><a href="/docs/own-your-data.html">Own your data</a></li>
       <li><a href="/docs/troubleshooting.html">If something goes wrong</a></li>
       </ul>
     </aside>
@@ -43,13 +44,15 @@
 <p>Sworkr runs on <strong>your own computer</strong>. There is no account with us and nothing is sent to us. Pick one way to run it.</p>
 
 <h2>Docker (recommended: Windows, Mac, Linux or a home server)</h2>
+<p>Never used Docker? That's fine: you won't need to type any commands.</p>
 <ol>
-  <li>Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>, open it, and wait for <em>Engine running</em>. (On Linux or a home server, Docker Engine is enough.)</li>
-  <li>Make a folder called <code>sworkr</code> and save <a href="/downloads/docker-compose.yml" download>docker-compose.yml</a> in it.</li>
-  <li>Open a terminal in that folder and run <code>docker compose up -d</code>. The first start downloads Sworkr and takes a few minutes.</li>
-  <li>Open <a href="http://localhost:8008">localhost:8008</a>.</li>
+  <li>Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>, open it, and wait until it says <em>Engine running</em>. (<a href="/docs/install.html#first-time">More help with this step</a>.)</li>
+  <li>Download <a href="/downloads/sworkr-start.zip" download>sworkr-start.zip</a> and unzip it somewhere you'll keep it, like Documents.</li>
+  <li><strong>Windows:</strong> double-click <em>Start sworkr</em>. <strong>Mac:</strong> right-click <em>Start sworkr.command</em>, choose <em>Open</em>, then <em>Open</em> again (only the first time: the Mac asks because the file didn't come from the App Store). <strong>Linux:</strong> run <code>./start.sh</code>.</li>
+  <li>The first start downloads Sworkr (a few minutes), then your browser opens it.</li>
 </ol>
-<p>Want a different port, your content folder, or your own web address? <a href="/docs/install.html">Make your setup file</a> and use that one instead.</p>
+<p>The same folder has <em>Update sworkr</em> and <em>Stop sworkr</em>. Your records stay through both.</p>
+<p>Prefer a terminal, or want a different port, your content folder or your own web address? <a href="/docs/install.html">Make your setup file</a>: it's the same thing, with your choices in it.</p>
 
 <h2>Windows without Docker</h2>
 <ol>
@@ -87,7 +90,7 @@
 </ul>
 
 <h2>Updating</h2>
-<p>Docker: in your <code>sworkr</code> folder, run <code>docker compose pull</code>, then <code>docker compose up -d</code>. Windows app: quit it, unzip the new version over the old folder, start it. Either way your records are upgraded by themselves, and a copy is saved first.</p>
+<p>Docker: double-click <em>Update sworkr</em> in your sworkr folder (or run <code>docker compose pull</code>, then <code>docker compose up -d</code> there). Windows app: quit it, unzip the new version over the old folder, start it. Either way your records are upgraded by themselves, and a copy is saved first.</p>
 
     </main>
   </div>

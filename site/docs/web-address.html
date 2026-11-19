@@ -34,6 +34,7 @@
       <li><a href="/docs/content.html">Content &amp; planning</a></li>
       <li><a href="/docs/health-and-safety.html">Health &amp; safety</a></li>
       <li><a href="/docs/notifications.html">Notifications</a></li>
+      <li><a href="/docs/own-your-data.html">Own your data</a></li>
       <li><a href="/docs/troubleshooting.html">If something goes wrong</a></li>
       </ul>
     </aside>
@@ -51,10 +52,18 @@
 
 <h2>1. Get a free address with DuckDNS</h2>
 <ol>
-  <li>Go to <a href="https://www.duckdns.org">duckdns.org</a> and sign in, or use <a href="https://desec.io">deSEC</a>, a privacy-focused non-profit. Use an account you keep private.</li>
+  <li>Go to <a href="https://www.duckdns.org">duckdns.org</a> and sign in, or use <a href="https://desec.io">deSEC</a> (a privacy-focused non-profit) or <a href="https://www.noip.com">No-IP</a> (its free plan asks you to confirm your name once a month). Use an account you keep private.</li>
   <li>Pick a name: you get <code>yourname.duckdns.org</code>. Pick something that doesn't say what it's for.</li>
   <li>Keep it pointing at your home: your home's address can change. Many routers have a <em>Dynamic DNS</em> setting with DuckDNS in the list (use your token from the DuckDNS page). If yours doesn't, the DuckDNS <em>install</em> page has a small updater for Windows, Mac and Linux.</li>
 </ol>
+
+<h2>Or use a domain you own</h2>
+<p>If you already have a domain, or buy one, you don't need a free address: use the domain itself or a subdomain of it, like <code>planner.yourdomain.com</code>. Pick a name that doesn't say what it's for.</p>
+<ul>
+  <li>At your domain's DNS settings, add a <strong>CNAME</strong> record for the subdomain pointing to your free address (say <code>yourname.duckdns.org</code>), so it follows your home's address when it changes. Or an <strong>A</strong> record with your home's address, if it never changes.</li>
+  <li>Then use your own name everywhere below instead of <code>yourname.duckdns.org</code>.</li>
+  <li>Buy it with <strong>WHOIS privacy</strong> (most registrars include it now) so your name and address aren't shown on the public record. A registrar that accepts adult sites and doesn't ask why you want it is worth choosing.</li>
+</ul>
 
 <h2>2. Install Caddy</h2>
 <p><a href="https://caddyserver.com/download">Caddy</a> sits in front of Sworkr and handles HTTPS by itself: it gets and renews the certificate for your address, for free.</p>

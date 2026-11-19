@@ -34,6 +34,7 @@
       <li><a href="/docs/content.html">Content &amp; planning</a></li>
       <li><a href="/docs/health-and-safety.html">Health &amp; safety</a></li>
       <li><a href="/docs/notifications.html">Notifications</a></li>
+      <li><a href="/docs/own-your-data.html">Own your data</a></li>
       <li><a href="/docs/troubleshooting.html">If something goes wrong</a></li>
       </ul>
     </aside>
@@ -50,10 +51,20 @@
 </ol>
 
 <h2>Make it feel like an app</h2>
+<p>Do this from the address you'll really use: the Tailscale address (or your own web address), not <code>localhost</code>.</p>
 <ul>
+  <li><strong>A plain name and icon:</strong> under <em>Settings → Look → Home screen name &amp; icon</em>, choose a name like "Notes" and any picture. Phones that add Sworkr from then on show that instead of Sworkr. (Already on your home screen? Remove it and add it again.)</li>
   <li><strong>iPhone:</strong> in Safari, tap Share, then <em>Add to Home Screen</em>. <strong>Android:</strong> in Chrome, open the menu and tap <em>Add to Home screen</em>.</li>
   <li>Add a <strong>passkey</strong> on the phone (<em>Settings → Security &amp; privacy → Passkeys</em>) so you sign in with your face or fingerprint.</li>
   <li>Consider <em>Away from home → passkeys only</em>, so a password alone can't sign in from anywhere but your computer.</li>
+</ul>
+
+<h2>Android</h2>
+<ul>
+  <li>Chrome offers <em>Install app</em> or <em>Add to Home screen</em> in its menu; Sworkr then opens in its own window, like on an iPhone.</li>
+  <li>The <a href="https://ntfy.sh">ntfy</a> app works better on Android than on iPhone: it can show messages instantly even from your own ntfy server.</li>
+  <li>Tailscale and a VPN app can't both be on at once on most phones. Tailscale can send your internet through a VPN (an "exit node", or its Mullvad add-on) if you want both.</li>
+  <li>Passkeys are kept by your Google account (or your password manager); add one on the phone under <em>Settings → Security &amp; privacy → Passkeys</em>.</li>
 </ul>
 
 <h2>Good to know</h2>

@@ -24,6 +24,23 @@ _get_db: Optional[Callable] = None
 # (key, name, days apart). The keys are the ones tests have always been saved with.
 STARTERS = [("weekly", "Weekly test", 7), ("monthly", "Monthly test", 30), ("yearly", "Yearly test", 365)]
 SOON_DAYS = 3
+SAMPLES = {"blood": "Blood draw", "cervical": "Cervical swab", "vaginal": "Vaginal swab", "urethral": "Urethral swab",
+           "rectal": "Rectal swab", "throat": "Throat swab", "urine": "Urine"}
+
+# Ready-made sets, from rules that were checked at the source. Nothing here is advice: the person's own place
+# may add to it, and rules change.
+TEMPLATES = {
+    "nevada_house": {
+        "label": "Nevada licensed house (state rules)",
+        "source": "Nevada Administrative Code 441A.800, checked 2026-11-19",
+        "note": "Your county and house may add a work card and their own rules. A rectal swab is added if the house "
+                "has no written policy against anal sex.",
+        "kinds": [
+            {"label": "Weekly swab", "every_days": 7, "samples": ["cervical"], "checks_for": "Gonorrhea, chlamydia"},
+            {"label": "Monthly blood draw", "every_days": 30, "samples": ["blood"], "checks_for": "HIV, syphilis"},
+        ],
+    },
+}
 
 
 def setup(get_db: Callable):
@@ -95,6 +112,7 @@ def kinds(db, owner_id: int) -> List[dict]:
     """, (now_iso, now_iso, owner_id)):
         d = dict(r)
         d["archived"] = bool(d["archived"])
+        d["samples"] = [x for x in (d.get("samples") or "").split(",") if x]
         d["starter"] = d["key"] in {s[0] for s in STARTERS}
         d["next_due"], d["due_in_days"], d["state"] = None, None, "none"
         if d["every_days"] and d["last_done"] and not d["archived"]:
@@ -112,6 +130,8 @@ class KindIn(BaseModel):
     every_days: Optional[int] = None      # how many days apart it's due; None: no schedule
     cost: Optional[float] = None          # what it usually costs
     archived: bool = False
+    samples: List[str] = []               # blood, cervical, vaginal, urethral, rectal, throat, urine
+    checks_for: Optional[str] = None      # "Gonorrhea, chlamydia"
 
 
 def _values(body: KindIn) -> tuple:
@@ -122,11 +142,46 @@ def _values(body: KindIn) -> tuple:
         raise HTTPException(status_code=400, detail="Days between tests is 1 to 3650 (or leave it empty for no schedule)")
     if body.cost is not None and not (0 <= body.cost < 1e9):
         raise HTTPException(status_code=400, detail="The cost must be 0 or more")
-    return label, body.every_days, body.cost, int(body.archived)
+    unknown = [x for x in body.samples if x not in SAMPLES]
+    if unknown:
+        raise HTTPException(status_code=400, detail="Unknown sample: " + ", ".join(unknown))
+    samples = ",".join(dict.fromkeys(body.samples)) or None
+    return label, body.every_days, body.cost, int(body.archived), samples, (body.checks_for or "").strip()[:200] or None
 
 
 def _one(db, owner_id: int, kind_id: int) -> Optional[dict]:
     return next((k for k in kinds(db, owner_id) if k["id"] == kind_id), None)
+
+
+@router.get("/api/test-kinds/templates")
+def templates():
+    return {"samples": SAMPLES, "templates": [{"id": k, **{x: v[x] for x in ("label", "source", "note")},
+                                               "kinds": v["kinds"]} for k, v in TEMPLATES.items()]}
+
+
+@router.post("/api/test-kinds/templates/{template_id}", status_code=201)
+def use_template(template_id: str, request: Request):
+    """Add a ready-made set of tests. Ones you already have with the same name are left alone."""
+    t = TEMPLATES.get(template_id)
+    if not t:
+        raise HTTPException(status_code=404, detail="Not found")
+    owner = _owner(request)
+    db = _get_db()
+    try:
+        ensure_kinds(db, owner)
+        have = {r[0].lower() for r in db.execute("SELECT label FROM test_kinds WHERE owner_id = ?", (owner,))}
+        last = db.execute("SELECT COALESCE(MAX(sort_order), 0) FROM test_kinds WHERE owner_id = ?", (owner,)).fetchone()[0]
+        for i, k in enumerate(t["kinds"]):
+            if k["label"].lower() in have:
+                continue
+            db.execute("INSERT INTO test_kinds (owner_id, key, label, every_days, cost, archived, sort_order, created_at, updated_at, "
+                       "samples, checks_for) VALUES (?, ?, ?, ?, NULL, 0, ?, ?, ?, ?, ?)",
+                       (owner, "t" + uuid.uuid4().hex[:10], k["label"], k["every_days"], last + 1 + i, _now(), _now(),
+                        ",".join(k["samples"]), k["checks_for"]))
+        db.commit()
+        return kinds(db, owner)
+    finally:
+        db.close()
 
 
 @router.get("/api/test-kinds")
@@ -144,10 +199,11 @@ def add_kind(body: KindIn, request: Request):
     db = _get_db()
     try:
         ensure_kinds(db, owner)
-        label, days, cost, archived = _values(body)
+        label, days, cost, archived, samples, checks = _values(body)
         last = db.execute("SELECT COALESCE(MAX(sort_order), 0) FROM test_kinds WHERE owner_id = ?", (owner,)).fetchone()[0]
-        cur = db.execute("INSERT INTO test_kinds (owner_id, key, label, every_days, cost, archived, sort_order, created_at, updated_at) "
-                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (owner, "t" + uuid.uuid4().hex[:10], label, days, cost, archived, last + 1, _now(), _now()))
+        cur = db.execute("INSERT INTO test_kinds (owner_id, key, label, every_days, cost, archived, sort_order, created_at, updated_at, "
+                         "samples, checks_for) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                         (owner, "t" + uuid.uuid4().hex[:10], label, days, cost, archived, last + 1, _now(), _now(), samples, checks))
         db.commit()
         return _one(db, owner, cur.lastrowid)
     finally:
@@ -162,8 +218,8 @@ def update_kind(kind_id: int, body: KindIn, request: Request):
     db = _get_db()
     try:
         ensure_kinds(db, owner)
-        done = db.execute("UPDATE test_kinds SET label = ?, every_days = ?, cost = ?, archived = ?, updated_at = ? WHERE id = ? AND owner_id = ?",
-                          (*_values(body), _now(), kind_id, owner))
+        done = db.execute("UPDATE test_kinds SET label = ?, every_days = ?, cost = ?, archived = ?, samples = ?, checks_for = ?, "
+                          "updated_at = ? WHERE id = ? AND owner_id = ?", (*_values(body), _now(), kind_id, owner))
         if not done.rowcount:
             raise HTTPException(status_code=404, detail="Not found")
         db.commit()

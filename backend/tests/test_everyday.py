@@ -145,3 +145,25 @@ def test_the_incident_log_and_privacy_checkup_are_private(api, admin):
     assert c["done"] == 1 and next(i for i in c["items"] if i["id"] == "work_phone")["done_on"]
     assert ok(admin.get("/api/privacy-checkup"))["done"] == 0
     assert api.post("/api/privacy-checkup", json={"id": "nope", "done": True}).status_code == 400
+
+
+def test_the_home_screen_name_and_icon_can_be_plain(api, admin):
+    import base64 as _b64
+    import io as _io
+    from PIL import Image
+    anyone = TestClient(main.app)                                    # not signed in: the phone asks like this
+    m = anyone.get("/api/branding/manifest.json")
+    assert m.status_code == 200 and m.json()["name"] == "Sworkr"
+    assert anyone.get("/api/branding/icon-180.png").status_code == 200
+    buf = _io.BytesIO()
+    Image.new("RGB", (300, 200), (10, 120, 200)).save(buf, "PNG")
+    picture = "data:image/png;base64," + _b64.b64encode(buf.getvalue()).decode()
+    assert api.put("/api/branding", json={"name": "Notes", "icon": picture}).status_code == 403     # admins only
+    r = ok(admin.put("/api/branding", json={"name": "Notes", "icon": picture}))
+    assert r == {"name": "Notes", "custom_icon": True}
+    assert anyone.get("/api/branding/manifest.json").json()["short_name"] == "Notes"
+    icon = Image.open(_io.BytesIO(anyone.get("/api/branding/icon-512.png").content))
+    assert icon.size == (512, 512)                                   # cut square and resized
+    assert admin.put("/api/branding", json={"icon": "data:image/png;base64,bm90IGEgcGljdHVyZQ=="}).status_code == 400
+    ok(admin.put("/api/branding", json={"name": "", "reset_icon": True}))
+    assert anyone.get("/api/branding/manifest.json").json()["name"] == "Sworkr"

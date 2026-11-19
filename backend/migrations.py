@@ -1755,6 +1755,12 @@ def _m58_test_results(conn):
     conn.execute("ALTER TABLE appointments ADD COLUMN test_result_on TEXT")
 
 
+def _m59_test_samples(conn):
+    """What each kind of health test takes (blood draw, swabs, urine) and what it checks for."""
+    conn.execute("ALTER TABLE test_kinds ADD COLUMN samples TEXT")
+    conn.execute("ALTER TABLE test_kinds ADD COLUMN checks_for TEXT")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1814,6 +1820,7 @@ MIGRATIONS = [
     (56, "progress: weekly goals", _m56_progress_goals, False),
     (57, "work logs, safety timers, supplies, incidents", _m57_everyday, False),
     (58, "health test results", _m58_test_results, False),
+    (59, "health test samples", _m59_test_samples, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

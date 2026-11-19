@@ -29,6 +29,7 @@ CHECKUP = [
     ("data_brokers", "Asked people-search sites to remove your home address", "Search your legal name and address; most of these sites have an opt-out form."),
     ("social_split", "Personal and work accounts fully apart", "Different email, different phone number, no shared contacts upload, not logged in on the same browser profile."),
     ("payment_names", "Checked what name clients see when they pay you", "Payment apps often show your legal name. Look at what a payer sees, and change the display name if you can."),
+    ("vpn", "A VPN for hotel and public Wi-Fi", "Turn it on when you're on someone else's network, and when you look up clients or addresses. Choose one that keeps no logs."),
     ("phone_lock", "A strong phone lock, with previews hidden", "A 6-digit code or longer, and message previews off on the lock screen."),
     ("two_step_everywhere", "Two-step sign-in on email and your main platforms", "An authenticator app is safer than text messages."),
     ("backup_plan", "Someone you trust knows what to do in an emergency", "Who to call, and where your important things are."),

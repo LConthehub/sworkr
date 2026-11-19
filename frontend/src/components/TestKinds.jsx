@@ -41,9 +41,10 @@ export function TestKindsSettings() {
   const { kinds, reload } = useTestKinds();
   const [rows, setRows] = useState(null);
   const [message, setMessage] = useState(null);
-  useEffect(() => { reload(); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  const [info, setInfo] = useState(null);   // the kinds of sample, and ready-made sets
+  useEffect(() => { reload(); axios.get('/api/test-kinds/templates').then(({ data }) => setInfo(data)).catch(() => {}); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    setRows(kinds.map((k) => ({ id: k.id, label: k.label, every_days: k.every_days ?? '', cost: k.cost ?? '', archived: k.archived, starter: k.starter, tests: k.tests })));
+    setRows(kinds.map((k) => ({ id: k.id, label: k.label, every_days: k.every_days ?? '', cost: k.cost ?? '', archived: k.archived, starter: k.starter, tests: k.tests, samples: k.samples || [], checks_for: k.checks_for || '' })));
   }, [kinds]);
   if (!rows) return null;
   const update = (i, patch) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -52,7 +53,7 @@ export function TestKindsSettings() {
     setMessage(null);
     try {
       for (const r of rows) {
-        const body = { label: r.label, every_days: r.every_days === '' ? null : Number(r.every_days), cost: r.cost === '' ? null : Number(r.cost), archived: r.archived };
+        const body = { label: r.label, every_days: r.every_days === '' ? null : Number(r.every_days), cost: r.cost === '' ? null : Number(r.cost), archived: r.archived, samples: r.samples || [], checks_for: r.checks_for || null };
         if (r.id) await axios.put(`/api/test-kinds/${r.id}`, body);
         else if (r.label.trim()) await axios.post('/api/test-kinds', body);
       }
@@ -94,6 +95,20 @@ export function TestKindsSettings() {
               )}
               {(!r.id || (!r.starter && !r.tests)) && <button type="button" onClick={() => remove(r, i)} className="text-gray-400 hover:text-red-500">Remove</button>}
             </span>
+            {info && (
+              <div className="col-span-12 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600 pb-2 border-b border-gray-100">
+                <span className="text-gray-500">What's taken:</span>
+                {Object.entries(info.samples).map(([key, name]) => (
+                  <label key={key} className="flex items-center gap-1">
+                    <input type="checkbox" checked={(r.samples || []).includes(key)}
+                      onChange={(e) => update(i, { samples: e.target.checked ? [...(r.samples || []), key] : (r.samples || []).filter((x) => x !== key) })} />
+                    {name}
+                  </label>
+                ))}
+                <input value={r.checks_for} onChange={(e) => update(i, { checks_for: e.target.value })} placeholder="Checks for, e.g. HIV, syphilis" aria-label="What it checks for"
+                  className={`${inputClass} !py-1 !text-xs sm:!w-64`} />
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -105,8 +120,17 @@ export function TestKindsSettings() {
       {message?.ok && <p className="text-sm text-emerald-600">{message.ok}</p>}
       <div className="flex flex-wrap gap-2">
         <button type="submit" className={buttonClass}>Save</button>
-        <button type="button" onClick={() => setRows([...rows, { label: '', every_days: '', cost: '', archived: false }])} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">+ Add a test</button>
+        <button type="button" onClick={() => setRows([...rows, { label: '', every_days: '', cost: '', archived: false, samples: [], checks_for: '' }])} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">+ Add a test</button>
       </div>
+      {info?.templates.map((t) => (
+        <div key={t.id} className="rounded-xl border border-gray-100 p-3 text-sm">
+          <p className="font-medium text-gray-800">{t.label}</p>
+          <p className="text-xs text-gray-600 mt-0.5">{t.kinds.map((k) => `${k.label} every ${k.every_days} days (${k.checks_for})`).join('; ')}.</p>
+          <p className="text-xs text-gray-500 mt-0.5">{t.note} Source: {t.source}.</p>
+          <button type="button" onClick={async () => { await axios.post(`/api/test-kinds/templates/${t.id}`).catch(() => {}); reload(); }}
+            className="mt-2 px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50">Add these tests</button>
+        </div>
+      ))}
     </form>
   );
 }
@@ -137,7 +161,7 @@ export function TestsDue() {
           </li>
         ))}
       </ul>
-      <p className="text-xs text-gray-400 mt-1">Change how often under <Link to="/account/work#tests" className="underline">Account → Health tests</Link>.</p>
+      <p className="text-xs text-gray-400 mt-1">Change how often under <Link to="/account/health#tests" className="underline">Settings → Health tests</Link>.</p>
     </div>
   );
 }

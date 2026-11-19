@@ -34,6 +34,7 @@
       <li><a href="/docs/content.html">Content &amp; planning</a></li>
       <li><a href="/docs/health-and-safety.html">Health &amp; safety</a></li>
       <li><a href="/docs/notifications.html">Notifications</a></li>
+      <li><a href="/docs/own-your-data.html">Own your data</a></li>
       <li><a href="/docs/troubleshooting.html">If something goes wrong</a></li>
       </ul>
     </aside>
@@ -41,6 +42,17 @@
       <h1>Install with Docker</h1>
 
 <p class="lead">Pick your options, copy one file, start it. This page writes the setup file for you.</p>
+
+<h2 id="first-time">First time with Docker</h2>
+<p>Docker runs Sworkr in a sealed box on your computer, the same way on Windows, Mac and Linux. You install it once.</p>
+<ul>
+  <li><strong>Windows 10 or 11:</strong> install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>. It may ask to install or update "WSL" (a part of Windows it needs): say yes, and restart if it asks. Open Docker Desktop and wait for <em>Engine running</em> at the bottom left. You can skip signing in to Docker.</li>
+  <li><strong>Mac:</strong> download the Docker Desktop that matches your Mac: <em>Apple chip</em> for M1 and newer, <em>Intel chip</em> for older ones (Apple menu, About This Mac shows which). Drag it to Applications, open it, and wait for <em>Engine running</em>.</li>
+  <li><strong>Linux or a home server:</strong> Docker Engine is enough; your distribution's instructions are at <a href="https://docs.docker.com/engine/install/">docs.docker.com/engine/install</a>.</li>
+  <li><strong>A NAS:</strong> Synology's Container Manager, Unraid and TrueNAS all run it (see below).</li>
+</ul>
+<p>Then the easy way: download <a href="/downloads/sworkr-start.zip" download>sworkr-start.zip</a>, unzip it, and double-click <em>Start sworkr</em>. Or carry on below to make a setup file with your own choices.</p>
+<p><strong>If it doesn't start:</strong> "Docker isn't running" means Docker Desktop isn't open yet, or is still starting. "Port is already allocated" means something else uses 8008: change the port below. On a Mac, "can't be opened because it is from an unidentified developer": right-click the file and choose <em>Open</em> instead of double-clicking.</p>
 <p>Sworkr's Docker setup is one file, <code>docker-compose.yml</code>: where your records live, which folders it can see, and who can open it. Fill in what you want below; the file updates as you type. <strong>Nothing you type here leaves your browser.</strong></p>
 <p id="no-script">This builder needs JavaScript. Without it, use the ready-made <a href="/downloads/docker-compose.yml" download>docker-compose.yml</a> as it is: it works without changes.</p>
 

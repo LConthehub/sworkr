@@ -15,6 +15,7 @@ import { AssistantSettings } from '../components/Assistant';
 import { WellnessSettings } from '../components/Wellness';
 import { ProgressSettings } from '../components/Progress';
 import { Supplies, Incidents, PrivacyCheckup } from '../components/Everyday';
+import HomeScreenSettings from '../components/HomeScreen';
 import { reloadFeatures } from '../features';
 import HolidaySettings from '../components/Holidays';
 import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from '../components/SignInSecurity';
@@ -197,6 +198,10 @@ const GROUPS = [
       {
         id: 'theme', title: 'Light or dark', words: 'dark mode night theme light colours colors appearance',
         render: () => <Section title="Light or dark" hint="How sworkr looks on this phone or computer."><LookSettings /></Section>,
+      },
+      {
+        id: 'homescreen', title: 'Home screen name & icon', words: 'icon home screen app name favicon discreet phone shortcut',
+        render: ({ me }) => <Section title="Home screen name & icon" hint="What a phone shows when sworkr is on its home screen."><HomeScreenSettings isAdmin={!!me?.is_admin} /></Section>,
       },
       {
         id: 'progress', title: 'Progress', words: 'streaks goals badges bests gamify progress',

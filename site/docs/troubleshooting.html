@@ -34,6 +34,7 @@
       <li><a href="/docs/content.html">Content &amp; planning</a></li>
       <li><a href="/docs/health-and-safety.html">Health &amp; safety</a></li>
       <li><a href="/docs/notifications.html">Notifications</a></li>
+      <li><a href="/docs/own-your-data.html">Own your data</a></li>
       <li><a href="/docs/troubleshooting.html" aria-current="page">If something goes wrong</a></li>
       </ul>
     </aside>
@@ -43,7 +44,11 @@
 <h2>Sworkr won't start</h2>
 <ul>
   <li><strong>Windows app:</strong> if a message says Sworkr couldn't start, it gives the file with the details (<code>sworkr.log</code> in the Sworkr data folder). If another program is using port 8765, close it, or start Sworkr with the <code>SWORKR_PORT</code> setting set to another number.</li>
-  <li><strong>Docker:</strong> "Docker Desktop isn't running": open Docker Desktop and wait for <em>Engine running</em>.</li>
+  <li><strong>Docker:</strong> "Docker isn't running": open Docker Desktop and wait for <em>Engine running</em>.</li>
+  <li><strong>"Port is already allocated":</strong> something else uses port 8008. Make a setup file with another port in the <a href="/docs/install.html">setup builder</a>.</li>
+  <li><strong>Windows, "WSL" messages:</strong> Docker Desktop needs Windows' Linux part. Let it install or update it, then restart the computer.</li>
+  <li><strong>Mac, "unidentified developer":</strong> right-click <em>Start sworkr.command</em> and choose <em>Open</em>.</li>
+  <li><strong>The download stalls:</strong> a VPN can get in Docker's way. Pause it while Sworkr downloads the first time, then turn it back on.</li>
 </ul>
 
 <h2>I forgot my password</h2>

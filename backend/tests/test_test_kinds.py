@@ -165,3 +165,18 @@ def test_upgrading_keeps_place_charges_and_lets_them_use_any_kind(tmp_path, monk
                "VALUES (1, 1, 'Other', 'per_week', 't123', 'now', 'now')")
     assert db.execute("PRAGMA foreign_key_check").fetchall() == []
     db.close()
+
+
+def test_a_test_says_what_is_taken_and_nevada_rules_come_ready_made(api):
+    info = ok(api.get("/api/test-kinds/templates"))
+    assert "blood" in info["samples"] and info["templates"][0]["id"] == "nevada_house"
+    k = ok(api.post("/api/test-kinds", json={"label": "Throat check", "every_days": 14, "samples": ["throat", "throat"],
+                                              "checks_for": "Gonorrhea"}), 201)
+    assert (k["samples"], k["checks_for"]) == (["throat"], "Gonorrhea")
+    assert api.post("/api/test-kinds", json={"label": "x", "samples": ["toenail"]}).status_code == 400
+    after = ok(api.post("/api/test-kinds/templates/nevada_house"), 201)
+    swab = next(x for x in after if x["label"] == "Weekly swab")
+    blood = next(x for x in after if x["label"] == "Monthly blood draw")
+    assert (swab["every_days"], swab["samples"], blood["every_days"], blood["samples"]) == (7, ["cervical"], 30, ["blood"])
+    again = ok(api.post("/api/test-kinds/templates/nevada_house"), 201)
+    assert len(again) == len(after)                                   # not added twice
