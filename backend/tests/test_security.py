@@ -199,3 +199,20 @@ def test_text_that_looks_like_code_is_stored_as_plain_text(admin):
     assert user.get("/api/search", params={"q": "%"}).json()["count"] == 1        # % is matched literally
     assert user.get("/api/clients", params={"search": "_"}).json()[0]["name"] == tricky
     assert len(user.get("/api/clients").json()) == 1
+
+
+def test_every_api_route_is_closed_without_logging_in():
+    """Walks every route the app has, so a new one that forgets the login check fails here."""
+    import re
+    c = TestClient(main.app)
+    checked = 0
+    # The app's own index of every path (modules' routers included), not app.routes: newer FastAPI groups those.
+    for path, methods in main.app.openapi()["paths"].items():
+        if not path.startswith("/api") or path in main.PUBLIC_PATHS:
+            continue
+        url = re.sub(r"\{[^}]+\}", "1", path)
+        for method in sorted(m.upper() for m in methods):
+            r = c.request(method, url, headers={"Origin": "http://testserver"})
+            assert r.status_code in (401, 403), f"{method} {path} answered {r.status_code} without a login"
+            checked += 1
+    assert checked > 200

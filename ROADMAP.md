@@ -90,7 +90,10 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   Ollama: all speak the OpenAI-style API on localhost). Cloud AI only as an explicit opt-in, clearly marked,
   off by default. Jobs: statistics and search (ask questions of your own numbers, find things across notes), not writing.
 - start planning ways to gamify posting, earnings etc.
-- penetration testing
+- Penetration testing, part 1 done 2026-11-18: a test walks every API route (200+) and checks none answers
+  without a login; Python dependencies audited clean (pip-audit). Frontend: 2 moderate react-router advisories
+  that don't apply here (no outside redirect targets, no server rendering); upgrade to react-router 7 to clear
+  them (a breaking upgrade). Still to do: an outside tester before launch.
 - apple health support as an option, track health choices like water intake and food, sleep to see how these things effect income over time.
 
 ## Bigger ideas
