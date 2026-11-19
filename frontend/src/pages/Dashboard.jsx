@@ -8,6 +8,11 @@ import QuickNote from '../components/QuickNote';
 import { AskCard } from '../components/Assistant';
 import { WellnessCard } from '../components/Wellness';
 import { ProgressCard, TourWrapUp } from '../components/Progress';
+import Today from '../components/Today';
+import { useFeatures } from '../features';
+
+// Cards that only fit some kinds of work (see FEATURES in backend/finance.py).
+const CARD_NEEDS = { deposits: 'bookings', inquiries: 'bookings', shoots: 'shoots', customs: 'customs', ads: 'ads', posts: 'content' };
 import { EmailPanel } from '../components/Email';
 import GoalsGlance from '../components/GoalsGlance';
 import { CycleCard } from '../components/Cycle';
@@ -56,6 +61,8 @@ export default function Dashboard({ user }) {
   const move = (i, by) => setOrder((o) => { const next = [...o]; [next[i], next[i + by]] = [next[i + by], next[i]]; return next; });
   const saveLayout = async () => { await axios.put('/api/dashboard-layout', { order, hidden }).catch(() => {}); setCustomizing(false); };
   const bump = () => setVersion((v) => v + 1);
+  const has = useFeatures();
+  const fits = (id) => !CARD_NEEDS[id] || has(CARD_NEEDS[id]);
   const card = (id) => ({
     week: <WeekAhead version={version} />,
     deposits: <DepositsDue />,
@@ -107,8 +114,9 @@ export default function Dashboard({ user }) {
           </div>
         </div>
       )}
+      <Today onLogged={bump} />
       <div className="lg:columns-2 gap-4">
-        {order.filter((id) => !hidden.includes(id)).map((id) => (
+        {order.filter((id) => !hidden.includes(id) && fits(id)).map((id) => (
           <div key={id} className="mb-4 break-inside-avoid empty:hidden">{card(id)}</div>
         ))}
       </div>

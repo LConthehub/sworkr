@@ -4,6 +4,7 @@ import axios from 'axios';
 import Modal, { Field, inputClass, errorMessage, buttonClass, quietButtonClass } from '../components/Modal';
 import ClientForm from '../components/ClientForm';
 import { useSnippets } from '../components/Promo';
+import { useFeatures } from '../features';
 
 /**
  * A saved reply with this inquiry's details filled in, ready to paste.
@@ -40,9 +41,11 @@ const shortDay = (iso) => dayLabel(new Date(iso), { weekday: 'short', month: 'sh
 export function PeopleNav({ dark = false }) {
   const base = dark ? 'text-gray-600 hover:bg-gray-100' : 'text-white hover:bg-white/20';
   const active = dark ? 'bg-sworkr-500 text-white' : 'bg-white text-sworkr-600 shadow';
+  const bookings = useFeatures()('bookings');
   return (
     <nav className={`flex gap-1 overflow-x-auto rounded-full p-1 ${dark ? 'bg-gray-50' : 'bg-white/20 backdrop-blur-sm'}`} aria-label="People">
-      {[['/contacts', 'Everyone'], ['/contacts/inquiries', 'Inquiries'], ['/contacts/quiet', 'Ghosts'], ['/contacts/base', 'Client base']].map(([to, label]) => (
+      {[['/contacts', 'Everyone'], ['/contacts/inquiries', 'Inquiries'], ['/contacts/quiet', 'Ghosts'], ['/contacts/base', 'Client base']]
+        .filter(([to]) => bookings || (to !== '/contacts/inquiries' && to !== '/contacts/quiet')).map(([to, label]) => (
         <NavLink key={to} to={to} end className={({ isActive }) => `whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium ${isActive ? active : base}`}>
           {label}
         </NavLink>

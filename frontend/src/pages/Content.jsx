@@ -7,6 +7,7 @@ import { Campaigns, Toolkit, useCampaigns, usePlaces, useSnippets } from '../com
 import Listings from '../components/Listings';
 import Customs from '../components/Customs';
 import Social, { PublishButtons, useSocialAccounts } from '../components/Social';
+import { useFeatures } from '../features';
 import { dayLabel, formatTime, fromDateTimeInputs, money, repeatDates, toDateInput, toTimeInput } from '../colors';
 
 /** Suggestions only: any platform, ad site or your own website can be typed in. */
@@ -50,13 +51,15 @@ export default function Content() {
   const [version, setVersion] = useState(0);
   const plan = (draft) => setModal({ post: draft });
   const section = SECTION_OF[tab] || 'library';
+  const has = useFeatures();
+  const sections = SECTIONS.filter(([id]) => id !== 'customs' || has('customs'));
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-white">Content</h1>
         <nav className="flex gap-1 overflow-x-auto rounded-full bg-white/20 p-1 backdrop-blur-sm" aria-label="Content">
-          {SECTIONS.map(([id, to, label]) => (
+          {sections.map(([id, to, label]) => (
             <Link key={id} to={to} aria-current={section === id ? 'page' : undefined}
               className={`whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-full text-sm font-medium ${section === id ? 'bg-white text-sworkr-600 shadow' : 'text-white hover:bg-white/20'}`}>
               {label}

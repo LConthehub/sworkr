@@ -249,6 +249,30 @@
           "payout_note": "For example Clips4Sale; check the platform's cut"
         }
       ]
+    },
+    "massage": {
+      "label": "Massage or bodywork",
+      "categories": {
+        "workspace": [
+          "Table & linens"
+        ]
+      },
+      "sources": []
+    },
+    "seller": {
+      "label": "Online seller (clips, items)",
+      "categories": {
+        "other": [
+          "Postage & packaging"
+        ]
+      },
+      "sources": [
+        {
+          "name": "My shop",
+          "kind": "platform",
+          "payout_note": "Enter the shop's cut and payout schedule"
+        }
+      ]
     }
   }
 }

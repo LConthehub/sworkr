@@ -967,12 +967,57 @@ def apply_presets(db, owner_id: int, work_types: List[str]) -> dict:
     return added
 
 
+# The parts of sworkr, and the kinds of work each is for. Someone who hasn't said how they work, or who ticked
+# "show everything", sees all of it.
+FEATURES = {
+    "bookings": {"brothel", "independent", "sugar", "fetish", "massage", "porn"},   # deposits, inquiries, ghosts
+    "rates": {"independent", "sugar", "fetish", "massage", "brothel"},
+    "tours": {"independent", "brothel", "dancer", "porn", "cosplay", "fetish", "massage"},
+    "content": {"content", "cam", "porn", "cosplay", "fetish", "independent", "sugar", "seller", "phone", "massage"},
+    "customs": {"content", "cam", "cosplay", "fetish", "phone", "seller"},
+    "ads": {"independent", "fetish", "sugar", "massage"},
+    "shoots": {"content", "porn", "cosplay", "fetish"},
+    "log_shift": {"dancer", "brothel"},
+    "log_stream": {"cam"},
+    "log_call": {"phone"},
+    "log_scene": {"porn"},
+    "log_sale": {"content", "cosplay", "seller", "cam"},
+}
+
+
+def features_for(db, owner_id: int) -> dict:
+    types = _work_types(db, owner_id)
+    r = db.execute("SELECT value FROM user_settings WHERE user_id = ? AND key = 'show_everything'", (owner_id,)).fetchone()
+    everything = not types or bool(r and r["value"] == "1")
+    return {name: everything or bool(kinds & set(types)) for name, kinds in FEATURES.items()}
+
+
+class ShowEverything(BaseModel):
+    show_everything: bool
+
+
+@router.put("/api/work-profile/show-everything")
+def save_show_everything(body: ShowEverything, request: Request):
+    owner = _owner(request)
+    db = _db()
+    try:
+        db.execute("INSERT INTO user_settings (user_id, key, value) VALUES (?, 'show_everything', ?) "
+                   "ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value", (owner, "1" if body.show_everything else "0"))
+        db.commit()
+        return {"show_everything": body.show_everything, "features": features_for(db, owner)}
+    finally:
+        db.close()
+
+
 @router.get("/api/work-profile")
 def get_work_profile(request: Request):
     db = _db()
     try:
-        return {"work_types": _work_types(db, _owner(request)),
-                "options": [{"key": k, "label": v["label"]} for k, v in PRESETS.items()]}
+        owner = _owner(request)
+        r = db.execute("SELECT value FROM user_settings WHERE user_id = ? AND key = 'show_everything'", (owner,)).fetchone()
+        return {"work_types": _work_types(db, owner),
+                "options": [{"key": k, "label": v["label"]} for k, v in PRESETS.items()],
+                "features": features_for(db, owner), "show_everything": bool(r and r["value"] == "1")}
     finally:
         db.close()
 

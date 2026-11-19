@@ -47,6 +47,8 @@ import assistant
 import wellness
 import bank
 import progress
+import worklog
+import everyday
 import calendar_dates
 import blocklist
 import signin
@@ -2220,6 +2222,8 @@ app.include_router(assistant.router)
 app.include_router(wellness.router)
 app.include_router(bank.router)
 app.include_router(progress.router)
+app.include_router(worklog.router)
+app.include_router(everyday.router)
 app.include_router(calendar_dates.router)
 app.include_router(marketing.router)
 app.include_router(campaigns.router)
@@ -2259,6 +2263,8 @@ assistant.setup(get_db)
 wellness.setup(get_db)
 bank.setup(get_db)
 progress.setup(get_db)
+worklog.setup(get_db)
+everyday.setup(get_db)
 calendar_dates.setup(get_db)
 marketing.setup(get_db)
 campaigns.setup(get_db)

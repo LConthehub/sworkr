@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Modal, { errorMessage, buttonClass, quietButtonClass } from './Modal';
 import { reloadCategories } from '../api';
+import { reloadFeatures } from '../features';
 
 /** The kinds of work as checkboxes. Saving adds each kind's starter categories and workplaces and platforms. */
 export function WorkTypesPicker({ onSaved, onSkip, saveLabel = 'Save' }) {
@@ -25,6 +26,7 @@ export function WorkTypesPicker({ onSaved, onSkip, saveLabel = 'Save' }) {
     try {
       const { data } = await axios.put('/api/work-profile', { work_types: types });
       reloadCategories().catch(() => {});
+      reloadFeatures();
       const added = [...data.added.categories, ...data.added.sources];
       setMessage({ ok: added.length ? `Added: ${added.join(', ')}.` : 'Saved.' });
       onSaved?.(data);

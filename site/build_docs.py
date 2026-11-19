@@ -64,7 +64,14 @@ PAGES = [
 </ol>
 
 <h2>Your dashboard</h2>
-<p>The first page shows what needs doing. <em>Customize</em> chooses the cards and their order. Besides bookings, tasks and money, there are:</p>
+<p>Sworkr shows the parts that fit the kinds of work you ticked, and tucks the rest away (<em>Settings → My work → Show everything</em> brings it all back).</p>
+<p>The first page shows what needs doing. <em>Customize</em> chooses the cards and their order. At the top, made for a phone:</p>
+<ul>
+  <li><strong>Quick logs</strong> for your kind of work: one tap for a shift, a stream, calls, a scene or a sale. Add the hours and what came in, and it's in your income.</li>
+  <li><strong>The safety timer</strong>: "tell my contact if I haven't tapped I'm safe in 20 minutes". For a walk home, a first meeting, anything.</li>
+  <li><strong>What's running low</strong> from your supplies list.</li>
+</ul>
+<p>Below that, besides bookings, tasks and money:</p>
 <ul>
   <li><strong>Routines</strong>: your own checklists (morning, night, before and after a booking), ticked off each day.</li>
   <li><strong>Notes</strong>: a scratch pad that saves itself.</li>
@@ -314,6 +321,12 @@ PAGES = [
 <h2>Comparing</h2>
 <p><em>Money → Compare</em>: by tour, month, week, kind of work, workplace, persona, <strong>how they found you</strong> (income against ad spend) and <strong>busy times</strong> (a grid of when bookings happen, and what an hour of each kind brings in).</p>
 
+<h2>What an hour really pays</h2>
+<p><em>Money → Overview</em> shows what an hour brings in for each kind of work: bookings (their length plus the getting-ready and travel time you set) and your quick logs. The last line takes all your costs off too.</p>
+
+<h2>Steady pay</h2>
+<p>For uneven months. Put what comes in into a buffer envelope and pay yourself the same amount every week. Sworkr suggests a careful amount from your last six months and says how many weeks your buffer covers.</p>
+
 <h2>Wallet</h2>
 <p><em>Money → Wallet</em> holds savings goals and <strong>envelopes</strong>. A goal has a target; an envelope is just money in and out (your own wallet, spending money for a tour). An envelope can also show what a workplace is keeping for you until payout. Choose which ones show on the dashboard.</p>
 
@@ -360,8 +373,15 @@ PAGES = [
 <h2>Documents that expire</h2>
 <p><em>Settings → My work → Licenses &amp; documents</em>: a license, work card, ID, passport, health card, a platform's ID check, insurance. Each gets a reminder before it runs out, and shows on the calendar. Sworkr keeps names and dates only: <strong>there's no field for ID or license numbers, on purpose.</strong></p>
 
+<h2>Supplies</h2>
+<p><em>Settings → Health → Supplies</em> is a short stock list. Tap minus when you use one; what's running low shows on your dashboard.</p>
+
 <h2>Safety check-in</h2>
-<p><em>Settings → Health &amp; safety</em> sets up a trusted contact. Tick <em>Safety check-in</em> on a booking; if you haven't checked in afterwards (within the grace time you set), your contact is emailed what you chose to share. This needs email set up under <em>Connections</em>.</p>
+<p><em>Settings → Health &amp; safety</em> sets up a trusted contact. Tick <em>Safety check-in</em> on a booking; if you haven't checked in afterwards (within the grace time you set), your contact is emailed what you chose to share. This needs email set up under <em>Connections</em>, or a <strong>push address</strong>: your contact installs the free ntfy app and subscribes to a long random name you agree on. A push arrives in seconds, where email can take minutes.</p>
+<p>The <strong>safety timer</strong> on the dashboard uses the same contact for anything that isn't a booking. If the alert already went out when you tap <em>I'm safe</em>, your contact gets an all-clear.</p>
+
+<h2>Incident log and privacy check-up</h2>
+<p>Under <em>Settings → Security &amp; privacy</em>. The incident log is for writing down what happened the same day: when, what, who, and what you kept. It's never sent anywhere. The privacy check-up is a checklist for keeping work and private life apart.</p>
 
 <h2>Period tracker, birth control and regular meds</h2>
 <p>Optional, off until you turn them on. Injections can rotate sites and step up doses on a schedule. Dates show on the calendar, and medication marked discreet shows only as "Health".</p>

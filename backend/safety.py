@@ -106,7 +106,8 @@ def settings_for(db, user_id: int) -> dict:
         "timezone": _get(db, user_id, "safety_timezone", "UTC"),
         "email_configured": smtp_configured(),
         # Alerts will really go out only when both of these are in place.
-        "armed": bool(contact_email) and smtp_configured(),
+        "contact_push": _get(db, user_id, "safety_contact_push", ""),
+        "armed": (bool(contact_email) and smtp_configured()) or bool(_get(db, user_id, "safety_contact_push", "")),
         "last_error": _get(db, user_id, "safety_last_error"),
         "grace_choices": list(GRACE_CHOICES),
     }
@@ -187,21 +188,85 @@ def alert_text(appt: dict, cfg: dict, now: datetime) -> tuple:
     return f"Safety alert: {who} has not checked in", "\n".join(lines)
 
 
+PUSH_TRANSPORT = None    # tests put a pretend ntfy here
+
+
+def send_push(url: str, title: str, body: str) -> None:
+    """A push to the trusted contact's phone: they subscribe to this ntfy address in the ntfy app."""
+    import httpx
+    with httpx.Client(timeout=20, transport=PUSH_TRANSPORT, follow_redirects=False) as http:
+        r = http.post(url, content=body.encode(), headers={"Title": title.encode("ascii", "replace").decode(),
+                                                           "Priority": "5", "Tags": "rotating_light"})
+    if r.status_code >= 300:
+        raise RuntimeError(f"The push server answered {r.status_code}")
+
+
+def deliver(cfg: dict, subject: str, body: str) -> None:
+    """Send by every way that's set up (push is seconds, email can be minutes). Fails only if none got through."""
+    ways, errors = 0, []
+    if cfg.get("contact_push"):
+        ways += 1
+        try:
+            send_push(cfg["contact_push"], subject, body)
+        except Exception as e:
+            errors.append(f"push: {e}")
+    if cfg.get("contact_email") and smtp_configured():
+        ways += 1
+        try:
+            send_email(cfg["contact_email"], subject, body)
+        except Exception as e:
+            errors.append(f"email: {e}")
+    if ways == 0:
+        raise RuntimeError("No way to reach your trusted contact is set up")
+    if len(errors) == ways:
+        raise RuntimeError("; ".join(errors))
+
+
+def timer_text(timer: dict, cfg: dict, user_name: str) -> tuple:
+    who = cfg["contact_name"] or "there"
+    lines = [f"Hi {who},", "", f"{user_name} set a safety timer and hasn't tapped \"I'm safe\" in time.",
+             f"It was due at {_local(_parse(timer['due_at']), cfg['timezone'])}."]
+    if timer.get("note"):
+        lines += ["", f"Their note: {timer['note']}"]
+    if cfg["instructions"]:
+        lines += ["", "What they asked you to do:", cfg["instructions"]]
+    lines += ["", "Try to reach them now."]
+    return f"Safety timer: {user_name} hasn't checked in", "\n".join(lines)
+
+
+def run_timers(db, now: datetime) -> int:
+    sent = 0
+    for t in [dict(r) for r in db.execute(
+            "SELECT t.*, u.username FROM safety_timers t JOIN users u ON u.id = t.owner_id "
+            "WHERE t.done_at IS NULL AND t.alert_sent_at IS NULL AND t.due_at <= ?", (now.isoformat(timespec="seconds"),))]:
+        cfg = settings_for(db, t["owner_id"])
+        try:
+            deliver(cfg, *timer_text(t, cfg, t["username"]))
+            db.execute("UPDATE safety_timers SET alert_sent_at = ?, alert_error = NULL WHERE id = ?",
+                       (now.isoformat(timespec="seconds"), t["id"]))
+            sent += 1
+        except Exception as e:
+            db.execute("UPDATE safety_timers SET alert_error = ? WHERE id = ?", (str(e)[:300], t["id"]))
+        db.commit()
+    return sent
+
+
 def run_alerts(now: Optional[datetime] = None) -> int:
     """Send any alerts that are due. Returns how many were sent."""
     now = now or datetime.now(timezone.utc)
     db = _get_db()
     sent = 0
     try:
+        sent += run_timers(db, now)
         for appt in watched_appointments(db, now=now):
             if appt["alert_sent_at"] or _parse(appt["alert_at"]) > now:
                 continue
             cfg = settings_for(db, appt["owner_id"])
-            if not cfg["contact_email"]:
+            if not cfg["contact_email"] and not cfg["contact_push"]:
                 continue
             try:
                 subject, body = alert_text(appt, cfg, now)
-                send_email(cfg["contact_email"], subject, body)
+                deliver(cfg, subject, body)
                 db.execute("UPDATE appointments SET alert_sent_at = ?, alert_error = NULL WHERE id = ?",
                            (now.isoformat(timespec="seconds"), appt["id"]))
                 _put(db, appt["owner_id"], "safety_last_error", None)
@@ -244,6 +309,7 @@ class SafetySettings(BaseModel):
     include_details: bool = True
     instructions: str = ""
     timezone: str = "UTC"
+    contact_push: str = ""        # an ntfy address your contact subscribes to, e.g. https://ntfy.sh/a-long-random-name
 
 
 @router.get("")
@@ -262,10 +328,14 @@ def save_settings(body: SafetySettings, request: Request):
         raise HTTPException(status_code=400, detail="That doesn't look like an email address")
     if body.grace_minutes not in GRACE_CHOICES:
         raise HTTPException(status_code=400, detail="Pick one of the listed waiting times")
+    push = body.contact_push.strip()
+    if push and (not push.startswith("https://") or len(push.rstrip("/").rsplit("/", 1)[-1]) < 12):
+        raise HTTPException(status_code=400, detail="The push address starts with https:// and ends in a long, hard-to-guess name")
     user_id = request.state.user["id"]
     db = _get_db()
     try:
-        for key, value in (("safety_contact_name", body.contact_name.strip()),
+        for key, value in (("safety_contact_push", push),
+                           ("safety_contact_name", body.contact_name.strip()),
                            ("safety_contact_email", email),
                            ("safety_grace_minutes", str(body.grace_minutes)),
                            ("safety_details", "1" if body.include_details else "0"),
@@ -294,19 +364,19 @@ def send_test(request: Request):
         cfg = settings_for(db, user["id"])
     finally:
         db.close()
-    if not cfg["contact_email"]:
-        raise HTTPException(status_code=400, detail="Save your trusted contact's email first")
-    if not cfg["email_configured"]:
+    if not cfg["contact_email"] and not cfg["contact_push"]:
+        raise HTTPException(status_code=400, detail="Save your trusted contact's email or push address first")
+    if not cfg["contact_push"] and not cfg["email_configured"]:
         raise HTTPException(status_code=400, detail="Email isn't set up yet. Add the SMTP settings to the .env file and restart.")
     try:
-        send_email(cfg["contact_email"], f"Test: {user['username']}'s sworkr safety alerts",
+        deliver(cfg, f"Test: {user['username']}'s sworkr safety alerts",
                    f"This is a test. {user['username']} has named you as their trusted contact in sworkr.\n\n"
-                   "If they don't check in after an appointment, you'll get an email like this one saying so.\n"
+                   "If they don't check in after an appointment or a safety timer, you'll get a message like this one saying so.\n"
                    "Nothing is wrong right now.")
         _last_test_sent[user["id"]] = time.time()   # only a test that went out starts the wait
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"The email couldn't be sent: {e}")
-    return {"sent_to": cfg["contact_email"]}
+        raise HTTPException(status_code=502, detail=f"The test couldn't be sent: {e}")
+    return {"sent_to": cfg["contact_email"] or "their phone"}
 
 
 @router.get("/watch")
@@ -319,5 +389,71 @@ def watch(request: Request):
             "duration_minutes": a["duration_minutes"], "ends_at": a["ends_at"], "alert_at": a["alert_at"],
             "alert_sent_at": a["alert_sent_at"], "alert_error": a["alert_error"],
         } for a in watched_appointments(db, owner_id=request.state.user["id"])]
+    finally:
+        db.close()
+
+
+# ==================== A TIMER FOR ANYTHING ====================
+# "I'm walking home: tell my contact if I haven't tapped I'm safe in 20 minutes."
+
+class TimerIn(BaseModel):
+    minutes: int
+    note: str = ""
+
+
+def _active_timer(db, owner: int):
+    r = db.execute("SELECT id, due_at, note, alert_sent_at FROM safety_timers WHERE owner_id = ? AND done_at IS NULL "
+                   "ORDER BY id DESC LIMIT 1", (owner,)).fetchone()
+    return dict(r) if r else None
+
+
+@router.get("/timer")
+def get_timer(request: Request):
+    db = _get_db()
+    try:
+        return {"timer": _active_timer(db, request.state.user["id"]), "armed": settings_for(db, request.state.user["id"])["armed"]}
+    finally:
+        db.close()
+
+
+@router.post("/timer", status_code=201)
+def start_timer(body: TimerIn, request: Request):
+    if not 1 <= body.minutes <= 24 * 60:
+        raise HTTPException(status_code=400, detail="From 1 minute to 24 hours")
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        if not settings_for(db, owner)["armed"]:
+            raise HTTPException(status_code=409, detail="Set up your trusted contact first (Settings → Security & privacy → Safety check-in)")
+        now = datetime.now(timezone.utc)
+        db.execute("UPDATE safety_timers SET done_at = ? WHERE owner_id = ? AND done_at IS NULL", (now.isoformat(timespec="seconds"), owner))
+        db.execute("INSERT INTO safety_timers (owner_id, due_at, note, created_at) VALUES (?, ?, ?, ?)",
+                   (owner, (now + timedelta(minutes=body.minutes)).isoformat(timespec="seconds"), body.note.strip()[:300] or None,
+                    now.isoformat(timespec="seconds")))
+        db.commit()
+        return {"timer": _active_timer(db, owner)}
+    finally:
+        db.close()
+
+
+@router.post("/timer/safe")
+def timer_safe(request: Request):
+    """I'm safe: stop the timer. If the alert already went out, your contact is told you're fine."""
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        t = _active_timer(db, owner)
+        if t:
+            db.execute("UPDATE safety_timers SET done_at = ? WHERE owner_id = ? AND done_at IS NULL",
+                       (datetime.now(timezone.utc).isoformat(timespec="seconds"), owner))
+            db.commit()
+            if t["alert_sent_at"]:
+                cfg = settings_for(db, owner)
+                try:
+                    deliver(cfg, f"All clear: {request.state.user['username']} is safe",
+                            f"{request.state.user['username']} just tapped \"I'm safe\". No need to do anything more.")
+                except Exception as e:
+                    log.warning("All-clear message failed: %s", e)
+        return {"timer": None}
     finally:
         db.close()

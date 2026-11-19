@@ -63,6 +63,12 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Only what fits: each part of sworkr shows for the kinds of work it's for (Settings > My work > Show everything
+  to see all). Two more kinds of work: massage or bodywork, online seller.
+- Today strip on the dashboard: quick logs (shift, stream, calls, scene, sale), the safety timer, supplies low.
+- Safety: alerts by ntfy push to the trusted contact as well as email; a timer for anything, with an all-clear.
+- Money > Overview: what an hour really pays, and steady pay from a buffer envelope.
+- Supplies (Settings > Health), incident log and privacy check-up (Settings > Security & privacy).
 - Review pass: routines, the daily check-in and Progress now use your own day, not the server's UTC day
   (ticks used to reset at 4pm Pacific); editing a routine keeps ticks on unchanged steps; "paused" streaks
   shown correctly; dark-mode colours for the goal rings; rates form fits a phone; demo sample data and docs

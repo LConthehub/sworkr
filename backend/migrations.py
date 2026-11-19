@@ -1694,6 +1694,61 @@ def _m56_progress_goals(conn):
     """)
 
 
+def _m57_everyday(conn):
+    """Quick work logs (shift, stream, call, scene, sale), safety timers, supplies and an incident log."""
+    conn.execute("""
+        CREATE TABLE work_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            kind TEXT NOT NULL CHECK(kind IN ('shift', 'stream', 'call', 'scene', 'sale')),
+            source_id INTEGER REFERENCES income_sources(id) ON DELETE SET NULL,
+            day TEXT NOT NULL,
+            hours REAL CHECK(hours IS NULL OR hours >= 0),
+            units REAL,
+            income_id INTEGER REFERENCES income(id) ON DELETE SET NULL,
+            note TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_work_logs_owner ON work_logs(owner_id, day)")
+    conn.execute("""
+        CREATE TABLE safety_timers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            due_at TEXT NOT NULL,
+            note TEXT,
+            created_at TEXT NOT NULL,
+            done_at TEXT,
+            alert_sent_at TEXT,
+            alert_error TEXT
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE supplies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            have INTEGER NOT NULL DEFAULT 0 CHECK(have >= 0),
+            low_at INTEGER NOT NULL DEFAULT 1 CHECK(low_at >= 0),
+            note TEXT,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE incidents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            happened_on TEXT NOT NULL,
+            title TEXT NOT NULL,
+            what TEXT,
+            who TEXT,
+            evidence TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1751,6 +1806,7 @@ MIGRATIONS = [
     (54, "wellness log", _m54_wellness, False),
     (55, "bank transactions (SimpleFIN)", _m55_bank, False),
     (56, "progress: weekly goals", _m56_progress_goals, False),
+    (57, "work logs, safety timers, supplies, incidents", _m57_everyday, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

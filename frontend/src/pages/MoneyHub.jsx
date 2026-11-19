@@ -4,6 +4,8 @@ import Money from './Money';
 import Earnings from './Earnings';
 import Goals from './Goals';
 import Bank from '../components/Bank';
+import { PerHour, SteadyPay } from '../components/MoneyTruth';
+import { useFeatures } from '../features';
 import Splits from './Splits';
 import TaxSummary from './TaxSummary';
 import Rates from './Rates';
@@ -26,6 +28,7 @@ const TABS = [
 export default function MoneyHub() {
   const { tab = 'overview' } = useParams();
   const [year, setYear] = useState(new Date().getFullYear());
+  const has = useFeatures();
   if (!TABS.some((t) => t.id === tab)) return <Navigate to="/money" replace />;
 
   return (
@@ -33,7 +36,7 @@ export default function MoneyHub() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-white">Money</h1>
         <nav className="flex gap-1 overflow-x-auto rounded-full bg-white/20 p-1 backdrop-blur-sm" aria-label="Money">
-          {TABS.map((t) => (
+          {TABS.filter((t) => t.id !== 'rates' || has('rates')).map((t) => (
             <NavLink
               key={t.id}
               to={t.to}
@@ -48,6 +51,7 @@ export default function MoneyHub() {
         </nav>
       </div>
       {(tab === 'overview' || tab === 'records') && <Money view={tab} year={year} setYear={setYear} />}
+      {tab === 'overview' && <div className="grid gap-4 lg:grid-cols-2 items-start"><PerHour /><SteadyPay /></div>}
       {tab === 'compare' && <Earnings />}
       {tab === 'rates' && <Rates />}
       {tab === 'goals' && <Goals />}

@@ -14,6 +14,8 @@ import { SocialAccounts } from '../components/Social';
 import { AssistantSettings } from '../components/Assistant';
 import { WellnessSettings } from '../components/Wellness';
 import { ProgressSettings } from '../components/Progress';
+import { Supplies, Incidents, PrivacyCheckup } from '../components/Everyday';
+import { reloadFeatures } from '../features';
 import HolidaySettings from '../components/Holidays';
 import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from '../components/SignInSecurity';
 import { WorkTypesPicker } from '../components/WorkTypes';
@@ -101,7 +103,15 @@ const GROUPS = [
         ),
       },
       { id: 'logout', title: 'Automatic log-out', words: 'idle timeout', render: ({ onIdleChange }) => <AutoLogout onIdleChange={onIdleChange} /> },
-      { id: 'safety', title: 'Safety check-in', words: 'trusted contact alert emergency', render: () => <SafetyCheckIn /> },
+      { id: 'safety', title: 'Safety check-in', words: 'trusted contact alert emergency timer push', render: () => <SafetyCheckIn /> },
+      {
+        id: 'incidents', title: 'Incident log', words: 'incident report what happened evidence log harassment record',
+        render: () => <Section title="Incident log" hint="What happened, written down the same day. Private, and never sent anywhere."><Incidents /></Section>,
+      },
+      {
+        id: 'checkup', title: 'Privacy check-up', words: 'privacy checklist check-up work phone location photos data brokers',
+        render: () => <Section title="Privacy check-up" hint="A checklist for keeping work and private life apart."><PrivacyCheckup /></Section>,
+      },
       {
         id: 'baddates', title: 'Bad-date list', words: 'blocklist ugly mugs warning list blacklist dangerous clients upload',
         render: () => (
@@ -152,6 +162,10 @@ const GROUPS = [
             <CycleSettings />
           </Section>
         ),
+      },
+      {
+        id: 'supplies', title: 'Supplies', words: 'supplies stock condoms lube test kits running low',
+        render: () => <Section title="Supplies" hint="A short list of what you keep in stock, and when it's running low."><Supplies /></Section>,
       },
       {
         id: 'wellness', title: 'Wellness log', words: 'sleep water food energy wellness health apple health',
@@ -503,10 +517,28 @@ const WORK_STYLES = [
   { value: 'both', label: 'Both', hint: 'Everything is shown.' },
 ];
 
+function ShowEverything() {
+  const [on, setOn] = useState(null);
+  useEffect(() => { axios.get('/api/work-profile').then(({ data }) => setOn(!!data.show_everything)).catch(() => {}); }, []);
+  if (on === null) return null;
+  const toggle = async (e) => {
+    const { data } = await axios.put('/api/work-profile/show-everything', { show_everything: e.target.checked });
+    setOn(data.show_everything);
+    reloadFeatures();
+  };
+  return (
+    <label className="mt-3 flex items-start gap-2 text-sm text-gray-700">
+      <input type="checkbox" checked={on} onChange={toggle} className="mt-1" />
+      <span>Show everything<span className="block text-xs text-gray-500">Parts of sworkr that don't fit your kinds of work are tucked away. Tick this to see them all.</span></span>
+    </label>
+  );
+}
+
 function WorkTypes() {
   return (
-    <Section title="Kinds of work" hint="Tick everything you do. Each adds starter expense categories and workplaces and platforms.">
+    <Section title="Kinds of work" hint="Tick everything you do. sworkr shows the parts that fit, and adds starter expense categories, workplaces and platforms.">
       <WorkTypesPicker />
+      <ShowEverything />
     </Section>
   );
 }
@@ -597,7 +629,7 @@ function SafetyCheckIn() {
     axios.get('/api/safety').then(({ data }) => {
       setStatus(data);
       setForm({ contact_name: data.contact_name, contact_email: data.contact_email, grace_minutes: data.grace_minutes,
-                include_details: data.include_details, instructions: data.instructions });
+                include_details: data.include_details, instructions: data.instructions, contact_push: data.contact_push || '' });
     }).catch(() => {});
   }, []);
 
@@ -659,6 +691,13 @@ function SafetyCheckIn() {
             <input type="email" value={form.contact_email} onChange={set('contact_email')} className={inputClass} />
           </Field>
         </div>
+        <Field label="Push to their phone (faster than email)">
+          <input value={form.contact_push} onChange={set('contact_push')} placeholder="https://ntfy.sh/a-long-random-name" autoComplete="off" className={inputClass} />
+          <span className="block text-xs text-gray-500 mt-1">
+            Your contact installs the free ntfy app and subscribes to a long, random name you agree on; put the full address here.
+            The alert reaches them in seconds, and it also powers the safety timer on your dashboard. Use Send a test below.
+          </span>
+        </Field>
         <Field label="Email them if I haven't checked in this long after the appointment ends">
           <select value={form.grace_minutes} onChange={set('grace_minutes')} className={inputClass}>
             {status.grace_choices.map((m) => <option key={m} value={m}>{m} minutes</option>)}

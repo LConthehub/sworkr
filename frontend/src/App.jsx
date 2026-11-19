@@ -9,6 +9,7 @@ import QuickCash from './components/QuickCash';
 import { DecoyScreen, useDiscreet, usePanicKey } from './components/Discreet';
 import Reminders from './components/Reminders';
 import { WorkTypesFirstRun } from './components/WorkTypes';
+import { useFeatures } from './features';
 import { clearCaches, setDemoMode } from './api';
 
 const navClass = ({ isActive }) =>
@@ -64,6 +65,7 @@ function ShootsRedirect() {
 function App() {
   // user: undefined = still checking, null = logged out
   const [auth, setAuth] = useState({ user: undefined, setupRequired: false });
+  const has = useFeatures();   // which parts fit this person's kinds of work
   const [idleMinutes, setIdleMinutes] = useState(0);
   const [notice, setNotice] = useState('');
 
@@ -142,6 +144,8 @@ function App() {
     );
   }
 
+  const pages = PAGES.filter((p) => p.to !== '/content' || has('content') || has('ads'));
+
   return (
     <BrowserRouter>
       <div className="min-h-screen">
@@ -158,7 +162,7 @@ function App() {
                   <span className="hidden xl:inline text-white font-bold text-xl tracking-tight">Sworkr</span>
                 </NavLink>
                 <div className="hidden sm:flex items-center gap-4 lg:gap-6">
-                  {PAGES.map((p) => <NavLink key={p.to} to={p.to} end={p.end} className={navClass}>{p.label}</NavLink>)}
+                  {pages.map((p) => <NavLink key={p.to} to={p.to} end={p.end} className={navClass}>{p.label}</NavLink>)}
                 </div>
               </div>
 
@@ -181,7 +185,7 @@ function App() {
             </div>
             {/* On a phone the pages are a row under the header that scrolls sideways. */}
             <div className="sm:hidden flex gap-1 overflow-x-auto pb-2 -mx-1 px-1" aria-label="Pages">
-              {PAGES.map((p) => <NavLink key={p.to} to={p.to} end={p.end} className={tabClass}>{p.label}</NavLink>)}
+              {pages.map((p) => <NavLink key={p.to} to={p.to} end={p.end} className={tabClass}>{p.label}</NavLink>)}
             </div>
           </div>
         </nav>
