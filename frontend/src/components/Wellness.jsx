@@ -46,7 +46,7 @@ export function WellnessCard() {
     axios.get('/api/wellness/settings').then(({ data }) => {
       setOn(data.enabled);
       if (!data.enabled) return;
-      axios.get('/api/wellness', { params: { days: 1 } }).then(({ data: rows }) => setDay(rows.find((r) => r.day === today) || { day: today }));
+      axios.get('/api/wellness', { params: { days: 3 } }).then(({ data: rows }) => setDay(rows.find((r) => r.day === today) || { day: today }));
     }).catch(() => {});
   }, [today]);
   if (!on || !day) return null;

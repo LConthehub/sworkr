@@ -36,7 +36,7 @@ bg = {
 }
 text = {
     "text-gray-900": "#fff", "text-gray-800": INK, "text-gray-700": "#e4d3de", "text-gray-600": "#cdbac8",
-    "text-gray-500": MUTED, "text-gray-400": "#94808f", "text-gray-300": "#6f5b6c",
+    "text-gray-500": MUTED, "text-gray-100": LINE, "text-gray-400": "#94808f", "text-gray-300": "#6f5b6c",
     "hover\\:text-gray-700:hover": "#fff", "hover\\:text-gray-800:hover": "#fff",
     "text-sworkr-600": "#ff8cc4", "text-sworkr-700": "#ffa6d0", "text-sworkr-800": "#ffbddc",
     "hover\\:text-sworkr-600:hover": "#ffa6d0", "hover\\:text-sworkr-700:hover": "#ffbddc", "hover\\:text-sworkr-800:hover": "#ffd3e7",
@@ -74,6 +74,7 @@ lines += [
     # form fields: typed text, placeholders, and the date/time pickers follow color-scheme
     f"html.dark input, html.dark select, html.dark textarea {{ color: {INK}; }}",
     f"html.dark ::placeholder {{ color: #8a7688; }}",
+    f"html.dark .fill-gray-700 {{ fill: {INK}; }}",
     "html.dark .shadow-lg, html.dark .shadow-xl { box-shadow: 0 10px 30px rgba(0,0,0,.45); }",
     f"html.dark .ring-white {{ --tw-ring-color: {CARD}; }}",
 ]

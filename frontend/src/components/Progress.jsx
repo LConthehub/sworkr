@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import Modal, { inputClass, errorMessage, quietButtonClass } from './Modal';
-import { money } from '../colors';
+import { money, toDateInput } from '../colors';
 
 // Shared by the Progress and Tour wrap-up cards, so the dashboard asks once.
 let pending = null;
 const fetchProgress = (fresh = false) => {
-  if (fresh || !pending) pending = axios.get('/api/progress').then(({ data }) => data).catch(() => ({ enabled: false }));
+  if (fresh || !pending) pending = axios.get('/api/progress', { params: { day: toDateInput(new Date()) } }).then(({ data }) => data).catch(() => ({ enabled: false }));
   return pending;
 };
 

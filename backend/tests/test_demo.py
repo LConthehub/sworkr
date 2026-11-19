@@ -65,7 +65,7 @@ def test_demo_reset_builds_a_complete_sample():
     assert out["status"]["demo_login"] == {"username": "demo", "password": "demo-password-1"}
     assert out["admin_login"] == 401          # nobody knows the admin password
     assert out["login"] == 200
-    assert out["clients"] == 14          # with Robert (an arrangement) and Mike (a no-show)
+    assert out["clients"] == 15          # with Robert (an arrangement), Mike (a no-show) and Dee (a driver)
     assert {name for name, _, _ in out["tours"]} == {"Chicago", "Denver", "Miami", "Cheryl's Ranch stint"}
     assert all(has_rent for _, has_rent, _ in out["tours"])
     assert any(income > 0 for _, _, income in out["tours"])
@@ -73,7 +73,7 @@ def test_demo_reset_builds_a_complete_sample():
     assert {"medical", "room_rent", "travel", "marketing"} <= set(out["categories"])
     assert out["tests"] == 7             # with the house doctor during the stint
     assert out["users_page"] == 403           # the demo login isn't an admin
-    assert set(out["partners"]) == {"Alex", "Jade", "Ruby"} and all(isinstance(v, (int, float)) for v in out["partners"].values())   # someone with nothing owed is a plain 0
+    assert set(out["partners"]) == {"Alex", "Dee", "Jade", "Ruby"} and all(isinstance(v, (int, float)) for v in out["partners"].values())   # someone with nothing owed is a plain 0
     assert out["goals"] == ["Emergency fund", "New camera", "Retirement goal", "Taxes"]
     assert out["income"] == 29 and out["sources"] == ["Cheryl's Ranch", "Club Velvet", "Fansly", "My sugar site", "OF"]
     assert out["change_password"] == 403

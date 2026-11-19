@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import Modal, { Field, inputClass, errorMessage, buttonClass, quietButtonClass } from './Modal';
+import { toDateInput } from '../colors';
+
+// The day where you are, not the server's (which runs on UTC): ticks start fresh at your midnight.
+const localDay = () => toDateInput(new Date());
 
 const WHEN = {
   morning: 'Morning', night: 'Night', before_booking: 'Before a booking', after_booking: 'After a booking', any: 'Any time',
@@ -18,7 +22,7 @@ function RoutineForm({ routine, onDone }) {
     e.preventDefault();
     const body = { name: form.name, when: form.when, steps: form.steps.split('\n') };
     try {
-      if (routine?.id) await axios.put(`/api/routines/${routine.id}`, body);
+      if (routine?.id) await axios.put(`/api/routines/${routine.id}`, body, { params: { day: localDay() } });
       else await axios.post('/api/routines', body);
       onDone();
     } catch (err) {
@@ -63,11 +67,11 @@ export function RoutinesCard() {
   const [open, setOpen] = useState(null);        // the routine shown with its steps
   const [editing, setEditing] = useState(null);  // { routine } (routine may be a starter, or null for new)
   const load = useCallback(() => {
-    axios.get('/api/routines').then(({ data: d }) => setData(d)).catch(() => setData({ routines: [], starters: [] }));
+    axios.get('/api/routines', { params: { day: localDay() } }).then(({ data: d }) => setData(d)).catch(() => setData({ routines: [], starters: [] }));
   }, []);
   useEffect(() => { load(); }, [load]);
   const tick = async (r, step) => {
-    const { data: updated } = await axios.post(`/api/routines/${r.id}/check`, { step_id: step.id, done: !step.done });
+    const { data: updated } = await axios.post(`/api/routines/${r.id}/check`, { step_id: step.id, done: !step.done, day: localDay() });
     setData((d) => ({ ...d, routines: d.routines.map((x) => (x.id === r.id ? updated : x)) }));
   };
   if (!data) return null;

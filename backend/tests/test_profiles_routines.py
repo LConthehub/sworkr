@@ -81,8 +81,9 @@ def test_routines_start_with_ideas_then_tick_off_day_by_day(api):
     assert ok(api.get("/api/routines", params={"day": "2044-01-01"}))["routines"][0]["done"] == 1
     assert ok(api.get("/api/routines", params={"day": "2044-01-02"}))["routines"][0]["done"] == 0      # a new day starts fresh
     assert ok(api.get("/api/routines"))["starters"] == []
-    r = ok(api.put(f"/api/routines/{r['id']}", json={"name": "Mornings", "when": "morning", "steps": ["Water", "Skincare"]}))
-    assert r["name"] == "Mornings" and len(r["steps"]) == 2
+    r = ok(api.put(f"/api/routines/{r['id']}", params={"day": "2044-01-01"},
+                   json={"name": "Mornings", "when": "morning", "steps": ["Skincare", "Water"]}))
+    assert r["name"] == "Mornings" and [(x["label"], x["done"]) for x in r["steps"]] == [("Skincare", False), ("Water", True)]   # Water keeps its tick
     assert api.post("/api/routines", json={"name": "Empty", "steps": []}).status_code == 400
     assert api.post("/api/routines", json={"name": "x", "when": "lunch", "steps": ["a"]}).status_code == 400
     assert api.delete(f"/api/routines/{r['id']}").status_code == 204
@@ -333,6 +334,8 @@ def test_a_missed_day_pauses_a_streak_two_end_it():
     assert progress.streak({day(0), day(1), day(2)}, today)["days"] == 3
     assert progress.streak({day(1), day(2)}, today)["days"] == 2                 # today isn't over yet
     assert progress.streak({day(0), day(2), day(3)}, today)["days"] == 3         # one gap: paused, not lost
+    assert progress.streak({day(2), day(3)}, today) == {"days": 2, "paused": True}    # yesterday missed: paused
+    assert progress.streak({day(0), day(1)}, today)["paused"] is False
     assert progress.streak({day(0), day(3), day(4)}, today)["days"] == 1         # two gaps: a new streak
     assert progress.streak({day(0), day(2)}, today, skip={day(1)})["days"] == 2  # nothing planned that day
     assert progress.longest([day(9), day(8), day(6), day(1)]) == 3

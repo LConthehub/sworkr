@@ -74,10 +74,19 @@ def _owned(db, owner: int, routine_id: int):
 
 
 def _save_steps(db, owner: int, routine_id: int, steps: List[str]):
-    db.execute("DELETE FROM routine_steps WHERE routine_id = ?", (routine_id,))
+    """Steps whose wording didn't change keep their row (and so today's tick); the rest are removed or added."""
+    old = {}
+    for r in db.execute("SELECT id, label FROM routine_steps WHERE routine_id = ? ORDER BY sort_order, id", (routine_id,)):
+        old.setdefault(r["label"], []).append(r["id"])
     for i, label in enumerate(steps):
-        db.execute("INSERT INTO routine_steps (routine_id, owner_id, label, sort_order) VALUES (?, ?, ?, ?)",
-                   (routine_id, owner, label, i))
+        if old.get(label):
+            db.execute("UPDATE routine_steps SET sort_order = ? WHERE id = ?", (i, old[label].pop(0)))
+        else:
+            db.execute("INSERT INTO routine_steps (routine_id, owner_id, label, sort_order) VALUES (?, ?, ?, ?)",
+                       (routine_id, owner, label, i))
+    for ids in old.values():
+        for step_id in ids:
+            db.execute("DELETE FROM routine_steps WHERE id = ?", (step_id,))
 
 
 @router.get("")
@@ -111,7 +120,7 @@ def create_routine(body: RoutineIn, request: Request):
 
 
 @router.put("/{routine_id}")
-def update_routine(routine_id: int, body: RoutineIn, request: Request):
+def update_routine(routine_id: int, body: RoutineIn, request: Request, day: Optional[date] = Query(None)):
     """Rename, retime, or change the steps (today's ticks on removed or changed steps go with them)."""
     _check(body)
     owner = request.state.user["id"]
@@ -122,7 +131,7 @@ def update_routine(routine_id: int, body: RoutineIn, request: Request):
                    (body.name, body.when, _now(), routine_id))
         _save_steps(db, owner, routine_id, body.steps)
         db.commit()
-        return next(r for r in _routines(db, owner, date.today().isoformat()) if r["id"] == routine_id)
+        return next(r for r in _routines(db, owner, (day or date.today()).isoformat()) if r["id"] == routine_id)
     finally:
         db.close()
 

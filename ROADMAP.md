@@ -63,6 +63,10 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Review pass: routines, the daily check-in and Progress now use your own day, not the server's UTC day
+  (ticks used to reset at 4pm Pacific); editing a routine keeps ticks on unchanged steps; "paused" streaks
+  shown correctly; dark-mode colours for the goal rings; rates form fits a phone; demo sample data and docs
+  cover the new features.
 - Progress (all the gamifying ideas): streaks (posting, routines, money; one missed day pauses), weekly goals
   you set (rings), personal bests, badges for setup and safety, tour wrap-up card, wallet level; one switch in
   Settings > Look turns it all off.

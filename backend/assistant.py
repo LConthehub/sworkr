@@ -95,7 +95,8 @@ def _demo() -> bool:
 def get_settings(request: Request):
     db = _get_db()
     try:
-        return {**load_settings(db, request.state.user["id"]), "local": None}
+        s = load_settings(db, request.state.user["id"])
+        return {**s, "local": is_local(s["url"])}
     finally:
         db.close()
 

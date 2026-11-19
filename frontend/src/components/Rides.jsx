@@ -53,7 +53,7 @@ export function DriverRates({ contactId }) {
           ))}
         </ul>
       )}
-      <form onSubmit={add} className="mt-2 grid grid-cols-[1fr_6rem_auto_auto] gap-2">
+      <form onSubmit={add} className="mt-2 grid grid-cols-2 sm:grid-cols-[1fr_6rem_auto_auto] gap-2">
         <input required value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="e.g. Airport run, Waiting" aria-label="What for" className={inputClass} />
         <input required type="number" min="0" step="0.5" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="$" aria-label="Amount" className={inputClass} />
         <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} aria-label="Per" className={inputClass}>

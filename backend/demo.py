@@ -543,6 +543,31 @@ def _fill(api):
         if kind["key"] == "weekly":      # where she works, the panel is every 14 days
             _ok(api.put(f"/api/test-kinds/{kind['id']}", json={"label": "Two-week panel", "every_days": 14, "cost": 85}))
 
+    # ---------- the newer corners: routines, getting to know a client, drivers, a persona's kit, the wallet ----------
+    _ok(api.post("/api/routines", json={"name": "Before a booking", "when": "before_booking",
+                                        "steps": ["Screening checked", "Safety check-in turned on", "Bag packed", "A friend knows where I am"]}))
+    _ok(api.post("/api/routines", json={"name": "Night", "when": "night",
+                                        "steps": ["Log today's money", "Look at tomorrow", "Phone charging"]}))
+    clients = [c for c in _ok(api.get("/api/clients", params={"limit": 200})) if c["role"] == "client"]
+    if clients:
+        _ok(api.put(f"/api/clients/{clients[0]['id']}/profile", json={
+            "languages": "English, some French", "culture": "Doesn't drink. Shoes off indoors.",
+            "talk_about": "Sailing, his daughter's art school", "avoid": "His work"}))
+        done = [a for a in _ok(api.get("/api/appointments")) if a.get("status") == "completed" and a.get("client_id") == clients[0]["id"]]
+        if done:
+            _ok(api.put(f"/api/appointments/{done[0]['id']}/review", json={
+                "rating": "great", "again": "yes", "talked_about": "The regatta in June"}))
+    driver = _ok(api.post("/api/clients", json={"name": "Dee", "role": "partner", "industry": "Driver"}))
+    for label, amount, unit in (("Airport run", 60, "trip"), ("Across town", 35, "trip"), ("Waiting", 30, "hour")):
+        _ok(api.post(f"/api/clients/{driver['id']}/rates", json={"label": label, "amount": amount, "unit": unit}))
+    for item in ({"kind": "bio", "platform": "Bluesky", "body": "Cosplay, cats and late-night streams. New sets on Fridays."},
+                 {"kind": "link", "platform": "Bluesky", "body": "https://bsky.app/profile/kittykam.example"},
+                 {"kind": "wishlist", "platform": "Wishlist", "body": "https://wishlist.example/kittykam"}):
+        _ok(api.post(f"/api/personas/{kitty['id']}/kit", json=item))
+    _ok(api.put("/api/quick-note", json={"text": "Ask Alex about the March shoot dates\nBuy more lashes"}))
+    _ok(api.post("/api/progress/goals", json={"kind": "posts", "target": 3}))
+    _ok(api.put("/api/holidays/settings", json={"country": "US"}))
+
 
 def _quarter_due(year, quarter):
     import taxes

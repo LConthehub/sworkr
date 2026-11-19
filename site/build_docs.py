@@ -63,13 +63,22 @@ PAGES = [
   <li><strong>Encrypt your computer's disk</strong> (BitLocker on Windows, FileVault on a Mac) and use a locked user account.</li>
 </ol>
 
+<h2>Your dashboard</h2>
+<p>The first page shows what needs doing. <em>Customize</em> chooses the cards and their order. Besides bookings, tasks and money, there are:</p>
+<ul>
+  <li><strong>Routines</strong>: your own checklists (morning, night, before and after a booking), ticked off each day.</li>
+  <li><strong>Notes</strong>: a scratch pad that saves itself.</li>
+  <li><strong>Progress</strong>: private streaks, weekly goals you set, personal bests and badges. It never suggests working more, and <em>Settings → Look</em> turns it off.</li>
+  <li><strong>Ask your numbers</strong>, if you turn on the assistant: questions about your own totals, answered by an AI model running on your own computer.</li>
+</ul>
+
 <h2>Updating</h2>
 <p>Docker: in your <code>sworkr</code> folder, run <code>docker compose pull</code>, then <code>docker compose up -d</code>. Windows app: quit it, unzip the new version over the old folder, start it. Either way your records are upgraded by themselves, and a copy is saved first.</p>
 """),
 
 ("privacy-and-backups", "Privacy & backups", "Privacy &amp; backups", """
 <h2>What's stored, and where</h2>
-<p>Everything is in one database file on your computer: clients, bookings, money, plans, settings. Sworkr doesn't send it anywhere. The only things it talks to are services <em>you</em> connect: your own email, a Nextcloud calendar or content folder, ntfy if you turn on notifications, Bluesky, Mastodon or Reddit if you connect them for posting, and an AI model if you turn on the assistant (one on your own computer unless you allow a cloud one; it only gets totals, never names or notes).</p>
+<p>Everything is in one database file on your computer: clients, bookings, money, plans, settings. Sworkr doesn't send it anywhere. The only things it talks to are services <em>you</em> connect: your own email, a Nextcloud calendar or content folder, ntfy if you turn on notifications, SimpleFIN if you connect your bank, Bluesky, Mastodon or Reddit if you connect them for posting, and an AI model if you turn on the assistant (one on your own computer unless you allow a cloud one; it only gets totals, never names or notes).</p>
 
 <h2>How it's locked</h2>
 <ul>
@@ -262,6 +271,16 @@ PAGES = [
 <h2>Prices by tag</h2>
 <p><em>Money → Rates → Prices by tag</em>: give a tag a percentage off, an amount off, or a <strong>locked-in rate</strong> (the client keeps paying what they last paid for that service). When you book someone with that tag for a service on your rate card, the price is worked out for you and says why. Locked-in clients don't show under "On an old rate".</p>
 
+<h2>Getting to know them</h2>
+<p>Each client's page has a card for what's worth remembering about the person: the languages they speak and whether a translator is needed, cultural practices to respect, what's good to talk about and what to avoid. A client can be marked as passed away: their history stays, and the reminders stop.</p>
+<p>After a finished booking, <em>How did it go?</em> asks a few quick questions (how it went, would you see them again, what you talked about). The answers are kept on the client's page.</p>
+
+<h2>Client base</h2>
+<p><em>Contacts → Client base</em> shows who your clients are as simple bars: age, how they found you, line of work, languages, how often they've booked and what they've spent. It's built from what you've noted on their profiles, as counts only.</p>
+
+<h2>Drivers and rides</h2>
+<p>A driver is a contact you work with (not a client), and each keeps their own rates: per trip, hour, mile, km or day. <em>Ride</em> on a booking picks a driver and a rate and logs it as a travel expense that day, so it counts in the tour's budget.</p>
+
 <h2>Cancellations and no-shows</h2>
 <p><em>Settings → Deposits &amp; cancellations</em> sets your deposit percentage, what counts as a late cancellation, and the fees. Cancelling a booking asks who cancelled and suggests the fee from your policy.</p>
 """),
@@ -295,6 +314,12 @@ PAGES = [
 <h2>Comparing</h2>
 <p><em>Money → Compare</em>: by tour, month, week, kind of work, workplace, persona, <strong>how they found you</strong> (income against ad spend) and <strong>busy times</strong> (a grid of when bookings happen, and what an hour of each kind brings in).</p>
 
+<h2>Wallet</h2>
+<p><em>Money → Wallet</em> holds savings goals and <strong>envelopes</strong>. A goal has a target; an envelope is just money in and out (your own wallet, spending money for a tour). An envelope can also show what a workplace is keeping for you until payout. Choose which ones show on the dashboard.</p>
+
+<h2>Bank</h2>
+<p><em>Money → Bank</em> brings in your bank's transactions through <a href="https://bridge.simplefin.org">SimpleFIN Bridge</a>, an independent service you sign up to yourself (your bank password goes to them, never to Sworkr). Paste its setup token once. Each transaction then waits for you: add it as an expense or income with a tap, or ignore it. Nothing is added by itself.</p>
+
 <h2>Taxes</h2>
 <p><em>Money → Taxes</em> adds up the year: income by kind, fees, expenses by category, your profit, mileage and estimated payments, with quarterly due dates and reminders. <strong>Download as CSV</strong> gives your accountant a spreadsheet; <em>Print or save as PDF</em> gives a page. Sworkr adds up your records. It isn't tax advice.</p>
 <p>Keep a <strong>license or work card</strong> under <em>Settings → My work → Licenses &amp; documents</em>, tied to a workplace if it's for one, and when you renew it press <em>Renewed</em> to move the date and log what you paid under Fees &amp; licenses.</p>
@@ -321,6 +346,9 @@ PAGES = [
 <h2>Library</h2>
 <p><em>Content → Library</em> shows the folder you already keep your photos and videos in, from Nextcloud, a Synology or other WebDAV server, or a folder on your computer. Each subfolder is a set. Sworkr only <em>reads</em> it, never copies or changes anything, and shows where each file has already been posted. Connect it under <em>Settings → Connections → Content library</em>.</p>
 
+<h2>A persona's kit</h2>
+<p>Under <em>Settings → My work → Personas</em>, <em>Kit</em> keeps what goes with each name you work under: a bio for each platform, your social links and wishlist links, each one tap to copy.</p>
+
 <h2>Customs</h2>
 <p><em>Content → Customs</em> follows made-to-order content from request to delivery: who asked, what they want, the price, what's paid, when it's due. <em>Got paid</em> adds the payment to your income as a sale (minus the platform's fee) and says how it was paid. Sworkr flags customs being made before they're fully paid for, and late ones. <em>Your menu</em> keeps your usual prices and copies as text.</p>
 """),
@@ -337,6 +365,12 @@ PAGES = [
 
 <h2>Period tracker, birth control and regular meds</h2>
 <p>Optional, off until you turn them on. Injections can rotate sites and step up doses on a schedule. Dates show on the calendar, and medication marked discreet shows only as "Health".</p>
+
+<h2>Wellness log</h2>
+<p>Also optional (<em>Settings → Health → Wellness log</em>): a daily check-in on the dashboard for sleep, water, how well you ate and your energy. After a few weeks it shows how your earnings compare on better and worse days. Sleep and water can be filled in from an iPhone's Health app export.</p>
+
+<h2>Holidays</h2>
+<p><em>Settings → My work → Holidays</em> puts your country's public holidays on the calendar. They're worked out on your own computer: no calendar is downloaded from anyone.</p>
 """),
 
 ("notifications", "Notifications", "Notifications", """

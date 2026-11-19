@@ -48,6 +48,7 @@ html.dark .text-gray-800 { color: #f2e7ee; }
 html.dark .text-gray-700 { color: #e4d3de; }
 html.dark .text-gray-600 { color: #cdbac8; }
 html.dark .text-gray-500 { color: #b9a6b6; }
+html.dark .text-gray-100 { color: #3a2a3e; }
 html.dark .text-gray-400 { color: #94808f; }
 html.dark .text-gray-300 { color: #6f5b6c; }
 html.dark .hover\:text-gray-700:hover { color: #fff; }
@@ -102,5 +103,6 @@ html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #3a
 html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #3a2a3e; }
 html.dark input, html.dark select, html.dark textarea { color: #f2e7ee; }
 html.dark ::placeholder { color: #8a7688; }
+html.dark .fill-gray-700 { fill: #f2e7ee; }
 html.dark .shadow-lg, html.dark .shadow-xl { box-shadow: 0 10px 30px rgba(0,0,0,.45); }
 html.dark .ring-white { --tw-ring-color: #221a26; }

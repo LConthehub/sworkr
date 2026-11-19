@@ -47,12 +47,14 @@ def streak(days: Set[str], today: date, skip: Optional[Set[str]] = None) -> dict
     """Days in a row ending today (or yesterday) that count. One missing day pauses, two in a row end it.
     `skip` days (nothing was planned) neither count nor break."""
     skip = skip or set()
-    count, misses, d = 0, 0, today
+    count, misses, d, paused = 0, 0, today, False
     if d.isoformat() not in days and d.isoformat() not in skip:
         d -= timedelta(days=1)          # today isn't over yet
     for _ in range(3660):
         key = d.isoformat()
         if key in days:
+            if count == 0 and misses:
+                paused = True           # the most recent day that counted has a missed day after it
             count, misses = count + 1, 0
         elif key in skip:
             pass
@@ -61,7 +63,7 @@ def streak(days: Set[str], today: date, skip: Optional[Set[str]] = None) -> dict
             if misses >= 2:
                 break
         d -= timedelta(days=1)
-    return {"days": count, "paused": today.isoformat() not in days and (today - timedelta(days=1)).isoformat() not in days and count > 0}
+    return {"days": count, "paused": paused and count > 0}
 
 
 def longest(days: Iterable[str]) -> int:
@@ -190,7 +192,8 @@ def bests(db, owner: int, post_days: Set[str]) -> List[dict]:
             out.append({"title": "Best week", "value": round(v, 2), "money": True, "when": f"week of {wk}"})
     import main
     best_tour = None
-    for t in db.execute("SELECT * FROM tours WHERE owner_id = ? AND kind = 'tour' AND end_date < ?", (owner, date.today().isoformat())):
+    for t in db.execute("SELECT * FROM tours WHERE owner_id = ? AND kind = 'tour' AND end_date < ? ORDER BY end_date DESC LIMIT 60",
+                        (owner, date.today().isoformat())):
         f = main.tour_figures(db, owner, dict(t))
         if f.get("profit_per_day") is not None and (best_tour is None or f["profit_per_day"] > best_tour[1]):
             best_tour = (t["name"], f["profit_per_day"])
@@ -291,9 +294,9 @@ def save_settings(body: OnOff, request: Request):
 
 
 @router.get("")
-def progress(request: Request):
+def progress(request: Request, day: Optional[date] = None):
     owner = request.state.user["id"]
-    today = date.today()
+    today = day or date.today()         # the browser's day: the server's clock is UTC
     db = _get_db()
     try:
         if _setting(db, owner, "progress_off") == "1":
