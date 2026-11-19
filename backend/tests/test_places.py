@@ -302,3 +302,29 @@ def test_the_doctor_comes_on_their_own_day(api):
     if short_end >= date(2044, 6, 1):
         s2 = stay(api, "2044-06-01", short_end.isoformat(), house["id"])
         assert not [a for a in ok(api.get(f"/api/tours/{s2['id']}/summary"))["appointments"] if a["kind"] == "test"]
+
+
+def test_a_party_waits_for_a_clear_test_and_a_current_work_card(api):
+    from datetime import date as _d, timedelta as _td
+    house = place(api, name="Test House")
+    charge(api, house["id"], label="Doctor", cadence="per_week", amount=60, test_type="weekly", weekday=2)   # Wednesdays
+    first = _d(2045, 3, 6)                                    # a Monday
+    s = stay(api, first.isoformat(), (first + _td(days=9)).isoformat(), house["id"])
+    c = ok(api.post("/api/clients", json={"name": "Party guest"}), 201)
+    def warn(day):
+        r = api.post("/api/appointments", params={"warn": True}, json={"client_id": c["id"], "service_type": "Party",
+                     "duration_minutes": 60, "scheduled_date": f"{day}T20:00:00Z"})
+        return [w["message"] for w in r.json()["detail"]["warnings"] if w["type"] == "clearance"] if r.status_code == 409 else []
+    assert any("No test yet" in m for m in warn("2045-03-07"))                     # Tuesday, before the doctor's day
+    assert any("no result yet" in m for m in warn("2045-03-09"))                   # Thursday, result not marked
+    test = next(a for a in ok(api.get(f"/api/tours/{s['id']}/summary"))["appointments"] if a["kind"] == "test")
+    marked = ok(api.put(f"/api/appointments/{test['id']}/test-result", json={"result": "clear"}))
+    assert marked["test_result"] == "clear"
+    assert warn("2045-03-09") == []
+    # The stay changing makes its tests again: the result stays.
+    ok(api.put(f"/api/tours/{s['id']}", json={"kind": "tour", "name": "Spring stint", "start_date": first.isoformat(),
+                                              "end_date": (first + _td(days=10)).isoformat(), "starts_at": f"{first.isoformat()}T00:00:00Z",
+                                              "ends_at": f"{(first + _td(days=11)).isoformat()}T00:00:00Z", "source_id": house["id"]}))
+    assert warn("2045-03-09") == []
+    ok(api.post("/api/documents", json={"name": "Work card", "kind": "work_card", "expires_on": "2045-03-08", "source_id": house["id"]}), 201)
+    assert any("Work card" in m and "ran out" in m for m in warn("2045-03-09"))

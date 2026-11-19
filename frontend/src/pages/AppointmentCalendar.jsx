@@ -225,6 +225,7 @@ export default function AppointmentCalendar() {
     status: (a, status, extra = {}) => act(() => axios.put(`/api/appointments/${a.id}/status`, null, { params: { status, ...extra } })),
     paid: (a) => act(() => axios.post(`/api/appointments/${a.id}/mark-paid`)),
     checkIn: (a) => act(() => axios.post(`/api/appointments/${a.id}/check-in`)),
+    refresh: () => act(() => Promise.resolve()),
   };
 
   // Money at a glance for what's on screen (cancelled bookings only count what was actually paid).
@@ -820,6 +821,26 @@ function CancelChooser({ appointment: a, onCancel, onClose }) {
   );
 }
 
+/** A health test's result, once it's back: clear (or not). A house's parties wait for a clear one. */
+function TestResultButtons({ appointment: a, onDone, small }) {
+  const [result, setResult] = useState(a.test_result || null);
+  const mark = async (value) => {
+    const next = result === value ? null : value;
+    await axios.put(`/api/appointments/${a.id}/test-result`, { result: next }).catch(() => {});
+    setResult(next);
+    onDone();
+  };
+  return (
+    <>
+      <span className="text-[11px] text-gray-500">Result:</span>
+      <button onClick={() => mark('clear')} aria-pressed={result === 'clear'}
+        className={`${small} ${result === 'clear' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>Clear</button>
+      <button onClick={() => mark('not_clear')} aria-pressed={result === 'not_clear'}
+        className={`${small} ${result === 'not_clear' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-600 hover:bg-red-100'}`}>Not clear</button>
+    </>
+  );
+}
+
 export function AppointmentItem({ appointment: a, actions, showDate = false, showClient = true }) {
   const [cancelling, setCancelling] = useState(false);
   const [receipt, setReceipt] = useState(false);
@@ -862,6 +883,11 @@ export function AppointmentItem({ appointment: a, actions, showDate = false, sho
         {isTest && a.cost != null && (
           <p className="text-xs mt-1 text-gray-600">Cost <span className="font-semibold text-gray-700">{money(a.cost)}</span> · in expenses</p>
         )}
+        {isTest && a.test_result && (
+          <p className={`text-xs mt-1 font-medium ${a.test_result === 'clear' ? 'text-emerald-700' : 'text-red-700'}`}>
+            {a.test_result === 'clear' ? '✓ Came back clear' : '✕ Not clear'}{a.test_result_on && ` · ${a.test_result_on}`}
+          </p>
+        )}
         {(a.rate != null || a.amount_paid > 0) && (
           <p className="text-xs mt-1 flex items-center gap-2">
             <span className="font-semibold text-gray-700">{a.rate != null ? money(a.rate) : money(a.amount_paid)}</span>
@@ -880,6 +906,9 @@ export function AppointmentItem({ appointment: a, actions, showDate = false, sho
       </button>
 
       <div className="flex flex-wrap items-center gap-2 mt-2">
+        {isTest && a.status !== 'cancelled' && startAt <= new Date() && (
+          <TestResultButtons appointment={a} onDone={() => actions.refresh?.()} small={small} />
+        )}
         {needsCheckIn && (
           <button onClick={() => actions.checkIn(a)} className={`${small} bg-emerald-600 text-white hover:bg-emerald-700 font-medium`}>
             ✓ I'm safe (check in)

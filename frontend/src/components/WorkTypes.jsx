@@ -100,7 +100,7 @@ const CONNECTIONS = [
 const HEALTH = [
   ['Period tracker', '/account/health'],
   ['Birth control & regular meds', '/account/health'],
-  ['Health tests', '/account/work'],
+  ['Health tests', '/account/health'],
 ];
 
 /** First run, step two: offer the connections and health tracking. Every part is optional. */

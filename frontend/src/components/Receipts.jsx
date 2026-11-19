@@ -82,7 +82,7 @@ export function ReceiptMaker({ appointment: a, onClose }) {
       <form onSubmit={submit} className="space-y-3">
         {settings && !settings.business && (
           <p className="text-xs text-amber-800 bg-amber-50 rounded-lg px-3 py-2">
-            Tip: set the name printed at the top in Settings → My work → Receipts. Until then it's left blank.
+            Tip: set the name printed at the top in Settings → Money → Receipts. Until then it's left blank.
           </p>
         )}
         <div className="grid grid-cols-2 gap-3">

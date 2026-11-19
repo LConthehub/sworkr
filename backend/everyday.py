@@ -19,7 +19,7 @@ from pydantic import BaseModel
 router = APIRouter()
 _get_db: Optional[Callable] = None
 
-STARTER_SUPPLIES = ["Condoms", "Lube", "Wipes", "Test kits", "Hand sanitiser"]
+STARTER_SUPPLIES = ["Condoms", "Lube", "Wipes", "Toy cleaner", "Hand sanitizer"]
 
 CHECKUP = [
     ("work_phone", "A separate work phone or number", "A second SIM, an eSIM or a number app. Clients never get your personal number."),

@@ -424,7 +424,7 @@ def start_timer(body: TimerIn, request: Request):
     db = _get_db()
     try:
         if not settings_for(db, owner)["armed"]:
-            raise HTTPException(status_code=409, detail="Set up your trusted contact first (Settings → Security & privacy → Safety check-in)")
+            raise HTTPException(status_code=409, detail="Set up your trusted contact first (Settings → Safety → Safety check-in)")
         now = datetime.now(timezone.utc)
         db.execute("UPDATE safety_timers SET done_at = ? WHERE owner_id = ? AND done_at IS NULL", (now.isoformat(timespec="seconds"), owner))
         db.execute("INSERT INTO safety_timers (owner_id, due_at, note, created_at) VALUES (?, ?, ?, ?)",

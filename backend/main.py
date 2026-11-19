@@ -257,6 +257,8 @@ class Appointment(AppointmentIn):
     partner_names: Optional[str] = None
     cancel_reason: Optional[str] = None      # client | late | no_show | me (cancelled ones)
     cancellation_fee: Optional[float] = None # what the client owes for a late cancellation or no-show
+    test_result: Optional[str] = None        # health tests: clear or not_clear, once it's back
+    test_result_on: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -1102,6 +1104,9 @@ def _booking_warnings(db, owner_id: int, client: Optional[dict], starts: List[da
                 warnings.append({"type": "period", "starts_at": to_utc_iso(start), "message": period})
             for off in time_off_during(db, owner_id, start, minutes):
                 warnings.append({"type": "time_off", "starts_at": to_utc_iso(start), "message": _time_off_message(off)})
+        if client:
+            for message in clearance_warnings(db, owner_id, start):
+                warnings.append({"type": "clearance", "starts_at": to_utc_iso(start), "message": message})
         for other in find_overlaps(db, owner_id, start, minutes, exclude_id):
             who = other["client_name"] or other["service_type"] or "another appointment"
             warnings.append({
@@ -1114,6 +1119,54 @@ def _booking_warnings(db, owner_id: int, client: Optional[dict], starts: List[da
                 "message": f"Overlaps with {who}",
             })
     return warnings
+
+
+def clearance_warnings(db, owner_id: int, start: datetime) -> List[str]:
+    """At a house that tests (a doctor among its charges), a party is only booked once your test there has come back
+    clear and your work card for the house is current. Said as a warning: the house's rule, your call."""
+    day = to_utc_iso(start)[:10]
+    out = []
+    for t in db.execute("""
+        SELECT t.id, t.name, s.id AS source_id, s.name AS place FROM tours t JOIN income_sources s ON s.id = t.source_id
+        WHERE t.owner_id = ? AND t.kind = 'tour' AND t.start_date <= ? AND t.end_date >= ?
+          AND EXISTS (SELECT 1 FROM place_charges c WHERE c.source_id = s.id AND c.test_type IS NOT NULL)
+    """, (owner_id, day, day)).fetchall():
+        test = db.execute("""
+            SELECT scheduled_date, test_result FROM appointments WHERE owner_id = ? AND from_tour_id = ? AND kind = 'test'
+              AND substr(scheduled_date, 1, 10) <= ? ORDER BY scheduled_date DESC LIMIT 1
+        """, (owner_id, t["id"], day)).fetchone()
+        if not test:
+            nxt = db.execute("SELECT substr(scheduled_date, 1, 10) FROM appointments WHERE owner_id = ? AND from_tour_id = ? "
+                             "AND kind = 'test' ORDER BY scheduled_date LIMIT 1", (owner_id, t["id"])).fetchone()
+            out.append(f"No test yet on your stay at {t['place']}" + (f": the doctor's day is {nxt[0]}" if nxt else ""))
+        elif test["test_result"] is None:
+            out.append(f"Your test at {t['place']} on {test['scheduled_date'][:10]} has no result yet (it usually comes the next day)")
+        elif test["test_result"] == "not_clear":
+            out.append(f"Your test at {t['place']} on {test['scheduled_date'][:10]} didn't come back clear")
+        card = db.execute("""
+            SELECT name, expires_on FROM documents WHERE owner_id = ? AND source_id = ? AND kind IN ('work_card', 'license')
+            ORDER BY expires_on DESC LIMIT 1
+        """, (owner_id, t["source_id"])).fetchone()
+        if card and card["expires_on"] and card["expires_on"] < day:
+            out.append(f"Your {card['name']} for {t['place']} ran out on {card['expires_on']}")
+    return out
+
+
+class TestResult(BaseModel):
+    result: Optional[str] = None      # clear, not_clear, or empty to clear the mark
+
+
+@app.put("/api/appointments/{appointment_id}/test-result", response_model=Appointment)
+def set_test_result(appointment_id: int, body: TestResult, user: UserDep, db: DbDep):
+    if body.result not in (None, "clear", "not_clear"):
+        raise HTTPException(status_code=400, detail="Clear, not clear, or nothing")
+    row = db.execute("SELECT id FROM appointments WHERE id = ? AND owner_id = ? AND kind = 'test'", (appointment_id, user["id"])).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Health test not found")
+    db.execute("UPDATE appointments SET test_result = ?, test_result_on = ?, updated_at = ? WHERE id = ?",
+               (body.result, date.today().isoformat() if body.result else None, now_iso(), appointment_id))
+    db.commit()
+    return get_appointment_by_id(db, appointment_id, user["id"])
 
 
 def _stop_if_warned(warnings: List[dict], warn: bool):
@@ -1682,6 +1735,10 @@ def sync_stay_charges(db, tour_id: int, owner_id: int) -> List[int]:
     or the place's charges change. Returns the health tests removed and added (for calendar sync)."""
     old_ids = [r[0] for r in db.execute(
         "SELECT id FROM expenses WHERE tour_id = ? AND owner_id = ? AND source = 'stay_charge' ORDER BY id", (tour_id, owner_id))]
+    # Results already marked survive the tests being made again (they're matched by the day of the test).
+    results = {r["day"]: (r["test_result"], r["test_result_on"]) for r in db.execute(
+        "SELECT substr(scheduled_date, 1, 10) AS day, test_result, test_result_on FROM appointments "
+        "WHERE from_tour_id = ? AND owner_id = ? AND test_result IS NOT NULL", (tour_id, owner_id))}
     touched = _clear_stay_charges(db, tour_id, owner_id)
     tour = get_tour_by_id(db, tour_id, owner_id)
     if not tour or tour["kind"] != TourKind.TOUR.value or not tour.get("source_id"):
@@ -1700,7 +1757,9 @@ def sync_stay_charges(db, tour_id: int, owner_id: int) -> List[int]:
             description = f"{charge['label']} – {tour['name']}"
             if charge["test_type"]:
                 test_id = log_health_test(db, owner_id, when, charge["test_type"], charge["amount"], description, tour_id)
-                db.execute("UPDATE appointments SET from_tour_id = ? WHERE id = ?", (tour_id, test_id))
+                kept = results.get(to_utc_iso(when)[:10])
+                db.execute("UPDATE appointments SET from_tour_id = ?, test_result = ?, test_result_on = ? WHERE id = ?",
+                           (tour_id, kept[0] if kept else None, kept[1] if kept else None, test_id))
                 touched.append(test_id)
             else:
                 cur = db.execute("""

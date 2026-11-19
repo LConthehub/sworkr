@@ -1749,6 +1749,12 @@ def _m57_everyday(conn):
     """)
 
 
+def _m58_test_results(conn):
+    """A health test's result once it's back (usually the day after the doctor's day): clear or not."""
+    conn.execute("ALTER TABLE appointments ADD COLUMN test_result TEXT CHECK(test_result IS NULL OR test_result IN ('clear', 'not_clear'))")
+    conn.execute("ALTER TABLE appointments ADD COLUMN test_result_on TEXT")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1807,6 +1813,7 @@ MIGRATIONS = [
     (55, "bank transactions (SimpleFIN)", _m55_bank, False),
     (56, "progress: weekly goals", _m56_progress_goals, False),
     (57, "work logs, safety timers, supplies, incidents", _m57_everyday, False),
+    (58, "health test results", _m58_test_results, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

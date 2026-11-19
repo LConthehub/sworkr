@@ -27,7 +27,7 @@ import NtfySettings from '../components/NtfySettings';
 import ContentSettings from '../components/ContentSettings';
 import { CycleSettings } from '../components/Cycle';
 import { notificationsSupported, reminderSettings, saveReminderSettings } from '../components/Reminders';
-import { downloadBlob } from '../api';
+import { downloadBlob, isDemo } from '../api';
 
 const idleLabel = (m) => (m === 0 ? 'Never (stay logged in for 30 days)' : m < 60 ? `${m} minutes` : m === 60 ? '1 hour' : `${m / 60} hours`);
 
@@ -50,6 +50,7 @@ const GROUPS = [
           </Section>
         ),
       },
+      { id: 'policy', title: 'Deposits & cancellations', words: 'deposit no-show no show cancellation fee late policy', render: () => <BookingPolicy /> },
       {
         id: 'documents', title: 'Licenses & documents', words: 'license work card id passport verification expiry expire renew insurance',
         render: () => (
@@ -59,18 +60,36 @@ const GROUPS = [
         ),
       },
       {
-        id: 'tests', title: 'Health tests', words: 'test testing sti std screening doctor weekly monthly schedule interval cost county rules',
-        render: () => <Section title="Health tests" hint="How often each test is due and what it costs, set to the rules where you work."><TestKindsSettings /></Section>,
-      },
-      { id: 'policy', title: 'Deposits & cancellations', words: 'deposit no-show no show cancellation fee late policy', render: () => <BookingPolicy /> },
-      { id: 'categories', title: 'Expense categories', words: 'rename hide colour color', render: () => <ExpenseCategories /> },
-      {
         id: 'holidays', title: 'Holidays', words: 'holiday public bank holidays calendar country state',
         render: () => <Section title="Holidays" hint="Public holidays on your calendar."><HolidaySettings /></Section>,
       },
+    ],
+  },
+  {
+    id: 'money', label: 'Money', icon: 'money',
+    sections: [
+      { id: 'categories', title: 'Expense categories', words: 'rename hide colour color', render: () => <ExpenseCategories /> },
       {
         id: 'receipts', title: 'Receipts', words: 'receipt invoice discreet business name client paid print pdf',
         render: () => <Section title="Receipts" hint="Plain receipts for clients who ask: your choice of name and wording, nothing about the work."><ReceiptSettings /></Section>,
+      },
+    ],
+  },
+  {
+    id: 'safety', label: 'Safety', icon: 'shield',
+    sections: [
+      { id: 'safety', title: 'Safety check-in', words: 'trusted contact alert emergency timer push', render: () => <SafetyCheckIn /> },
+      {
+        id: 'baddates', title: 'Bad-date list', words: 'blocklist ugly mugs warning list blacklist dangerous clients upload',
+        render: () => (
+          <Section title="Bad-date list" hint="People to warn about or refuse. A contact or booking whose phone, email or handle matches shows a warning; nothing is blocked without you seeing it. Only you can see your list.">
+            <BlocklistSettings />
+          </Section>
+        ),
+      },
+      {
+        id: 'incidents', title: 'Incident log', words: 'incident report what happened evidence log harassment record',
+        render: () => <Section title="Incident log" hint="What happened, written down the same day. Private, and never sent anywhere."><Incidents /></Section>,
       },
     ],
   },
@@ -90,10 +109,7 @@ const GROUPS = [
         id: 'away', title: 'Away from home', words: 'internet public remote passkey only password off new sign-in alert email notify',
         render: () => <Section title="Away from home" hint="For when sworkr can be reached from the internet."><AwayFromHome /></Section>,
       },
-      {
-        id: 'devices', title: 'Signed-in devices', words: 'sessions devices log out everywhere history sign-ins activity recent',
-        render: () => <Section title="Signed-in devices" hint="Where your account is open right now, and recent sign-ins."><SignedInDevices /></Section>,
-      },
+      { id: 'logout', title: 'Automatic log-out', words: 'idle timeout', render: ({ onIdleChange }) => <AutoLogout onIdleChange={onIdleChange} /> },
       {
         id: 'discreet', title: 'Discreet mode', words: 'panic hide tab title privacy disguise decoy',
         render: () => (
@@ -102,23 +118,46 @@ const GROUPS = [
           </Section>
         ),
       },
-      { id: 'logout', title: 'Automatic log-out', words: 'idle timeout', render: ({ onIdleChange }) => <AutoLogout onIdleChange={onIdleChange} /> },
-      { id: 'safety', title: 'Safety check-in', words: 'trusted contact alert emergency timer push', render: () => <SafetyCheckIn /> },
-      {
-        id: 'incidents', title: 'Incident log', words: 'incident report what happened evidence log harassment record',
-        render: () => <Section title="Incident log" hint="What happened, written down the same day. Private, and never sent anywhere."><Incidents /></Section>,
-      },
       {
         id: 'checkup', title: 'Privacy check-up', words: 'privacy checklist check-up work phone location photos data brokers',
         render: () => <Section title="Privacy check-up" hint="A checklist for keeping work and private life apart."><PrivacyCheckup /></Section>,
       },
       {
-        id: 'baddates', title: 'Bad-date list', words: 'blocklist ugly mugs warning list blacklist dangerous clients upload',
+        id: 'devices', noDemo: true, title: 'Signed-in devices', words: 'sessions devices log out everywhere history sign-ins activity recent',
+        render: () => <Section title="Signed-in devices" hint="Where your account is open right now, and recent sign-ins."><SignedInDevices /></Section>,
+      },
+    ],
+  },
+  {
+    id: 'health', label: 'Health', icon: 'heart',
+    sections: [
+      {
+        id: 'tests', title: 'Health tests', words: 'test testing sti std screening doctor weekly monthly schedule interval cost county rules',
+        render: () => <Section title="Health tests" hint="How often each test is due and what it costs, set to the rules where you work."><TestKindsSettings /></Section>,
+      },
+      {
+        id: 'meds', title: 'Birth control & regular meds', words: 'contraception pill patch ring shot depo implant iud prep doxypep hormones hrt',
         render: () => (
-          <Section title="Bad-date list" hint="People to warn about or refuse. A contact or booking whose phone, email or handle matches shows a warning; nothing is blocked without you seeing it. Only you can see your list.">
-            <BlocklistSettings />
+          <Section title="Birth control & regular meds (optional)" hint="What you take and when: sworkr shows what's due next and reminds you of changes, shots and refills. Only you can see it.">
+            <MedsSettings />
           </Section>
         ),
+      },
+      {
+        id: 'cycle', title: 'Period tracker', words: 'cycle menstrual',
+        render: () => (
+          <Section title="Period tracker (optional)" hint="Off unless you turn it on, and nothing about it shows anywhere until you do. Skip it if it isn't for you.">
+            <CycleSettings />
+          </Section>
+        ),
+      },
+      {
+        id: 'wellness', title: 'Wellness log', words: 'sleep water food energy wellness health apple health',
+        render: () => <Section title="Wellness log (optional)" hint="Sleep, water, food and energy, and how they line up with your earnings."><WellnessSettings /></Section>,
+      },
+      {
+        id: 'supplies', title: 'Supplies', words: 'supplies stock condoms lube test kits running low',
+        render: () => <Section title="Supplies" hint="A short list of what you keep in stock, and when it's running low."><Supplies /></Section>,
       },
     ],
   },
@@ -153,35 +192,6 @@ const GROUPS = [
     ],
   },
   {
-    id: 'health', label: 'Health', icon: 'heart',
-    sections: [
-      {
-        id: 'cycle', title: 'Period tracker', words: 'cycle menstrual',
-        render: () => (
-          <Section title="Period tracker (optional)" hint="Off unless you turn it on, and nothing about it shows anywhere until you do. Skip it if it isn't for you.">
-            <CycleSettings />
-          </Section>
-        ),
-      },
-      {
-        id: 'supplies', title: 'Supplies', words: 'supplies stock condoms lube test kits running low',
-        render: () => <Section title="Supplies" hint="A short list of what you keep in stock, and when it's running low."><Supplies /></Section>,
-      },
-      {
-        id: 'wellness', title: 'Wellness log', words: 'sleep water food energy wellness health apple health',
-        render: () => <Section title="Wellness log (optional)" hint="Sleep, water, food and energy, and how they line up with your earnings."><WellnessSettings /></Section>,
-      },
-      {
-        id: 'meds', title: 'Birth control & regular meds', words: 'contraception pill patch ring shot depo implant iud prep doxypep hormones hrt',
-        render: () => (
-          <Section title="Birth control & regular meds (optional)" hint="What you take and when: sworkr shows what's due next and reminds you of changes, shots and refills. Only you can see it.">
-            <MedsSettings />
-          </Section>
-        ),
-      },
-    ],
-  },
-  {
     id: 'look', label: 'Look', icon: 'moon',
     sections: [
       {
@@ -197,9 +207,9 @@ const GROUPS = [
   {
     id: 'data', label: 'Data & users', icon: 'database',
     sections: [
-      { id: 'sample', title: 'Example data', words: 'demo sample', render: () => <SampleData /> },
-      { id: 'yours', title: 'Your data', words: 'download export everything erase delete wipe remove all privacy', render: () => <YourData /> },
       { id: 'backups', title: 'Backups', words: 'export restore encrypted', admin: true, render: () => <Backups /> },
+      { id: 'yours', title: 'Your data', words: 'download export everything erase delete wipe remove all privacy', render: () => <YourData /> },
+      { id: 'sample', title: 'Example data', words: 'demo sample', render: () => <SampleData /> },
       { id: 'users', title: 'Users', words: 'accounts people', admin: true, render: ({ me }) => <Users me={me} /> },
     ],
   },
@@ -211,6 +221,8 @@ const ICONS = {
   bell: 'M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5-6.71V4a2 2 0 0 0-4 0v.29A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z',
   link: 'M10.6 13.4a1 1 0 0 1 0-1.4l3.5-3.5a3 3 0 1 1 4.2 4.2l-2 2-1.4-1.4 2-2a1 1 0 1 0-1.4-1.4L12 13.4a1 1 0 0 1-1.4 0Zm2.8-2.8a1 1 0 0 1 0 1.4l-3.5 3.5a3 3 0 1 1-4.2-4.2l2-2 1.4 1.4-2 2a1 1 0 1 0 1.4 1.4l3.5-3.5a1 1 0 0 1 1.4 0Z',
   heart: 'M12 21s-7.5-4.6-9.5-9.2C1.1 8.5 3.2 5 6.6 5c2 0 3.4 1.1 4.4 2.5C12 6.1 13.4 5 15.4 5c3.4 0 5.5 3.5 4.1 6.8C17.5 16.4 12 21 12 21Z',
+  money: 'M3 6h18a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Zm9 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM5 9v6h1V9H5Zm13 0v6h1V9h-1Z',
+  shield: 'M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Zm-1 13.6-3.3-3.3 1.4-1.4 1.9 1.9 4.3-4.3 1.4 1.4-5.7 5.7Z',
   moon: 'M20.5 14.4A8.5 8.5 0 0 1 9.6 3.5a8.5 8.5 0 1 0 10.9 10.9Z',
   database: 'M12 3c4.4 0 8 1.3 8 3v12c0 1.7-3.6 3-8 3s-8-1.3-8-3V6c0-1.7 3.6-3 8-3Zm6 9.4c-1.5.7-3.7 1.1-6 1.1s-4.5-.4-6-1.1V15c0 .5 2.3 1.5 6 1.5s6-1 6-1.5v-2.6Zm0-4.5c-1.5.7-3.7 1.1-6 1.1s-4.5-.4-6-1.1v2.6c0 .5 2.3 1.5 6 1.5s6-1 6-1.5V7.9Z',
 };
@@ -220,7 +232,7 @@ function Icon({ name, className = 'w-5 h-5' }) {
 }
 
 const visibleGroups = (user) => GROUPS
-  .map((g) => ({ ...g, sections: g.sections.filter((s) => !s.admin || user.is_admin) }))
+  .map((g) => ({ ...g, sections: g.sections.filter((s) => (!s.admin || user.is_admin) && !(s.noDemo && isDemo())) }))
   .filter((g) => g.sections.length);
 
 const RAIL_KEY = 'sworkr:settings-rail-collapsed';

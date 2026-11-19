@@ -113,5 +113,26 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   that didn't apply here; cleared by upgrading to react-router 7.18.6 (npm audit: 0). Still to do: an outside
   tester before launch.
 
+### Owner's list, 2026-11-19
+- Easier install for first-time Docker users; streamline install and update on the site and GitHub; better README.
+- Auto log-out: add 5 minutes as a choice, 15 minutes the default.
+- Docs: No-IP as a DDNS option; say clearly a domain or subdomain you own works; maybe affiliate links to domain
+  providers (discuss). Self-hosting spirit throughout the docs; VPN reminders where they fit.
+- Donations page on sworkr.com, small and large options (discuss).
+- A better word than "wellness" (discuss).
+- Supplies: no test kits in the starters; "Hand sanitizer"; add "Toy cleaner".
+- Demo: don't show sign-ins (invasive).
+- Web app instructions, with a way to set a custom home-screen icon; do it from the Tailscale or own-address URL.
+- Android: what's missing compared with iPhone.
+- Meal planning and shopping lists (beyond tours). Optional calorie and macro tracking, off unless turned on.
+- More fleshed-out budget categories; default colours that fit the app.
+- Settings order that makes sense in practice.
+- Fake test personas using it for a few simulated months, to find what breaks or is awkward.
+- Convention booth planning: promo materials and their costs, outfits; convention trips budgeted like tours.
+- Doctor day: usually the same weekday at a brothel (e.g. Wednesday), results the next day. A party can only be
+  booked after the test clears and the work card is current.
+- Health test questions (cervical swab, blood draw...). What Nevada counties require (owner worked in Nye and
+  Lyon; they differed). Talent Testing Service for how performer testing works.
+
 ## Bigger ideas
 - Translations: Spanish, Russian, French first. Later.

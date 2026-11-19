@@ -116,7 +116,7 @@ function SafetyTimer() {
     );
   }
   if (!state.armed) {
-    return <p className="text-xs text-gray-500">Safety timer: <Link to="/account/privacy" className="underline text-sworkr-600">add a trusted contact</Link> to use it.</p>;
+    return <p className="text-xs text-gray-500">Safety timer: <Link to="/account/safety" className="underline text-sworkr-600">add a trusted contact</Link> to use it.</p>;
   }
   return (
     <div>

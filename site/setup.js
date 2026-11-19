@@ -32,7 +32,7 @@
     var network = val('network') === 'network';
     var web = val('web_address').replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
     var passkeys = val('passkey_address').replace(/\/+$/, '') || (web ? 'https://' + web : '');
-    var idle = num('idle', 120, 0, 1440);
+    var idle = num('idle', 15, 0, 1440);
     var keep = num('keep', 14, 1, 365);
     var email = val('email');
 

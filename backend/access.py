@@ -298,7 +298,10 @@ def save_access(body: AccessSettings, request: Request):
 
 @router.get("/api/account/sessions")
 def list_sessions(request: Request):
-    """The devices signed in to this account, most recently used first."""
+    """The devices signed in to this account, most recently used first. Not in the demo (a shared account)."""
+    import demo
+    if demo.ENABLED:
+        return []
     current = auth._token_hash(request.cookies.get(auth.SESSION_COOKIE) or "")
     db = _get_db()
     try:
@@ -334,7 +337,11 @@ def log_out_others(request: Request):
 
 @router.get("/api/account/sign-ins")
 def list_sign_ins(request: Request):
-    """Recent sign-ins and failed tries for this account, newest first."""
+    """Recent sign-ins and failed tries for this account, newest first. Never in the demo: everyone shares that
+    account, so it would show other visitors' addresses and devices."""
+    import demo
+    if demo.ENABLED:
+        return []
     db = _get_db()
     try:
         return [{"id": r["id"], "outcome": r["outcome"], "method": r["method"], "ip": r["ip"],

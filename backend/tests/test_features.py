@@ -324,7 +324,7 @@ def test_sample_data_can_be_removed_without_touching_real_records(api):
 
 def test_auto_logout_setting(api):
     s = api.get("/api/account/settings").json()
-    assert s["idle_minutes"] == 120 and 0 in s["idle_choices"]
+    assert s["idle_minutes"] == 15 and 0 in s["idle_choices"] and 5 in s["idle_choices"]
     assert api.put("/api/account/settings", json={"idle_minutes": 7}).status_code == 400
     assert api.put("/api/account/settings", json={"idle_minutes": 30}).json()["idle_minutes"] == 30
     assert api.put("/api/account/settings", json={"idle_minutes": 120}).status_code == 200
@@ -338,9 +338,9 @@ def test_an_unused_session_is_logged_out(api, other):
         stamp = (datetime.now(timezone.utc) - timedelta(minutes=minutes_ago)).isoformat(timespec="seconds")
         db_exec("UPDATE sessions SET last_seen_at = ? WHERE user_id = ? AND token_hash != ''", stamp, other.user_id)
 
-    last_used(100)
-    assert device.get("/api/clients").status_code == 200           # under the 2 hour default, and counts as use
-    last_used(130)
+    last_used(10)
+    assert device.get("/api/clients").status_code == 200           # under the 15-minute default, and counts as use
+    last_used(20)
     assert device.get("/api/clients").status_code == 401           # over it: logged out
     assert device.get("/api/clients").status_code == 401           # and stays logged out
     other.post("/api/auth/login", json={"username": other.username, "password": PASSWORD})
@@ -348,7 +348,7 @@ def test_an_unused_session_is_logged_out(api, other):
 
 def test_background_requests_do_not_keep_a_session_alive(other):
     device = login(other.username)
-    stamp = (datetime.now(timezone.utc) - timedelta(minutes=100)).isoformat(timespec="seconds")
+    stamp = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat(timespec="seconds")
     db_exec("UPDATE sessions SET last_seen_at = ? WHERE user_id = ?", stamp, other.user_id)
     assert device.get("/api/safety/watch", headers={"X-Background": "1"}).status_code == 200
     db = sqlite3.connect(main.DB_PATH)

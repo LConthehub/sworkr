@@ -21,8 +21,8 @@ SESSION_COOKIE = "sworkr_session"
 SESSION_DAYS = 30
 MIN_PASSWORD_LENGTH = 12
 # Log out a session that hasn't been used for this long. Each user can change theirs on the Account page.
-DEFAULT_IDLE_MINUTES = int(os.environ.get("SESSION_IDLE_MINUTES", "120"))
-IDLE_CHOICES = (15, 30, 60, 120, 480, 0)   # minutes; 0 = stay logged in (up to 30 days)
+DEFAULT_IDLE_MINUTES = int(os.environ.get("SESSION_IDLE_MINUTES", "15"))
+IDLE_CHOICES = (5, 15, 30, 60, 120, 480, 0)   # minutes; 0 = stay logged in (up to 30 days)
 
 _SCRYPT_N, _SCRYPT_R, _SCRYPT_P = 2 ** 14, 8, 1
 
