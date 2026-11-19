@@ -63,6 +63,9 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Assistant (AI): Settings > Connections > Assistant; LM Studio / Ollama / llama.cpp on your own computer
+  (cloud only with an explicit tick); dashboard card "Ask your numbers". Gets totals only, never names or
+  notes, and won't write posts or messages. Tested against a pretend model only: try it with a real one.
 - Driver rates: each contact you work with keeps their own rates (per trip, hour, mile, km, day); Ride on a booking logs it as a travel expense that day.
 - Persona kit: each persona keeps bios by platform, social links and wishlist links, one tap to copy (Settings > My work > Personas > Kit).
 - Work card fees: a license tied to a workplace puts its renewal fee on that workplace's tour (the one under way,
@@ -86,9 +89,6 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 
 ## Next
 - Docs review finished 2026-11-17 (last six pages in one pass; owner may veto). Troubleshooting page not re-read.
-- Local AI: an optional assistant that talks to a model running on your own machine (LM Studio, llama.cpp,
-  Ollama: all speak the OpenAI-style API on localhost). Cloud AI only as an explicit opt-in, clearly marked,
-  off by default. Jobs: statistics and search (ask questions of your own numbers, find things across notes), not writing.
 - Gamify posting and earnings: plan (2026-11-18), for the owner to pick from. Ideas, all private, all optional,
   and none that push working more than you want:
   - Streaks: days in a row you posted what you planned, kept routines, or logged money. A missed day pauses a

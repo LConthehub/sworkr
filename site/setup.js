@@ -64,6 +64,8 @@
         y.push('      - ' + k + '=${' + k + ':-' + fallback + '}      # from the .env file next to this one');
       });
     }
+    y.push('    extra_hosts:');
+    y.push('      - "host.docker.internal:host-gateway"   # lets it reach an AI model running on this computer');
     y.push('    restart: unless-stopped');
     if (web) {
       y.push('');

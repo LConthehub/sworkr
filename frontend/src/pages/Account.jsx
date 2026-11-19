@@ -11,6 +11,7 @@ import { DiscreetSettings } from '../components/Discreet';
 import LookSettings from '../components/Look';
 import { ReceiptSettings } from '../components/Receipts';
 import { SocialAccounts } from '../components/Social';
+import { AssistantSettings } from '../components/Assistant';
 import HolidaySettings from '../components/Holidays';
 import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from '../components/SignInSecurity';
 import { WorkTypesPicker } from '../components/WorkTypes';
@@ -132,6 +133,10 @@ const GROUPS = [
       {
         id: 'social', title: 'Social accounts', words: 'bluesky mastodon reddit social post posting accounts',
         render: () => <Section title="Social accounts" hint="Post planned posts straight to Bluesky, Mastodon or Reddit."><SocialAccounts plain /></Section>,
+      },
+      {
+        id: 'assistant', title: 'Assistant (AI)', words: 'ai assistant llm lm studio ollama llama model local questions statistics',
+        render: () => <Section title="Assistant (AI)" hint="Questions about your own numbers, answered by a model on your own computer."><AssistantSettings /></Section>,
       },
     ],
   },

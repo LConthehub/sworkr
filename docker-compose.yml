@@ -32,6 +32,8 @@ services:
       - SMTP_FROM=${SMTP_FROM:-}
       - SMTP_SECURITY=${SMTP_SECURITY:-starttls}
       - PASSKEY_ORIGINS=${PASSKEY_ORIGINS:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # lets it reach an AI model running on this computer
     restart: unless-stopped
 
 volumes:

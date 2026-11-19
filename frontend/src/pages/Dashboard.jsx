@@ -5,6 +5,7 @@ import Modal from '../components/Modal';
 import { TaskForm, TasksPanel } from '../components/Tasks';
 import { RoutinesCard } from '../components/Routines';
 import QuickNote from '../components/QuickNote';
+import { AskCard } from '../components/Assistant';
 import { EmailPanel } from '../components/Email';
 import GoalsGlance from '../components/GoalsGlance';
 import { CycleCard } from '../components/Cycle';
@@ -30,7 +31,7 @@ function greeting(now) {
 // Every card the dashboard can show, in the usual order.
 const CARDS = {
   week: 'This week', deposits: 'Deposits to collect', tests: 'Health tests due', inquiries: 'Inquiries to answer',
-  shoots: 'Shoots coming up', customs: 'Customs to make', ads: 'Ads running out', posts: 'Posts & ads due', tasks: 'Tasks', routines: 'Routines', note: 'Notes',
+  shoots: 'Shoots coming up', customs: 'Customs to make', ads: 'Ads running out', posts: 'Posts & ads due', tasks: 'Tasks', routines: 'Routines', note: 'Notes', ask: 'Ask your numbers',
   email: 'Email', cycle: 'Period tracker', goals: 'Wallet',
 };
 
@@ -65,6 +66,7 @@ export default function Dashboard({ user }) {
     tasks: <TasksPanel version={version} onChanged={bump} onOpen={(task) => setTaskModal({ task })} />,
     routines: <RoutinesCard />,
     note: <QuickNote />,
+    ask: <AskCard />,
     email: <EmailPanel />,
     cycle: <CycleCard onChanged={bump} />,
     goals: <GoalsGlance version={version} />,

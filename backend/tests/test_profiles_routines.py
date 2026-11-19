@@ -166,3 +166,51 @@ def test_a_driver_keeps_rates_and_a_ride_becomes_a_travel_expense(api, admin):
     assert e["description"] == "Ride: Waiting (2 hours) – Dee Driver" and e["appointment_id"] == a["id"]
     assert admin.post(f"/api/appointments/{a['id']}/ride", json={"rate_id": rates[1]["id"]}).status_code == 404
     assert admin.get(f"/api/clients/{driver['id']}/rates").status_code == 404
+
+
+import json as _json  # noqa: E402
+
+import httpx  # noqa: E402
+
+import assistant  # noqa: E402
+
+
+class Model:
+    def __init__(self):
+        self.seen = []
+
+    def __call__(self, req):
+        self.seen.append(req)
+        if req.url.path.endswith("/models"):
+            return httpx.Response(200, json={"data": [{"id": "qwen-local"}]})
+        return httpx.Response(200, json={"choices": [{"message": {"content": "October was your best month."}}]})
+
+
+def test_local_and_cloud_addresses():
+    for url in ("http://localhost:1234/v1", "http://127.0.0.1:11434/v1", "http://host.docker.internal:1234/v1",
+                "http://192.168.1.20:8080/v1", "http://pc.tail1234.ts.net:1234/v1", "http://100.101.102.103:1234/v1"):
+        assert assistant.is_local(url), url
+    for url in ("https://api.openai.com/v1", "https://8.8.8.8/v1", "https://example.com/v1"):
+        assert not assistant.is_local(url), url
+
+
+def test_a_cloud_ai_needs_an_explicit_yes(api):
+    assert api.put("/api/assistant/settings", json={"enabled": True, "url": "https://api.example.com/v1"}).status_code == 400
+    s = ok(api.put("/api/assistant/settings", json={"enabled": True, "url": "https://api.example.com/v1", "cloud_ok": True, "key": "sk-1"}))
+    assert s["cloud_ok"] and s["key_saved"] and "sk-1" not in _json.dumps(s)
+
+
+def test_asking_sends_totals_only_never_names(api, monkeypatch):
+    m = Model()
+    monkeypatch.setattr(assistant, "TRANSPORT", httpx.MockTransport(m))
+    assert api.post("/api/assistant/ask", json={"question": "Best month?"}).status_code == 409     # not on yet
+    ok(api.put("/api/assistant/settings", json={"enabled": True, "url": "http://localhost:1234/v1", "model": "qwen-local"}))
+    assert ok(api.post("/api/assistant/test"))["models"] == ["qwen-local"]
+    c = ok(api.post("/api/clients", json={"name": "Secret Sam", "found_via": "Tryst", "contact_phone": "555-0100"}), 201)
+    ok(api.post("/api/appointments", json={"client_id": c["id"], "service_type": "Dinner", "duration_minutes": 60,
+                                           "scheduled_date": date.today().isoformat() + "T19:00:00Z", "rate": 400, "amount_paid": 400}), 201)
+    r = ok(api.post("/api/assistant/ask", json={"question": "Best month?"}))
+    assert r["answer"] == "October was your best month."
+    sent = next(x for x in m.seen if x.url.path.endswith("/chat/completions")).content.decode()
+    assert "Secret Sam" not in sent and "555-0100" not in sent
+    assert "Tryst" in sent and "Dinner" in sent and _json.loads(sent)["model"] == "qwen-local"
