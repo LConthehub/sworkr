@@ -152,12 +152,17 @@ def per_hour(request: Request, days: int = Query(90, ge=7, le=730)):
     try:
         prep = int(_setting(db, owner, "prep_minutes") or 60)
         rows = []
+        # Getting ready and travel count for each booking, except parties during a stay at a workplace (a house):
+        # you're already there.
         b = db.execute("""
-            SELECT COUNT(*) AS n, COALESCE(SUM(duration_minutes), 0) AS minutes, COALESCE(SUM(amount_paid), 0) AS paid
-            FROM appointments WHERE owner_id = ? AND kind = 'client' AND status = 'completed' AND scheduled_date >= ?
+            SELECT COUNT(*) AS n, COALESCE(SUM(a.duration_minutes), 0) AS minutes, COALESCE(SUM(a.amount_paid), 0) AS paid,
+                   SUM(CASE WHEN EXISTS (SELECT 1 FROM tours t WHERE t.owner_id = a.owner_id AND t.kind = 'tour'
+                        AND t.source_id IS NOT NULL AND substr(a.scheduled_date, 1, 10) BETWEEN t.start_date AND t.end_date)
+                       THEN 0 ELSE 1 END) AS travelled
+            FROM appointments a WHERE a.owner_id = ? AND a.kind = 'client' AND a.status = 'completed' AND a.scheduled_date >= ?
         """, (owner, since)).fetchone()
         if b["n"]:
-            hours = (b["minutes"] + prep * b["n"]) / 60
+            hours = (b["minutes"] + prep * (b["travelled"] or 0)) / 60
             rows.append({"label": "Bookings", "count": b["n"], "net": round(b["paid"], 2), "hours": round(hours, 1),
                          "per_hour": round(b["paid"] / hours, 2) if hours else None,
                          "note": f"their length plus {prep} minutes each for getting ready and travel"})
@@ -183,13 +188,26 @@ def per_hour(request: Request, days: int = Query(90, ge=7, le=730)):
 
 # ==================== STEADY PAY ====================
 
+def _first_record(db, owner: int) -> Optional[str]:
+    days = [db.execute(sql, (owner,)).fetchone()[0] for sql in (
+        "SELECT MIN(scheduled_date) FROM appointments WHERE owner_id = ? AND kind = 'client'",
+        "SELECT MIN(date) FROM income WHERE owner_id = ?",
+        "SELECT MIN(date) FROM expenses WHERE owner_id = ?")]
+    days = [d[:10] for d in days if d]
+    return min(days) if days else None
+
+
 def _monthly_net(db, owner: int, today: date) -> List[float]:
-    """What was left each of the last six full months: everything received, less everything spent."""
+    """What was left each of the last six full months: everything received, less everything spent. Months
+    before your first record are left out: they're months before you used sworkr, not months with no income."""
     out = []
+    began = _first_record(db, owner)
     first = today.replace(day=1)
     for _ in range(6):
         end = first
         first = (first - timedelta(days=1)).replace(day=1)
+        if began is None or end.isoformat() <= began:
+            break
         lo, hi = first.isoformat(), end.isoformat()
         booked = db.execute("SELECT COALESCE(SUM(amount_paid), 0) FROM appointments WHERE owner_id = ? AND kind = 'client' "
                             "AND status != 'cancelled' AND scheduled_date >= ? AND scheduled_date < ?", (owner, lo, hi)).fetchone()[0]
@@ -212,8 +230,8 @@ def steady_pay(request: Request):
     db = _get_db()
     try:
         months = _monthly_net(db, owner, date.today())
-        average = sum(months) / len(months)
-        lean = sorted(months)[1]                       # the second-leanest month: a careful base
+        average = sum(months) / len(months) if months else 0
+        lean = sorted(months)[1] if len(months) > 1 else average   # the second-leanest month: a careful base
         suggested = max(0, int((min(average * 0.8, max(lean, average * 0.5)) / 4.33) // 10 * 10))
         weekly = float(_setting(db, owner, "steady_weekly") or 0) or None
         goal_id = int(_setting(db, owner, "steady_goal") or 0) or None

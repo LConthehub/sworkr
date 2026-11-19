@@ -95,6 +95,17 @@ def _routine_days(db, owner: int) -> Set[str]:
     """, (owner,))}
 
 
+def _days_off(db, owner: int, routine_days: Set[str]) -> Set[str]:
+    """Days with no work and no routine started: rest, so they don't break a routine streak."""
+    worked = {r[0] for r in db.execute("SELECT DISTINCT substr(scheduled_date, 1, 10) FROM appointments WHERE owner_id = ? "
+                                       "AND kind = 'client' AND status != 'cancelled'", (owner,))}
+    worked |= {r[0] for r in db.execute("SELECT DISTINCT day FROM work_logs WHERE owner_id = ?", (owner,))}
+    started = {r[0] for r in db.execute("SELECT DISTINCT day FROM routine_checks WHERE owner_id = ?", (owner,))}
+    today = date.today()
+    every = {(today - timedelta(days=i)).isoformat() for i in range(400)}
+    return every - worked - started - routine_days
+
+
 def _money_days(db, owner: int) -> Set[str]:
     days = set()
     for table in ("expenses", "income"):
@@ -312,7 +323,7 @@ def progress(request: Request, day: Optional[date] = None):
             "enabled": True,
             "streaks": [
                 {"id": "posting", "title": "Posting what you planned", **streak(post_days, today, skip=all_days - planned_days)},
-                {"id": "routines", "title": "Finishing a routine", **streak(routine_days, today)},
+                {"id": "routines", "title": "Finishing a routine", **streak(routine_days, today, skip=_days_off(db, owner, routine_days))},
                 {"id": "money", "title": "Logging money", **streak(money_days, today)},
             ],
             "goals": goals,

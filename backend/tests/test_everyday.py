@@ -93,7 +93,7 @@ def test_a_quick_log_makes_the_income_and_shows_what_an_hour_pays(api, admin):
 
 def test_steady_pay_suggests_a_weekly_amount_and_counts_the_buffer(api):
     s = ok(api.get("/api/steady-pay"))
-    assert len(s["months"]) == 6 and s["weekly"] is None and s["buffer"] is None
+    assert s["months"] == [] and s["weekly"] is None and s["buffer"] is None     # nothing recorded yet: no empty months
     env = ok(api.post("/api/goals", json={"name": "Buffer", "envelope": True}), 201)
     ok(api.post(f"/api/goals/{env['id']}/entries", json={"amount": 3000}), 201)
     s = ok(api.put("/api/steady-pay", json={"weekly": 500, "goal_id": env["id"]}))
@@ -161,7 +161,8 @@ def test_the_home_screen_name_and_icon_can_be_plain(api, admin):
     assert api.put("/api/branding", json={"name": "Notes", "icon": picture}).status_code == 403     # admins only
     r = ok(admin.put("/api/branding", json={"name": "Notes", "icon": picture}))
     assert r == {"name": "Notes", "custom_icon": True}
-    assert anyone.get("/api/branding/manifest.json").json()["short_name"] == "Notes"
+    m = anyone.get("/api/branding/manifest.json").json()
+    assert m["short_name"] == "Notes" and [x["url"] for x in m["shortcuts"]] == ["/calendar", "/money", "/contacts"]
     icon = Image.open(_io.BytesIO(anyone.get("/api/branding/icon-512.png").content))
     assert icon.size == (512, 512)                                   # cut square and resized
     assert admin.put("/api/branding", json={"icon": "data:image/png;base64,bm90IGEgcGljdHVyZQ=="}).status_code == 400

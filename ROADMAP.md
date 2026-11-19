@@ -62,6 +62,20 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - One-container Docker install (Dockerfile + docker-compose.yml, port 8008); image workflow in .github/.
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
+## Done 2026-11-19
+- Quick fixes: auto log-out 5 min choice and 15 min default; no sign-in history on the demo; supplies starters.
+- Settings regrouped (Money and Safety groups; tests under Health; backups first).
+- Health tests: clear / not clear results; booking a party during a house stay warns until the test there is
+  clear and the work card is current; what each test takes and checks for; a Nevada house set (NAC 441A.800).
+  County rules (Nye, Lyon) and performer testing (TTS, PASS) could not be confirmed online: ask the owner/friends.
+- Easier install: sworkr-start.zip with double-click Start / Update / Stop (Windows tested in an isolated copy).
+- Home screen name & icon (Settings > Look), Android long-press shortcuts.
+- Docs: first time with Docker, No-IP, your own domain, Own your data (self-hosting, VPN), Android; README rewritten.
+- Fuller expense categories, coloured from the app's palette.
+- Conventions with a booth and promo list; Calendar > Meals with a shopping list; optional calories and macros.
+- Simulation test: four pretend workers, 90 days, every screen checked. It found and fixed: steady pay counting
+  months before someone started, routine streaks broken by days off, getting-ready time added to house parties.
+
 ## Done 2026-11-18
 - Only what fits: each part of sworkr shows for the kinds of work it's for (Settings > My work > Show everything
   to see all). Two more kinds of work: massage or bodywork, online seller.

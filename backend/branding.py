@@ -65,6 +65,8 @@ def manifest():
         "background_color": "#fc4c9c", "theme_color": "#a73178",
         "icons": [{"src": f"/api/branding/icon-{s}.png", "sizes": f"{s}x{s}", "type": "image/png"} for s in (192, 512)]
                  + [{"src": "/api/branding/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}],
+        # Android: a long press on the home-screen icon offers these. Plain words, so they give nothing away.
+        "shortcuts": [{"name": n, "url": u} for n, u in (("Calendar", "/calendar"), ("Money", "/money"), ("Contacts", "/contacts"))],
     }
     return Response(json.dumps(body), media_type="application/manifest+json", headers={"Cache-Control": "no-cache"})
 
