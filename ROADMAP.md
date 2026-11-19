@@ -68,8 +68,8 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   Caddy entry). Then link it from the home page footer and the README.
 - Affiliate links: sign up with Porkbun, Namecheap and Njalla's affiliate programs and swap the codes into
   the registrar links on the web-address docs page (they're marked rel="sponsored" and disclosed).
-- Nye and Lyon county rules (work card, renewals, extra tests), and performer testing (TTS, PASS): from the
-  owner's notes or friends; the websites couldn't be read.
+- Performer testing (TTS, PASS): from the owner's notes or friends; the websites couldn't be read.
+  (Nye and Lyon are covered by the Nevada house set: the owner confirmed what's there is fine.)
 
 ## Done 2026-11-19
 - "Wellness log" is now "Daily check-in"; Supplies is a dashboard card of its own.

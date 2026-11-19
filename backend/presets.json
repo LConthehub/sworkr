@@ -138,7 +138,7 @@
       ]
     },
     "content": {
-      "label": "Content creator (fan sites)",
+      "label": "Content creator (fan sites, clips)",
       "categories": {
         "gear": [
           "Camera & lighting",
@@ -164,6 +164,11 @@
           "kind": "platform",
           "fee_percent": 20,
           "payout_note": "Platform keeps 20% at the time of writing; check"
+        },
+        {
+          "name": "Clip store",
+          "kind": "platform",
+          "payout_note": "For example Clips4Sale; check the platform's cut"
         }
       ]
     },
@@ -260,7 +265,7 @@
       "sources": []
     },
     "seller": {
-      "label": "Online seller (clips, items)",
+      "label": "Online seller (items)",
       "categories": {
         "other": [
           "Postage & packaging"

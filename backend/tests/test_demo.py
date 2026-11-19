@@ -75,7 +75,7 @@ def test_demo_reset_builds_a_complete_sample():
     assert out["users_page"] == 403           # the demo login isn't an admin
     assert set(out["partners"]) == {"Alex", "Dee", "Jade", "Ruby"} and all(isinstance(v, (int, float)) for v in out["partners"].values())   # someone with nothing owed is a plain 0
     assert out["goals"] == ["Emergency fund", "New camera", "Retirement goal", "Taxes"]
-    assert out["income"] == 29 and out["sources"] == ["Cheryl's Ranch", "Club Velvet", "Fansly", "My sugar site", "OF"]
+    assert out["income"] == 29 and out["sources"] == ["Cheryl's Ranch", "Clip store", "Club Velvet", "Fansly", "My sugar site", "OF"]
     assert out["change_password"] == 403
     assert out["personas"] == ["Kitty Kam", "Scarlett"] and out["clients_have_personas"]
     assert out["clients_kept_phones"] >= 5            # adding personas kept the contacts' details

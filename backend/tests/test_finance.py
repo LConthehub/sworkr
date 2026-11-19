@@ -292,7 +292,7 @@ def test_work_profile_adds_starter_categories_and_places_once(api):
     r = ok(api.put("/api/work-profile", json={"work_types": ["dancer", "content", "cam"]}))
     assert "OF" not in r["added"]["sources"] and "My cam site" in r["added"]["sources"]
     assert "Makeup & beauty" not in r["added"]["categories"]      # dancer already added it
-    assert len(ok(api.get("/api/income-sources"))) == 4
+    assert len(ok(api.get("/api/income-sources"))) == 5      # My club, OF, Fansly, Clip store, My cam site
     assert ok(api.get("/api/work-profile"))["work_types"] == ["dancer", "content", "cam"]
     assert api.put("/api/work-profile", json={"work_types": ["astronaut"]}).status_code == 400
     ok(api.put("/api/work-profile", json={"work_types": []}))      # "skip" is remembered as an empty list
