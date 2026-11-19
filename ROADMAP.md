@@ -104,8 +104,8 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   - Never public, never compared with other workers, and one switch turns all of it off.
 - Penetration testing, part 1 done 2026-11-18: a test walks every API route (200+) and checks none answers
   without a login; Python dependencies audited clean (pip-audit). Frontend: 2 moderate react-router advisories
-  that don't apply here (no outside redirect targets, no server rendering); upgrade to react-router 7 to clear
-  them (a breaking upgrade). Still to do: an outside tester before launch.
+  that didn't apply here; cleared by upgrading to react-router 7.18.6 (npm audit: 0). Still to do: an outside
+  tester before launch.
 - Apple Health: import the Health app's export file (export.zip) to fill in sleep and water. A website can't read Health directly.
 
 ## Bigger ideas
