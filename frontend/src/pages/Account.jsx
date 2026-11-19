@@ -112,9 +112,9 @@ const GROUPS = [
     ],
   },
   {
-    id: 'notifications', label: 'Reminders', icon: 'bell',
+    id: 'notifications', label: 'Notifications', icon: 'bell',
     sections: [
-      { id: 'reminders', title: 'Reminders', words: 'notifications discreet', render: () => <ReminderSettings /> },
+      { id: 'reminders', title: 'In this browser', words: 'notifications reminders discreet browser', render: () => <ReminderSettings /> },
       {
         id: 'ntfy', title: 'Phone notifications', words: 'ntfy push notification phone alert reminder morning summary',
         render: () => <Section title="Phone notifications (ntfy)" hint="A message on your phone before a booking, and a summary each morning."><NtfySettings /></Section>,
@@ -711,7 +711,7 @@ function ReminderSettings() {
   };
 
   return (
-    <Section title="Reminders" hint="A notification on this computer before each appointment, and when a post or ad is due. It only works in this browser, while sworkr is open in a tab.">
+    <Section title="Notifications in this browser" hint="A notification on this computer before each appointment, and when a post or ad is due. It only works in this browser, while sworkr is open in a tab.">
       {!supported ? (
         <p className="text-sm text-gray-500">This browser doesn't support notifications.</p>
       ) : (

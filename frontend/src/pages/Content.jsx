@@ -242,7 +242,7 @@ export function Planner({ version, onEdit, onNew }) {
       </div>
       <p className="text-xs text-gray-500 mb-3">
         Plan social posts, fan-site drops, ad renewals and bumps, and tour announcements. sworkr doesn't post for you (sites don't
-        allow apps to): it reminds you when one is due (turn on Reminders in settings), you copy the text and post it, then mark it as posted.
+        allow apps to): it reminds you when one is due (turn on notifications in Settings → Notifications), you copy the text and post it, then mark it as posted.
       </p>
       {notice && <p className="text-sm text-emerald-700 mb-2">{notice}</p>}
       {!posts ? null : posts.length === 0 ? (

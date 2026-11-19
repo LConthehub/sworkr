@@ -13,7 +13,7 @@ function randomTopic() {
   return Array.from(bytes, (b) => letters[b % letters.length]).join('');
 }
 
-/** Account → Reminders → Phone notifications: ntfy, a free app that shows a message when sworkr says so. */
+/** Settings → Notifications → Phone notifications: ntfy, a free app that shows a message when sworkr says so. */
 export default function NtfySettings() {
   const [s, setS] = useState(null);
   const [form, setForm] = useState(null);

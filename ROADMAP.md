@@ -63,6 +63,9 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Settings: "Reminders" is now "Notifications".
+- First run: after "How do you work?", "Connect what you use" offers email, calendar, content library,
+  phone notifications, phone access and health tracking (all optional).
 - Apple Health import: Settings > Health > Wellness log reads the Health app's export.zip for sleep (asleep time, one source per night) and water.
 - Wellness log (Settings > Health): a daily check-in card (sleep, water, food, energy) and how earnings compare on better and worse days.
 - Assistant (AI): Settings > Connections > Assistant; LM Studio / Ollama / llama.cpp on your own computer
@@ -107,6 +110,8 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   without a login; Python dependencies audited clean (pip-audit). Frontend: 2 moderate react-router advisories
   that didn't apply here; cleared by upgrading to react-router 7.18.6 (npm audit: 0). Still to do: an outside
   tester before launch.
+- SimpleFIN bank import (owner's idea, 2026-11-18): bank transactions in through SimpleFIN Bridge.
+- Gamifying: the owner wants all of the options in the plan above.
 
 ## Bigger ideas
 - Translations: Spanish, Russian, French first. Later.
