@@ -152,3 +152,108 @@ def save_settings(body: OnOff, request: Request):
         return {"enabled": body.enabled}
     finally:
         db.close()
+
+
+# ==================== APPLE HEALTH IMPORT ====================
+# The Health app's "Export All Health Data" gives export.zip with apple_health_export/export.xml in it.
+# Only sleep and water are read. The file is read as it streams, so a large export doesn't fill memory.
+
+import os  # noqa: E402
+import tempfile  # noqa: E402
+import zipfile  # noqa: E402
+import xml.etree.ElementTree as ET  # noqa: E402
+
+MAX_EXPORT = 2 * 1024 ** 3        # 2 GB: years of a watch's data
+ASLEEP = ("HKCategoryValueSleepAnalysisAsleep", "HKCategoryValueSleepAnalysisAsleepUnspecified",
+          "HKCategoryValueSleepAnalysisAsleepCore", "HKCategoryValueSleepAnalysisAsleepDeep",
+          "HKCategoryValueSleepAnalysisAsleepREM")
+TO_ML = {"mL": 1, "ml": 1, "L": 1000, "l": 1000, "fl_oz_us": 29.5735, "fl_oz_imp": 28.4131, "cup_us": 236.588}
+
+
+def _when(text: str) -> datetime:
+    # "2026-05-01 07:12:00 -0700": the local wall-clock date is what counts.
+    return datetime.strptime(text[:19], "%Y-%m-%d %H:%M:%S")
+
+
+def read_health_export(stream) -> dict:
+    """{day: {"sleep_hours": h, "water_glasses": n}} from an export.xml stream."""
+    sleep, water = {}, {}            # sleep: day -> source -> hours (the longest source wins); water: day -> ml
+    for _, el in ET.iterparse(stream, events=("end",)):
+        if el.tag != "Record":
+            if el.tag != "HealthData":
+                el.clear()
+            continue
+        kind = el.get("type")
+        try:
+            if kind == "HKCategoryTypeIdentifierSleepAnalysis" and el.get("value") in ASLEEP:
+                start, end = _when(el.get("startDate")), _when(el.get("endDate"))
+                day = end.date().isoformat()
+                src = el.get("sourceName") or "?"
+                sleep.setdefault(day, {})[src] = sleep.get(day, {}).get(src, 0) + (end - start).total_seconds() / 3600
+            elif kind == "HKQuantityTypeIdentifierDietaryWater":
+                ml = float(el.get("value")) * TO_ML.get(el.get("unit"), 0)
+                day = _when(el.get("startDate")).date().isoformat()
+                water[day] = water.get(day, 0) + ml
+        except (TypeError, ValueError):
+            pass
+        el.clear()
+    out = {}
+    for day, sources in sleep.items():
+        hours = max(sources.values())
+        if 0 < hours <= 24:
+            out.setdefault(day, {})["sleep_hours"] = round(hours, 1)
+    for day, ml in water.items():
+        if ml > 0:
+            out.setdefault(day, {})["water_glasses"] = min(50, round(ml / 250))
+    return out
+
+
+@router.post("/import-apple-health")
+async def import_apple_health(request: Request):
+    """The export.zip (or export.xml) as the request body. Fills in sleep and water; food and energy are left alone."""
+    owner = request.state.user["id"]
+    fd, path = tempfile.mkstemp(prefix="health-", suffix=".upload")
+    size = 0
+    try:
+        with os.fdopen(fd, "wb") as f:
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > MAX_EXPORT:
+                    raise HTTPException(status_code=413, detail="That file is too big (2 GB at most)")
+                f.write(chunk)
+        if size == 0:
+            raise HTTPException(status_code=400, detail="The file is empty")
+        try:
+            if zipfile.is_zipfile(path):
+                with zipfile.ZipFile(path) as z:
+                    name = next((n for n in z.namelist() if n.endswith("export.xml") and "cda" not in n.lower()), None)
+                    if not name:
+                        raise HTTPException(status_code=400, detail="There's no export.xml in that zip: is it the Health app's export?")
+                    with z.open(name) as stream:
+                        days = read_health_export(stream)
+            else:
+                with open(path, "rb") as stream:
+                    days = read_health_export(stream)
+        except ET.ParseError:
+            raise HTTPException(status_code=400, detail="That file couldn't be read as a Health export")
+    finally:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+    db = _get_db()
+    try:
+        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        for day, v in days.items():
+            db.execute("""
+                INSERT INTO wellness_days (owner_id, day, sleep_hours, water_glasses, updated_at) VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(owner_id, day) DO UPDATE SET
+                    sleep_hours = COALESCE(excluded.sleep_hours, wellness_days.sleep_hours),
+                    water_glasses = COALESCE(excluded.water_glasses, wellness_days.water_glasses),
+                    updated_at = excluded.updated_at
+            """, (owner, day, v.get("sleep_hours"), v.get("water_glasses"), now))
+        db.commit()
+        return {"days": len(days), "sleep_days": sum(1 for v in days.values() if "sleep_hours" in v),
+                "water_days": sum(1 for v in days.values() if "water_glasses" in v)}
+    finally:
+        db.close()

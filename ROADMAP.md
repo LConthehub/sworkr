@@ -63,6 +63,7 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Apple Health import: Settings > Health > Wellness log reads the Health app's export.zip for sleep (asleep time, one source per night) and water.
 - Wellness log (Settings > Health): a daily check-in card (sleep, water, food, energy) and how earnings compare on better and worse days.
 - Assistant (AI): Settings > Connections > Assistant; LM Studio / Ollama / llama.cpp on your own computer
   (cloud only with an explicit tick); dashboard card "Ask your numbers". Gets totals only, never names or
@@ -106,7 +107,6 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   without a login; Python dependencies audited clean (pip-audit). Frontend: 2 moderate react-router advisories
   that didn't apply here; cleared by upgrading to react-router 7.18.6 (npm audit: 0). Still to do: an outside
   tester before launch.
-- Apple Health: import the Health app's export file (export.zip) to fill in sleep and water. A website can't read Health directly.
 
 ## Bigger ideas
 - Translations: Spanish, Russian, French first. Later.

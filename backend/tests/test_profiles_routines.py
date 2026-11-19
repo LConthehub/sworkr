@@ -233,3 +233,33 @@ def test_wellness_days_line_up_with_money(api, admin):
     assert (sleep["better_days"], sleep["better_avg"], sleep["worse_days"], sleep["worse_avg"]) == (2, 500, 2, 50)
     assert api.put("/api/wellness", json={"day": today.isoformat(), "energy": 9}).status_code == 400
     assert ok(admin.get("/api/wellness/vs-money"))["days_logged"] == 0
+
+
+HEALTH_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<HealthData locale="en_US">
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Watch" value="HKCategoryValueSleepAnalysisInBed" startDate="2044-03-01 22:00:00 -0800" endDate="2044-03-02 07:00:00 -0800"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Watch" value="HKCategoryValueSleepAnalysisAsleepCore" startDate="2044-03-01 23:00:00 -0800" endDate="2044-03-02 03:00:00 -0800"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="Watch" value="HKCategoryValueSleepAnalysisAsleepREM" startDate="2044-03-02 03:00:00 -0800" endDate="2044-03-02 06:30:00 -0800"/>
+ <Record type="HKCategoryTypeIdentifierSleepAnalysis" sourceName="iPhone" value="HKCategoryValueSleepAnalysisAsleepUnspecified" startDate="2044-03-01 23:30:00 -0800" endDate="2044-03-02 06:00:00 -0800"/>
+ <Record type="HKQuantityTypeIdentifierDietaryWater" sourceName="App" unit="mL" value="500" startDate="2044-03-02 09:00:00 -0800" endDate="2044-03-02 09:00:00 -0800"/>
+ <Record type="HKQuantityTypeIdentifierDietaryWater" sourceName="App" unit="L" value="1" startDate="2044-03-02 15:00:00 -0800" endDate="2044-03-02 15:00:00 -0800"/>
+ <Record type="HKQuantityTypeIdentifierStepCount" sourceName="iPhone" unit="count" value="900" startDate="2044-03-02 10:00:00 -0800" endDate="2044-03-02 10:10:00 -0800"/>
+</HealthData>"""
+
+
+def test_an_apple_health_export_fills_in_sleep_and_water(api):
+    import io as _io
+    import zipfile as _zip
+    ok(api.put("/api/wellness", json={"day": "2044-03-02", "energy": 4}))
+    buf = _io.BytesIO()
+    with _zip.ZipFile(buf, "w") as z:
+        z.writestr("apple_health_export/export.xml", HEALTH_XML)
+    r = ok(api.post("/api/wellness/import-apple-health", content=buf.getvalue(), headers={"Content-Type": "application/zip"}))
+    assert (r["days"], r["sleep_days"], r["water_days"]) == (1, 1, 1)
+    db = main.get_db()
+    row = db.execute("SELECT sleep_hours, water_glasses, energy FROM wellness_days WHERE day = '2044-03-02' AND owner_id = ?",
+                     (ok(api.get("/api/auth/status"))["user"]["id"],)).fetchone()
+    db.close()
+    assert (row["sleep_hours"], row["water_glasses"], row["energy"]) == (7.5, 6, 4)   # the watch's 7.5 h, not both; energy kept
+    assert api.post("/api/wellness/import-apple-health", content=b"not a zip or xml",
+                    headers={"Content-Type": "application/octet-stream"}).status_code == 400

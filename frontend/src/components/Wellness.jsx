@@ -19,8 +19,9 @@ export function WellnessSettings() {
       <label className="flex items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={on} onChange={toggle} /> Show a daily check-in on the dashboard</label>
       <p className="text-xs text-gray-500">
         Sleep, water, how well you ate, and your energy, in a few taps. After a few weeks, the card shows how your earnings
-        compare on better and worse days. Apple Health can't be read by apps like this one; importing its export file may come later.
+        compare on better and worse days.
       </p>
+      {on && <HealthImport />}
     </div>
   );
 }
@@ -93,6 +94,41 @@ export function WellnessCard() {
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Fill in sleep and water from the iPhone Health app's export (export.zip). */
+function HealthImport() {
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const pick = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    setMessage(`Reading ${file.name}… a big export can take a few minutes.`);
+    try {
+      const { data } = await axios.post('/api/wellness/import-apple-health', file, { headers: { 'Content-Type': 'application/octet-stream' }, timeout: 0 });
+      setMessage(`Done: sleep for ${data.sleep_days} days and water for ${data.water_days} days.`);
+    } catch (err) {
+      setMessage(errorMessage(err, "Couldn't read that file"));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="border-t border-gray-100 pt-3 space-y-1">
+      <p className="text-sm font-medium text-gray-700">Import from Apple Health</p>
+      <p className="text-xs text-gray-500">
+        On your iPhone: Health app, tap your picture, then Export All Health Data. Save the zip and choose it here. Only sleep and
+        water are read; what you've typed for food and energy stays.
+      </p>
+      <label className={`inline-block text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 cursor-pointer ${busy ? 'opacity-50' : 'hover:bg-gray-50'}`}>
+        {busy ? 'Importing…' : 'Choose export.zip'}
+        <input type="file" accept=".zip,.xml" onChange={pick} disabled={busy} className="hidden" />
+      </label>
+      {message && <p className="text-xs text-gray-600">{message}</p>}
     </div>
   );
 }
