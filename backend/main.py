@@ -50,6 +50,7 @@ import progress
 import worklog
 import everyday
 import branding
+import meals
 import calendar_dates
 import blocklist
 import signin
@@ -204,6 +205,7 @@ class TourIn(BaseModel):
     room_rent_per_day: Optional[float] = None
     notes: Optional[str] = None
     source_id: Optional[int] = None      # a stay at one of your places: its daily/weekly charges are logged
+    purpose: str = "work"                # work, or convention (with a booth and promo list)
 
 
 class Credentials(BaseModel):
@@ -1873,6 +1875,12 @@ def tour_figures(db, owner_id: int, tour: dict, appointments=None, expenses=None
                           income_rows)
 
 
+def _purpose(tour: TourIn) -> str:
+    if tour.purpose not in ("work", "convention"):
+        raise HTTPException(status_code=400, detail="A work tour or a convention")
+    return tour.purpose if tour.kind == TourKind.TOUR else "work"
+
+
 @app.post("/api/tours", response_model=Tour, status_code=201)
 def create_tour(tour: TourIn, user: UserDep, db: DbDep):
     _validate_tour(db, tour, user["id"])
@@ -1882,6 +1890,7 @@ def create_tour(tour: TourIn, user: UserDep, db: DbDep):
                            room_rent_per_day, notes, source_id, owner_id, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (*_tour_values(tour), user["id"], now, now))
+    db.execute("UPDATE tours SET purpose = ? WHERE id = ?", (_purpose(tour), cur.lastrowid))
     _sync_room_rent(db, cur.lastrowid, user["id"])
     tests = sync_stay_charges(db, cur.lastrowid, user["id"])
     db.commit()
@@ -1990,6 +1999,7 @@ def update_tour(tour_id: int, tour: TourIn, user: UserDep, db: DbDep):
                          starts_at = ?, ends_at = ?, room_rent_per_day = ?, notes = ?, source_id = ?, updated_at = ?
         WHERE id = ? AND owner_id = ?
     """, (*_tour_values(tour), now_iso(), tour_id, user["id"]))
+    db.execute("UPDATE tours SET purpose = ? WHERE id = ? AND owner_id = ?", (_purpose(tour), tour_id, user["id"]))
     _sync_room_rent(db, tour_id, user["id"])
     tests = sync_stay_charges(db, tour_id, user["id"])
     db.commit()
@@ -2287,6 +2297,7 @@ app.include_router(progress.router)
 app.include_router(worklog.router)
 app.include_router(everyday.router)
 app.include_router(branding.router)
+app.include_router(meals.router)
 app.include_router(calendar_dates.router)
 app.include_router(marketing.router)
 app.include_router(campaigns.router)
@@ -2329,6 +2340,7 @@ progress.setup(get_db)
 worklog.setup(get_db)
 everyday.setup(get_db)
 branding.setup(get_db)
+meals.setup(get_db)
 calendar_dates.setup(get_db)
 marketing.setup(get_db)
 campaigns.setup(get_db)

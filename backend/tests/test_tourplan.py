@@ -120,3 +120,21 @@ def test_meals_feed_the_pack_list_and_the_food_budget(api):
     assert api.post(f"/api/tours/{t['id']}/meals", json={"meal": "brunch", "what": "x"}).status_code == 400
     assert api.delete(f"/api/tour-meals/{meals[0]['id']}").status_code == 204
     assert len(ok(api.get(f"/api/tours/{t['id']}/meals"))) == 1
+
+
+def test_a_convention_has_a_booth_list_whose_buys_land_on_the_trip(api):
+    t = ok(api.post("/api/tours", json={"kind": "tour", "name": "AVN week", "purpose": "convention", "start_date": "2045-01-20",
+                                        "end_date": "2045-01-23", "starts_at": "2045-01-20T00:00:00Z", "ends_at": "2045-01-24T00:00:00Z"}), 201)
+    assert t["purpose"] == "convention"
+    c = ok(api.get(f"/api/tours/{t['id']}/convention"))
+    assert c["items"] == [] and any(s["kind"] == "booth" for s in c["starter"])
+    c = ok(api.post(f"/api/tours/{t['id']}/convention", json={"kind": "promo", "label": "Prints to sign", "qty": 50, "unit_cost": 2}), 201)
+    item = c["items"][0]
+    assert (item["total"], c["planned"], c["bought"]) == (100, 100, 0)
+    c = ok(api.post(f"/api/convention-items/{item['id']}/bought"))
+    assert c["bought"] == 100 and c["items"][0]["bought"]
+    assert api.post(f"/api/convention-items/{item['id']}/bought").status_code == 400          # once
+    e = next(x for x in ok(api.get("/api/expenses")) if x["description"].startswith("Prints to sign"))
+    assert e["tour_id"] == t["id"] and e["amount"] == 100
+    work = tour(api)
+    assert api.get(f"/api/tours/{work['id']}/convention").status_code == 400                   # a work tour has no booth list

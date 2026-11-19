@@ -21,6 +21,7 @@ export default function TourForm({ period, defaultKind = 'tour', defaultDate, on
     room_rent_per_day: period?.room_rent_per_day != null ? String(period.room_rent_per_day) : '',
     notes: period?.notes || '',
     source_id: period?.source_id ? String(period.source_id) : '',
+    purpose: period?.purpose || 'work',
   });
   // A tour can be a stay at one of your places: its daily and weekly charges are then logged for you.
   const [places, setPlaces] = useState([]);
@@ -68,6 +69,7 @@ export default function TourForm({ period, defaultKind = 'tour', defaultDate, on
       room_rent_per_day: isTour ? rate : null,
       notes: form.notes.trim() || null,
       source_id: isTour && form.source_id ? Number(form.source_id) : null,
+      purpose: isTour ? form.purpose : 'work',
     };
     setSaving(true);
     try {
@@ -118,6 +120,12 @@ export default function TourForm({ period, defaultKind = 'tour', defaultDate, on
           </Field>
           <Field label="Where (optional)">
             <input value={form.location} onChange={set('location')} placeholder="Hotel or area" className={inputClass} />
+          </Field>
+          <Field label="What kind of trip">
+            <select value={form.purpose} onChange={set('purpose')} className={inputClass}>
+              <option value="work">Work tour</option>
+              <option value="convention">Convention (with a booth and promo list)</option>
+            </select>
           </Field>
         </div>
       ) : (

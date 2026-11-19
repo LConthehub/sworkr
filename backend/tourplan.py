@@ -9,7 +9,7 @@ actually spent: expenses put on the tour or dated during it, your part after par
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Callable, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
@@ -385,5 +385,121 @@ def groceries_to_pack(tour_id: int, request: Request):
                            (owner, tour_id, label, order))
         db.commit()
         return {"added": added, "pack": _pack(db, owner, tour_id)}
+    finally:
+        db.close()
+
+
+# ==================== CONVENTIONS: BOOTH AND PROMO ====================
+# A convention is a tour whose purpose is "convention": its list has the booth fee, prints and cards, banners,
+# merch to sell, outfits. Marking one bought logs it as an expense on the trip, so the trip's budget is whole.
+
+CONVENTION_KINDS = {"booth": ("Booth & table", "marketing"), "promo": ("Promo materials", "marketing"),
+                    "merch": ("Merch to sell", "marketing"), "outfit": ("Outfits & costumes", "wardrobe"),
+                    "other": ("Other", "other")}
+CONVENTION_STARTER = [("booth", "Booth or table fee"), ("promo", "Business cards"), ("promo", "Prints to sign"),
+                      ("promo", "Banner"), ("merch", "Merch stock"), ("outfit", "Outfits"), ("other", "Card reader")]
+
+
+class ConventionItemIn(BaseModel):
+    kind: str = "promo"
+    label: str
+    qty: float = 1
+    unit_cost: Optional[float] = None
+
+
+def _convention(db, owner: int, tour_id: int) -> dict:
+    t = _tour(db, owner, tour_id)
+    if dict(t).get("purpose") != "convention":
+        raise HTTPException(status_code=400, detail="This trip isn't a convention: change its purpose first")
+    return t
+
+
+def _items(db, owner: int, tour_id: int) -> dict:
+    rows = [{**dict(r), "bought": r["expense_id"] is not None,
+             "total": round(r["qty"] * r["unit_cost"], 2) if r["unit_cost"] is not None else None}
+            for r in db.execute("SELECT id, kind, label, qty, unit_cost, expense_id FROM convention_items "
+                                "WHERE owner_id = ? AND tour_id = ? ORDER BY sort_order, id", (owner, tour_id))]
+    return {"items": rows, "kinds": {k: v[0] for k, v in CONVENTION_KINDS.items()},
+            "planned": round(sum(r["total"] or 0 for r in rows), 2),
+            "bought": round(sum(r["total"] or 0 for r in rows if r["bought"]), 2),
+            "starter": [] if rows else [{"kind": k, "label": label} for k, label in CONVENTION_STARTER]}
+
+
+def _check_item(body: ConventionItemIn) -> ConventionItemIn:
+    body.label = (body.label or "").strip()[:120]
+    if not body.label:
+        raise HTTPException(status_code=400, detail="What is it?")
+    if body.kind not in CONVENTION_KINDS:
+        raise HTTPException(status_code=400, detail="Booth, promo, merch, outfit or other")
+    if not 0 <= body.qty < 100000 or (body.unit_cost is not None and not 0 <= body.unit_cost < 1e7):
+        raise HTTPException(status_code=400, detail="Check the amounts")
+    return body
+
+
+@router.get("/api/tours/{tour_id}/convention")
+def get_convention(tour_id: int, request: Request):
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        _convention(db, owner, tour_id)
+        return _items(db, owner, tour_id)
+    finally:
+        db.close()
+
+
+@router.post("/api/tours/{tour_id}/convention", status_code=201)
+def add_convention_item(tour_id: int, body: ConventionItemIn, request: Request):
+    _check_item(body)
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        _convention(db, owner, tour_id)
+        order = db.execute("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM convention_items WHERE tour_id = ?", (tour_id,)).fetchone()[0]
+        db.execute("INSERT INTO convention_items (owner_id, tour_id, kind, label, qty, unit_cost, sort_order, created_at) "
+                   "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (owner, tour_id, body.kind, body.label, body.qty, body.unit_cost, order,
+                                                       datetime.now(timezone.utc).isoformat(timespec="seconds")))
+        db.commit()
+        return _items(db, owner, tour_id)
+    finally:
+        db.close()
+
+
+@router.delete("/api/convention-items/{item_id}", status_code=204)
+def delete_convention_item(item_id: int, request: Request):
+    """Remove it from the list. An expense it logged stays (the money was spent)."""
+    db = _get_db()
+    try:
+        db.execute("DELETE FROM convention_items WHERE id = ? AND owner_id = ?", (item_id, request.state.user["id"]))
+        db.commit()
+    finally:
+        db.close()
+
+
+@router.post("/api/convention-items/{item_id}/bought")
+def buy_convention_item(item_id: int, request: Request):
+    """Bought it: log the cost as an expense on the trip, in a fitting category."""
+    import finance
+    owner = request.state.user["id"]
+    db = _get_db()
+    try:
+        r = db.execute("SELECT * FROM convention_items WHERE id = ? AND owner_id = ?", (item_id, owner)).fetchone()
+        if not r:
+            raise HTTPException(status_code=404, detail="Not found")
+        if r["expense_id"] is not None:
+            raise HTTPException(status_code=400, detail="Already marked bought")
+        if r["unit_cost"] is None:
+            raise HTTPException(status_code=400, detail="Add what it cost first")
+        t = _tour(db, owner, r["tour_id"])
+        lookup = finance.category_lookup(db, owner)
+        category = {"merch": lookup.get("prints & merch"), "promo": lookup.get("prints & merch"),
+                    "outfit": lookup.get("costumes & props")}.get(r["kind"]) or CONVENTION_KINDS[r["kind"]][1]
+        day = date.today().isoformat()        # the day it was bought; it belongs to the trip either way (tour_id)
+        cur = db.execute("INSERT INTO expenses (description, amount, category, date, owner_id, created_at, currency, tour_id) "
+                         "VALUES (?, ?, ?, ?, ?, ?, 'USD', ?)",
+                         (f"{r['label']} – {t['name']}", round(r["qty"] * r["unit_cost"], 2), category, f"{day}T12:00:00+00:00",
+                          owner, datetime.now(timezone.utc).isoformat(timespec="seconds"), r["tour_id"]))
+        db.execute("UPDATE convention_items SET expense_id = ? WHERE id = ?", (cur.lastrowid, item_id))
+        db.commit()
+        return _items(db, owner, r["tour_id"])
     finally:
         db.close()

@@ -221,7 +221,79 @@ export function TourPlanning({ tour, version }) {
         <PackList key={`pack-${bump}`} tourId={tour.id} />
         <TourBudget tourId={tour.id} version={`${version}-${bump}`} />
       </div>
+      {tour.purpose === 'convention' && <Convention tour={tour} onChanged={changed} />}
       <Meals tour={tour} onChanged={changed} />
     </div>
+  );
+}
+
+/** A convention's booth and promo list: what to bring and buy, what it costs, and what's bought already. */
+function Convention({ tour, onChanged }) {
+  const [data, setData] = useState(null);
+  const [form, setForm] = useState({ kind: 'promo', label: '', qty: '1', unit_cost: '' });
+  const [message, setMessage] = useState('');
+  const load = useCallback(() => {
+    axios.get(`/api/tours/${tour.id}/convention`).then(({ data: d }) => setData(d)).catch(() => setData(null));
+  }, [tour.id]);
+  useEffect(() => { load(); }, [load]);
+  if (!data) return null;
+  const add = async (item) => {
+    setMessage('');
+    try {
+      const { data: d } = await axios.post(`/api/tours/${tour.id}/convention`, item);
+      setData(d);
+      setForm({ ...form, label: '', qty: '1', unit_cost: '' });
+    } catch (err) {
+      setMessage(errorMessage(err, "Couldn't add it"));
+    }
+  };
+  const buy = async (i) => {
+    try {
+      const { data: d } = await axios.post(`/api/convention-items/${i.id}/bought`);
+      setData(d);
+      onChanged();
+    } catch (err) {
+      setMessage(errorMessage(err, "Couldn't mark it bought"));
+    }
+  };
+  const remove = async (i) => { await axios.delete(`/api/convention-items/${i.id}`).catch(() => {}); load(); };
+  return (
+    <section>
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+        <h3 className="font-semibold text-gray-800">Booth & promo</h3>
+        <span className="text-sm text-gray-500">{money(data.bought)} bought of {money(data.planned)} planned</span>
+      </div>
+      {data.starter.length > 0 && (
+        <p className="flex flex-wrap items-center gap-1 mb-2 text-xs text-gray-500">Ideas:
+          {data.starter.map((st) => (
+            <button key={st.label} type="button" onClick={() => add({ kind: st.kind, label: st.label, qty: 1 })} className="px-2 py-0.5 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50">{st.label}</button>
+          ))}
+        </p>
+      )}
+      <ul className="divide-y divide-gray-100 text-sm">
+        {data.items.map((i) => (
+          <li key={i.id} className="py-1.5 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-gray-500 w-24">{data.kinds[i.kind]}</span>
+            <span className="flex-1 min-w-32 text-gray-800">{i.label}{i.qty !== 1 && <span className="text-gray-500"> × {i.qty}</span>}</span>
+            <span className="tabular-nums text-gray-600">{i.total != null ? money(i.total) : '–'}</span>
+            {i.bought ? <span className="text-xs text-emerald-700">✓ Bought</span>
+              : <button type="button" onClick={() => buy(i)} disabled={i.unit_cost == null} title={i.unit_cost == null ? 'Add what it cost first' : ''} className="text-xs px-2 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40">Bought</button>}
+            <button type="button" onClick={() => remove(i)} className="text-xs text-gray-400 hover:text-red-600" aria-label={`Remove ${i.label}`}>✕</button>
+          </li>
+        ))}
+      </ul>
+      <form onSubmit={(e) => { e.preventDefault(); add({ ...form, qty: Number(form.qty) || 1, unit_cost: form.unit_cost === '' ? null : Number(form.unit_cost) }); }}
+        className="grid grid-cols-2 sm:grid-cols-[8rem_1fr_5rem_6rem_auto] gap-2 mt-2">
+        <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })} aria-label="Kind" className={small}>
+          {Object.entries(data.kinds).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>
+        <input required value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="What" aria-label="What" className={small} />
+        <input type="number" min="0" step="1" value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} aria-label="How many" className={small} />
+        <input type="number" min="0" step="0.5" value={form.unit_cost} onChange={(e) => setForm({ ...form, unit_cost: e.target.value })} placeholder="$ each" aria-label="Cost each" className={small} />
+        <button type="submit" className="text-sm px-3 py-1.5 rounded-lg bg-sworkr-500 text-white">Add</button>
+      </form>
+      {message && <p className="text-xs text-red-600 mt-1">{message}</p>}
+      <p className="text-xs text-gray-500 mt-1">Bought ones go into this trip's expenses and budget. Sales at the convention: use "Sold something" on the dashboard.</p>
+    </section>
   );
 }

@@ -1767,6 +1767,52 @@ def _m60_category_colours(conn):
         conn.execute("UPDATE expense_categories SET color = ? WHERE key = ? AND LOWER(color) = ?", (new, key, old))
 
 
+def _m61_conventions(conn):
+    """A tour can be a convention, with a booth and promo list: booth fee, prints, merch, outfits, with costs."""
+    conn.execute("ALTER TABLE tours ADD COLUMN purpose TEXT NOT NULL DEFAULT 'work' CHECK(purpose IN ('work', 'convention'))")
+    conn.execute("""
+        CREATE TABLE convention_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            tour_id INTEGER NOT NULL REFERENCES tours(id) ON DELETE CASCADE,
+            kind TEXT NOT NULL DEFAULT 'promo' CHECK(kind IN ('booth', 'promo', 'merch', 'outfit', 'other')),
+            label TEXT NOT NULL,
+            qty REAL NOT NULL DEFAULT 1 CHECK(qty >= 0),
+            unit_cost REAL CHECK(unit_cost IS NULL OR unit_cost >= 0),
+            expense_id INTEGER REFERENCES expenses(id) ON DELETE SET NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+
+def _m62_meals(conn):
+    """Meals at home (with optional calories and macros) and a shopping list."""
+    conn.execute("""
+        CREATE TABLE meal_plan (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            day TEXT NOT NULL,
+            meal TEXT NOT NULL DEFAULT 'dinner' CHECK(meal IN ('breakfast', 'lunch', 'dinner', 'snack')),
+            what TEXT NOT NULL,
+            groceries TEXT,
+            calories REAL, protein REAL, carbs REAL, fat REAL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_meal_plan ON meal_plan(owner_id, day)")
+    conn.execute("""
+        CREATE TABLE shopping_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            label TEXT NOT NULL,
+            done INTEGER NOT NULL DEFAULT 0 CHECK(done IN (0, 1)),
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1828,6 +1874,8 @@ MIGRATIONS = [
     (58, "health test results", _m58_test_results, False),
     (59, "health test samples", _m59_test_samples, False),
     (60, "category colours from the app's palette", _m60_category_colours, False),
+    (61, "conventions: booth and promo", _m61_conventions, False),
+    (62, "meals and a shopping list", _m62_meals, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

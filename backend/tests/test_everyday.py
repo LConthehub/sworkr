@@ -167,3 +167,24 @@ def test_the_home_screen_name_and_icon_can_be_plain(api, admin):
     assert admin.put("/api/branding", json={"icon": "data:image/png;base64,bm90IGEgcGljdHVyZQ=="}).status_code == 400
     ok(admin.put("/api/branding", json={"name": "", "reset_icon": True}))
     assert anyone.get("/api/branding/manifest.json").json()["name"] == "Sworkr"
+
+
+def test_meals_fill_the_shopping_list_and_macros_only_when_turned_on(api, admin):
+    week = ok(api.get("/api/meals", params={"start": "2045-05-01"}))
+    assert len(week["days"]) == 7 and week["nutrition"]["enabled"] is False
+    ok(api.post("/api/meals", params={"start": "2045-05-01"}, json={"day": "2045-05-01", "meal": "dinner", "what": "Tacos",
+                                                                    "groceries": "Tortillas, beans, Salsa", "calories": 650, "protein": 30}), 201)
+    week = ok(api.post("/api/meals", params={"start": "2045-05-01"}, json={"day": "2045-05-01", "meal": "breakfast", "what": "Oats",
+                                                                           "groceries": "oats, salsa", "calories": 300, "protein": 10}), 201)
+    day = week["days"][0]
+    assert [m["what"] for m in day["meals"]] == ["Oats", "Tacos"] and day["totals"]["calories"] == 950
+    ok(api.post("/api/shopping", json={"label": "Beans"}), 201)
+    r = ok(api.post("/api/shopping/from-meals", params={"start": "2045-05-01"}))
+    assert r["added"] == 3 and sorted(i["label"].lower() for i in r["items"]) == ["beans", "oats", "salsa", "tortillas"]
+    rows = ok(api.post(f"/api/shopping/{r['items'][0]['id']}/done", json={"done": True}))
+    assert rows[-1]["done"] is True                                   # ticked ones go to the bottom
+    assert len(ok(api.post("/api/shopping/clear-done"))) == 3
+    n = ok(api.put("/api/meals/nutrition", json={"enabled": True, "calories": 2000, "protein": -5}))
+    assert n["enabled"] and n["targets"]["calories"] == 2000 and n["targets"]["protein"] is None
+    assert ok(admin.get("/api/shopping")) == [] or all(i["label"] != "Tortillas" for i in ok(admin.get("/api/shopping")))
+    assert api.post("/api/meals", json={"day": "2045-05-01", "meal": "brunch", "what": "x"}).status_code == 400

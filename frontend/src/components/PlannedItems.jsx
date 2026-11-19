@@ -139,7 +139,7 @@ export function LayerToggles({ layers, onToggle }) {
 
 /** The pages that make up the calendar: the calendar itself, and the lists behind its planning. */
 export function CalendarSwitch({ current }) {
-  const tabs = [['calendar', '/calendar', 'Calendar'], ['posts', '/calendar/posts', 'Posts'], ['shoots', '/calendar/shoots', 'Shoots']];
+  const tabs = [['calendar', '/calendar', 'Calendar'], ['posts', '/calendar/posts', 'Posts'], ['shoots', '/calendar/shoots', 'Shoots'], ['meals', '/calendar/meals', 'Meals']];
   return (
     <nav className="flex gap-1 overflow-x-auto rounded-full bg-white/20 p-1 backdrop-blur-sm" aria-label="Calendar and planning">
       {tabs.map(([id, to, label]) => (

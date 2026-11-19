@@ -16,6 +16,7 @@ import { WellnessSettings } from '../components/Wellness';
 import { ProgressSettings } from '../components/Progress';
 import { Supplies, Incidents, PrivacyCheckup } from '../components/Everyday';
 import HomeScreenSettings from '../components/HomeScreen';
+import { NutritionSettings } from '../components/MealPlanner';
 import { reloadFeatures } from '../features';
 import HolidaySettings from '../components/Holidays';
 import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from '../components/SignInSecurity';
@@ -155,6 +156,10 @@ const GROUPS = [
       {
         id: 'wellness', title: 'Wellness log', words: 'sleep water food energy wellness health apple health',
         render: () => <Section title="Wellness log (optional)" hint="Sleep, water, food and energy, and how they line up with your earnings."><WellnessSettings /></Section>,
+      },
+      {
+        id: 'nutrition', title: 'Calories & macros', words: 'calories macros protein carbs fat food diet nutrition meals',
+        render: () => <Section title="Calories & macros (optional)" hint="Off unless you turn it on. For meals under Calendar → Meals."><NutritionSettings /></Section>,
       },
       {
         id: 'supplies', title: 'Supplies', words: 'supplies stock condoms lube test kits running low',
