@@ -66,34 +66,54 @@ def _amount_ok(value: Optional[float]) -> bool:
 # Subcategories sit under a main one; a few are built in because sworkr fills them itself (room & board
 # from tours, health tests from appointments). Kinds of work (presets.json) add more.
 # (key, label, colour, parent key)
+# The colours come from sworkr's own palette (plum, pink, orchid, violet), with coral, honey, sage, teal and
+# the app's blue for contrast, and a muted grey for Other.
 BUILTIN_CATEGORIES = [
-    ("workspace", "Workspace", "#c2410c", None),
-    ("fees", "Fees & licenses", "#b45309", None),
-    ("health", "Health & safety", "#0f9488", None),
+    ("workspace", "Workspace", "#a73178", None),
+    ("fees", "Fees & licenses", "#6d3b8e", None),
+    ("health", "Health & safety", "#2a9d8f", None),
     ("wardrobe", "Look & wardrobe", "#fc4c9c", None),
-    ("gear", "Gear & tech", "#7c3aed", None),
-    ("marketing", "Marketing", "#e67eb6", None),
-    ("travel", "Travel", "#a73178", None),
-    ("fitness", "Fitness & training", "#65a30d", None),
-    ("food", "Food & drink", "#d97706", None),
-    ("other", "Other", "#4b86a6", None),
+    ("gear", "Gear & tech", "#4b86a6", None),
+    ("marketing", "Marketing", "#c77dce", None),
+    ("travel", "Travel", "#f07167", None),
+    ("fitness", "Fitness & training", "#6a994e", None),
+    ("food", "Food & drink", "#e0a458", None),
+    ("other", "Other", "#7a6e80", None),
     ("room_rent", "Room & board", None, "workspace"),
     ("cleaning", "Cleaning & laundry", None, "workspace"),
+    ("work_supplies", "Condoms, lube & supplies", None, "workspace"),
+    ("bank_fees", "Bank & payment fees", None, "fees"),
+    ("professional", "Accountant & legal", None, "fees"),
     ("medical", "Tests & doctor", None, "health"),
+    ("meds_prep", "Medication & PrEP", None, "health"),
+    ("therapy", "Therapy & counselling", None, "health"),
+    ("nails_lashes", "Nails & lashes", None, "wardrobe"),
     ("equipment", "Equipment & toys", None, "gear"),
+    ("website", "Website & hosting", None, "marketing"),
+    ("flights", "Flights, trains & buses", None, "travel"),
+    ("rideshare", "Rideshare & taxis", None, "travel"),
+    ("car", "Car, gas & parking", None, "travel"),
+    ("lodging", "Lodging", None, "travel"),
+    ("gym", "Gym & classes", None, "fitness"),
+    ("groceries", "Groceries", None, "food"),
+    ("meals_out", "Meals out", None, "food"),
 ]
 BUILTIN_KEYS = {c[0] for c in BUILTIN_CATEGORIES}
 BUILTIN_TOPS = {c[0] for c in BUILTIN_CATEGORIES if c[3] is None}
 NEVER_HIDDEN = {"other"}   # where expenses go when their category is deleted
-EXTRA_COLORS = ["#7c3aed", "#0891b2", "#65a30d", "#d97706", "#db2777", "#4f46e5", "#059669", "#b45309", "#9333ea", "#0284c7"]
+EXTRA_COLORS = ["#e67eb6", "#542b5c", "#3d8a7a", "#c9724d", "#8e6cb8", "#5c7ab3", "#b5838d", "#94a35e", "#d46a92", "#457b9d"]
 
 
 def ensure_categories(db, owner_id: int):
     """Every user has the built-in categories. Added the first time they're needed."""
-    have = {r[0] for r in db.execute("SELECT key FROM expense_categories WHERE owner_id = ?", (owner_id,))}
-    missing = [c for c in BUILTIN_CATEGORIES if c[0] not in have]
+    rows = db.execute("SELECT key, label FROM expense_categories WHERE owner_id = ?", (owner_id,)).fetchall()
+    have = {r[0] for r in rows}
+    labels = {(r[1] or "").strip().lower() for r in rows}
+    # A built-in isn't added next to a category of the same name the person already has (one they made, or one
+    # a kind of work added): no doubles.
+    missing = [c for c in BUILTIN_CATEGORIES if c[0] not in have and (c[3] is None or c[1].lower() not in labels)]
     for order, (key, label, color, parent) in enumerate(BUILTIN_CATEGORIES):
-        if key not in have:
+        if (key, label, color, parent) in missing:
             db.execute("INSERT OR IGNORE INTO expense_categories (owner_id, key, label, color, parent_key, sort_order, created_at) "
                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
                        (owner_id, key, label, color, parent, order if parent is None else 100 + order, _now()))

@@ -1761,6 +1761,12 @@ def _m59_test_samples(conn):
     conn.execute("ALTER TABLE test_kinds ADD COLUMN checks_for TEXT")
 
 
+def _m60_category_colours(conn):
+    """The built-in categories' new colours, from sworkr's own palette. Colours someone chose are left alone."""
+    for key, (old, new) in {'workspace': ('#c2410c', '#a73178'), 'fees': ('#b45309', '#6d3b8e'), 'health': ('#0f9488', '#2a9d8f'), 'wardrobe': ('#fc4c9c', '#fc4c9c'), 'gear': ('#7c3aed', '#4b86a6'), 'marketing': ('#e67eb6', '#c77dce'), 'travel': ('#a73178', '#f07167'), 'fitness': ('#65a30d', '#6a994e'), 'food': ('#d97706', '#e0a458'), 'other': ('#4b86a6', '#7a6e80')}.items():
+        conn.execute("UPDATE expense_categories SET color = ? WHERE key = ? AND LOWER(color) = ?", (new, key, old))
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1821,6 +1827,7 @@ MIGRATIONS = [
     (57, "work logs, safety timers, supplies, incidents", _m57_everyday, False),
     (58, "health test results", _m58_test_results, False),
     (59, "health test samples", _m59_test_samples, False),
+    (60, "category colours from the app's palette", _m60_category_colours, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

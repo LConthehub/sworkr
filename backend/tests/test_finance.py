@@ -50,10 +50,11 @@ def add_income(api, when="2044-03-10T20:00:00Z", **fields):
 
 def test_everyone_starts_with_the_built_in_categories(api):
     cats = ok(api.get("/api/expense-categories"))
-    assert [(c["key"], c["parent_key"]) for c in cats] == [
-        ("workspace", None), ("room_rent", "workspace"), ("cleaning", "workspace"), ("fees", None),
-        ("health", None), ("medical", "health"), ("wardrobe", None), ("gear", None), ("equipment", "gear"),
-        ("marketing", None), ("travel", None), ("fitness", None), ("food", None), ("other", None)]
+    assert [c["key"] for c in cats if c["parent_key"] is None] == [
+        "workspace", "fees", "health", "wardrobe", "gear", "marketing", "travel", "fitness", "food", "other"]
+    subs = {(c["key"], c["parent_key"]) for c in cats if c["parent_key"]}
+    assert {("room_rent", "workspace"), ("medical", "health"), ("equipment", "gear"), ("rideshare", "travel"),
+            ("groceries", "food"), ("bank_fees", "fees")} <= subs
     assert all(c["builtin"] and not c["hidden"] and c["color"] for c in cats)
     # A subcategory shows its main category's colour.
     colors = {c["key"]: c["color"] for c in cats}
@@ -369,3 +370,9 @@ def test_wallet_chooses_what_the_dashboard_shows(api):
     assert g["on_dashboard"] is True
     g = ok(api.put(f"/api/goals/{g['id']}", json={"name": "My wallet", "envelope": True, "on_dashboard": False}))
     assert g["on_dashboard"] is False
+
+
+def test_no_double_categories_when_a_kind_of_work_had_one(api):
+    cats = ok(api.get("/api/expense-categories"))
+    labels = [c["label"].lower() for c in cats]
+    assert len(labels) == len(set(labels))                      # every name once
