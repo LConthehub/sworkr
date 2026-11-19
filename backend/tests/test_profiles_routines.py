@@ -321,3 +321,48 @@ def test_bank_transactions_come_in_once_and_wait_to_be_reviewed(api, admin, monk
     assert api.post(f"/api/bank/transactions/{spend['id']}", json={"action": "expense"}).status_code == 400   # already added
     assert admin.post(f"/api/bank/transactions/{paid['id']}", json={"action": "restore"}).status_code == 404
     assert ok(api.get("/api/bank/status"))["connected"] is True
+
+
+import progress  # noqa: E402
+
+
+def test_a_missed_day_pauses_a_streak_two_end_it():
+    from datetime import date as _d, timedelta as _td
+    today = _d(2044, 5, 10)
+    day = lambda n: (today - _td(days=n)).isoformat()  # noqa: E731
+    assert progress.streak({day(0), day(1), day(2)}, today)["days"] == 3
+    assert progress.streak({day(1), day(2)}, today)["days"] == 2                 # today isn't over yet
+    assert progress.streak({day(0), day(2), day(3)}, today)["days"] == 3         # one gap: paused, not lost
+    assert progress.streak({day(0), day(3), day(4)}, today)["days"] == 1         # two gaps: a new streak
+    assert progress.streak({day(0), day(2)}, today, skip={day(1)})["days"] == 2  # nothing planned that day
+    assert progress.longest([day(9), day(8), day(6), day(1)]) == 3
+
+
+def test_progress_has_goals_badges_and_one_switch(api):
+    p = ok(api.get("/api/progress"))
+    assert p["enabled"] and {s["id"] for s in p["streaks"]} == {"posting", "routines", "money"}
+    assert {b["id"] for b in p["badges"]} >= {"backup", "two_step", "passkey", "checkin"}
+    ok(api.post("/api/progress/goals", json={"kind": "money_days", "target": 5}), 201)
+    ok(api.post("/api/expenses", json={"description": "Wipes", "amount": 9, "category": "other",
+                                       "date": date.today().isoformat() + "T12:00:00Z"}), 201)
+    g = ok(api.get("/api/progress"))["goals"][0]
+    assert (g["kind"], g["target"], g["done"]) == ("money_days", 5, 1)
+    assert next(s for s in ok(api.get("/api/progress"))["streaks"] if s["id"] == "money")["days"] == 1
+    assert api.post("/api/progress/goals", json={"kind": "work_more", "target": 5}).status_code == 400
+    assert api.delete("/api/progress/goals/money_days").status_code == 204
+    ok(api.put("/api/progress/settings", json={"enabled": False}))
+    assert ok(api.get("/api/progress")) == {"enabled": False}
+    ok(api.put("/api/progress/settings", json={"enabled": True}))
+
+
+def test_a_finished_tour_gets_a_wrap_up(api):
+    from datetime import timedelta as _td
+    end = date.today() - _td(days=2)
+    start = end - _td(days=4)
+    t = ok(api.post("/api/tours", json={"kind": "tour", "name": "Wrap stint", "start_date": start.isoformat(), "end_date": end.isoformat(),
+                                        "starts_at": f"{start.isoformat()}T00:00:00Z", "ends_at": f"{(end + _td(days=1)).isoformat()}T00:00:00Z"}), 201)
+    c = ok(api.post("/api/clients", json={"name": "Tour newbie"}), 201)
+    ok(api.post("/api/appointments", json={"client_id": c["id"], "service_type": "Dinner", "duration_minutes": 60,
+                                           "scheduled_date": f"{(start + _td(days=1)).isoformat()}T15:00:00Z", "rate": 500, "amount_paid": 500}), 201)
+    w = ok(api.get("/api/progress"))["tour_wrapup"]
+    assert w["name"] == "Wrap stint" and w["income"] == 500 and w["new_clients"] >= 1 and w["best_day"]["earned"] == 500

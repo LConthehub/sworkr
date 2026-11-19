@@ -13,6 +13,7 @@ import { ReceiptSettings } from '../components/Receipts';
 import { SocialAccounts } from '../components/Social';
 import { AssistantSettings } from '../components/Assistant';
 import { WellnessSettings } from '../components/Wellness';
+import { ProgressSettings } from '../components/Progress';
 import HolidaySettings from '../components/Holidays';
 import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from '../components/SignInSecurity';
 import { WorkTypesPicker } from '../components/WorkTypes';
@@ -172,6 +173,10 @@ const GROUPS = [
       {
         id: 'theme', title: 'Light or dark', words: 'dark mode night theme light colours colors appearance',
         render: () => <Section title="Light or dark" hint="How sworkr looks on this phone or computer."><LookSettings /></Section>,
+      },
+      {
+        id: 'progress', title: 'Progress', words: 'streaks goals badges bests gamify progress',
+        render: () => <Section title="Progress" hint="Private streaks, goals you set, personal bests and badges. Never shown to anyone."><ProgressSettings /></Section>,
       },
     ],
   },

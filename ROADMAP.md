@@ -63,6 +63,9 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Progress (all the gamifying ideas): streaks (posting, routines, money; one missed day pauses), weekly goals
+  you set (rings), personal bests, badges for setup and safety, tour wrap-up card, wallet level; one switch in
+  Settings > Look turns it all off.
 - Bank (Money > Bank): SimpleFIN Bridge setup token, transactions brought in once each, add as expense or income or ignore. Tested against a pretend bridge only.
 - Settings: "Reminders" is now "Notifications".
 - First run: after "How do you work?", "Connect what you use" offers email, calendar, content library,
@@ -95,23 +98,10 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 
 ## Next
 - Docs review finished 2026-11-17 (last six pages in one pass; owner may veto). Troubleshooting page not re-read.
-- Gamify posting and earnings: plan (2026-11-18), for the owner to pick from. Ideas, all private, all optional,
-  and none that push working more than you want:
-  - Streaks: days in a row you posted what you planned, kept routines, or logged money. A missed day pauses a
-    streak instead of zeroing it (rest is part of the job).
-  - Weekly goals you set yourself ("3 posts", "log every booking"), with a ring that fills; no goal is suggested
-    from your numbers, so it never says "work more".
-  - Personal bests: best week, best tour per working day, most inquiries from one post, longest posting streak.
-  - Badges for setup and safety, not output: first backup, two-step sign-in on, a passkey, check-in used, a full
-    week of routines, books closed for a month (every expense has a category).
-  - Tour wrap-up: after a tour, a card with the highlights (kept vs costs, best day, new regulars).
-  - A dashboard "level" for the Wallet: envelopes filling up (an emergency fund reaching 1, 3, 6 months).
-  - Never public, never compared with other workers, and one switch turns all of it off.
 - Penetration testing, part 1 done 2026-11-18: a test walks every API route (200+) and checks none answers
   without a login; Python dependencies audited clean (pip-audit). Frontend: 2 moderate react-router advisories
   that didn't apply here; cleared by upgrading to react-router 7.18.6 (npm audit: 0). Still to do: an outside
   tester before launch.
-- Gamifying: the owner wants all of the options in the plan above.
 
 ## Bigger ideas
 - Translations: Spanish, Russian, French first. Later.

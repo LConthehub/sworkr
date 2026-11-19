@@ -1682,6 +1682,18 @@ def _m55_bank(conn):
     conn.execute("CREATE INDEX idx_bank_status ON bank_transactions(owner_id, status, day)")
 
 
+def _m56_progress_goals(conn):
+    """Weekly goals the person sets for themselves (Progress)."""
+    conn.execute("""
+        CREATE TABLE progress_goals (
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            kind TEXT NOT NULL,
+            target INTEGER NOT NULL CHECK(target BETWEEN 1 AND 100),
+            PRIMARY KEY (owner_id, kind)
+        )
+    """)
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1738,6 +1750,7 @@ MIGRATIONS = [
     (53, "driver rates", _m53_driver_rates, False),
     (54, "wellness log", _m54_wellness, False),
     (55, "bank transactions (SimpleFIN)", _m55_bank, False),
+    (56, "progress: weekly goals", _m56_progress_goals, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 
