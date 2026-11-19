@@ -72,6 +72,8 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   (Nye and Lyon are covered by the Nevada house set: the owner confirmed what's there is fine.)
 
 ## Done 2026-11-19
+- A contact's handles open on the platform itself (their page or chat) in a new tab. Only a link: sworkr
+  never signs in to a platform or reads messages there, and that's a decision, not a gap.
 - House rules for each brothel, agency, club and studio (the doctor's day, outdates, shifts, storage), with a
   "Set up your workplace" guide on the dashboard until they're answered. A stay remembers its shift, and a
   booking outside it is warned about. Clients get an "outdates" answer once a house allows them.

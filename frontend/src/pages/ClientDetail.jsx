@@ -11,6 +11,7 @@ import Arrangement from '../components/Arrangement';
 import ClientProfile from '../components/ClientProfile';
 import { DriverRates } from '../components/Rides';
 import { colorFor, dayLabel, money, nextBirthday } from '../colors';
+import { handleLink } from '../handleLinks';
 
 const shortDate = (iso) => (iso ? dayLabel(new Date(iso), { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
 
@@ -133,6 +134,7 @@ export default function ClientDetail() {
                   {client.handles.map((h, i) => (
                     <li key={i} className="select-all break-all">
                       {h.platform && <span className="text-gray-400">{h.platform}: </span>}{h.handle}
+                      {handleLink(h.platform, h.handle) && <a href={handleLink(h.platform, h.handle)} target="_blank" rel="noreferrer noopener" className="ml-1 select-none text-sworkr-600 hover:text-sworkr-800" aria-label={`Open ${h.handle} on ${h.platform || 'the web'}`}>Open ↗</a>}
                     </li>
                   ))}
                 </ul>
