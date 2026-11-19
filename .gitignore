@@ -40,3 +40,6 @@ dist/
 
 # Downloads served by the website (built, not committed)
 site/downloads/
+
+# Private notes (never pushed)
+private/
