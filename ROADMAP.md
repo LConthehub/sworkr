@@ -63,6 +63,7 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
 ## Done 2026-11-18
+- Bank (Money > Bank): SimpleFIN Bridge setup token, transactions brought in once each, add as expense or income or ignore. Tested against a pretend bridge only.
 - Settings: "Reminders" is now "Notifications".
 - First run: after "How do you work?", "Connect what you use" offers email, calendar, content library,
   phone notifications, phone access and health tracking (all optional).
@@ -110,7 +111,6 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   without a login; Python dependencies audited clean (pip-audit). Frontend: 2 moderate react-router advisories
   that didn't apply here; cleared by upgrading to react-router 7.18.6 (npm audit: 0). Still to do: an outside
   tester before launch.
-- SimpleFIN bank import (owner's idea, 2026-11-18): bank transactions in through SimpleFIN Bridge.
 - Gamifying: the owner wants all of the options in the plan above.
 
 ## Bigger ideas

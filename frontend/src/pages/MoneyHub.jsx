@@ -3,6 +3,7 @@ import { NavLink, Navigate, useParams } from 'react-router-dom';
 import Money from './Money';
 import Earnings from './Earnings';
 import Goals from './Goals';
+import Bank from '../components/Bank';
 import Splits from './Splits';
 import TaxSummary from './TaxSummary';
 import Rates from './Rates';
@@ -13,6 +14,7 @@ const TABS = [
   { id: 'compare', to: '/money/compare', label: 'Compare' },
   { id: 'rates', to: '/money/rates', label: 'Rates' },
   { id: 'goals', to: '/money/goals', label: 'Wallet' },
+  { id: 'bank', to: '/money/bank', label: 'Bank' },
   { id: 'splits', to: '/money/splits', label: 'Splits' },
   { id: 'taxes', to: '/money/taxes', label: 'Taxes' },
 ];
@@ -49,6 +51,7 @@ export default function MoneyHub() {
       {tab === 'compare' && <Earnings />}
       {tab === 'rates' && <Rates />}
       {tab === 'goals' && <Goals />}
+      {tab === 'bank' && <Bank />}
       {tab === 'splits' && <Splits />}
       {tab === 'taxes' && <TaxSummary year={year} setYear={setYear} />}
     </div>

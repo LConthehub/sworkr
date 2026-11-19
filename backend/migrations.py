@@ -1659,6 +1659,29 @@ def _m54_wellness(conn):
     """)
 
 
+def _m55_bank(conn):
+    """Bank transactions brought in through SimpleFIN, each once, waiting to be added or ignored."""
+    conn.execute("""
+        CREATE TABLE bank_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            account_id TEXT NOT NULL,
+            account_name TEXT,
+            txn_id TEXT NOT NULL,
+            day TEXT,
+            amount REAL NOT NULL,
+            description TEXT,
+            pending INTEGER NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new', 'added', 'ignored')),
+            expense_id INTEGER REFERENCES expenses(id) ON DELETE SET NULL,
+            income_id INTEGER REFERENCES income(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE (owner_id, account_id, txn_id)
+        )
+    """)
+    conn.execute("CREATE INDEX idx_bank_status ON bank_transactions(owner_id, status, day)")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -1714,6 +1737,7 @@ MIGRATIONS = [
     (52, "persona kit: bios, links, wishlists", _m52_persona_kit, False),
     (53, "driver rates", _m53_driver_rates, False),
     (54, "wellness log", _m54_wellness, False),
+    (55, "bank transactions (SimpleFIN)", _m55_bank, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

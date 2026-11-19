@@ -263,3 +263,61 @@ def test_an_apple_health_export_fills_in_sleep_and_water(api):
     assert (row["sleep_hours"], row["water_glasses"], row["energy"]) == (7.5, 6, 4)   # the watch's 7.5 h, not both; energy kept
     assert api.post("/api/wellness/import-apple-health", content=b"not a zip or xml",
                     headers={"Content-Type": "application/octet-stream"}).status_code == 400
+
+
+import base64 as _b64  # noqa: E402
+
+import bank  # noqa: E402
+
+
+class Bridge:
+    """A pretend SimpleFIN Bridge: one claim, then accounts with transactions."""
+
+    def __init__(self):
+        self.claimed = False
+        self.seen = []
+
+    def __call__(self, req):
+        self.seen.append(req)
+        if req.url.path == "/claim/abc":
+            if self.claimed:
+                return httpx.Response(403)
+            self.claimed = True
+            return httpx.Response(200, text="https://user123:pass456@bridge.example/simplefin")
+        if req.url.path == "/simplefin/accounts":
+            assert req.headers["authorization"] == "Basic " + _b64.b64encode(b"user123:pass456").decode()
+            return httpx.Response(200, json={"errors": [], "accounts": [{
+                "org": {"name": "Credit Union"}, "id": "acct-1", "name": "Checking", "currency": "USD",
+                "transactions": [
+                    {"id": "t1", "posted": 2340000000, "amount": "-42.50", "description": "WIGS R US"},
+                    {"id": "t2", "posted": 2340086400, "amount": "300.00", "description": "VENMO FROM X"},
+                ]}]})
+        return httpx.Response(404)
+
+
+def test_bank_transactions_come_in_once_and_wait_to_be_reviewed(api, admin, monkeypatch):
+    bridge = Bridge()
+    monkeypatch.setattr(bank, "TRANSPORT", httpx.MockTransport(bridge))
+    assert api.post("/api/bank/connect", json={"setup_token": "not base64!!"}).status_code == 400
+    token = _b64.b64encode(b"https://bridge.example/claim/abc").decode()
+    ok(api.post("/api/bank/connect", json={"setup_token": token}))
+    assert api.post("/api/bank/connect", json={"setup_token": token}).status_code == 400    # a token works once
+    db = main.get_db()
+    stored = db.execute("SELECT value FROM user_settings WHERE key = 'simplefin_access' AND user_id = ?",
+                        (ok(api.get("/api/auth/status"))["user"]["id"],)).fetchone()[0]
+    db.close()
+    assert "pass456" not in stored
+    assert ok(api.post("/api/bank/fetch"))["added"] == 2
+    assert ok(api.post("/api/bank/fetch"))["added"] == 0                                  # not twice
+    new = ok(api.get("/api/bank/transactions"))
+    spend = next(t for t in new if t["amount"] < 0)
+    paid = next(t for t in new if t["amount"] > 0)
+    r = ok(api.post(f"/api/bank/transactions/{spend['id']}", json={"action": "expense", "category": "other", "description": "Wig"}))
+    assert r["status"] == "added" and r["expense_id"]
+    e = next(x for x in ok(api.get("/api/expenses")) if x["id"] == r["expense_id"])
+    assert (e["amount"], e["description"]) == (42.5, "Wig")
+    ok(api.post(f"/api/bank/transactions/{paid['id']}", json={"action": "ignore"}))
+    assert ok(api.get("/api/bank/transactions")) == []
+    assert api.post(f"/api/bank/transactions/{spend['id']}", json={"action": "expense"}).status_code == 400   # already added
+    assert admin.post(f"/api/bank/transactions/{paid['id']}", json={"action": "restore"}).status_code == 404
+    assert ok(api.get("/api/bank/status"))["connected"] is True
