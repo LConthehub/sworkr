@@ -1,5 +1,5 @@
 """
-A quick daily wellness log (sleep, water, food, energy) and how it lines up with money.
+The daily check-in (sleep, water, food, energy) and how it lines up with money.
 
 Optional and private, like the period tracker. Each day has at most one entry. The comparison puts each logged
 day next to what you earned that day, then shows the average for better and worse days (enough sleep or not,

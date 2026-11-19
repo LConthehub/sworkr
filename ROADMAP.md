@@ -62,7 +62,17 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 - One-container Docker install (Dockerfile + docker-compose.yml, port 8008); image workflow in .github/.
 - Meds: injections with site rotation and dose steps (GLP-1, hormones).
 
+## Waiting on the owner (2026-11-19)
+- Donations: site/donate.html is built (tiers $5, $25, $100, any amount) but not linked yet. To go live:
+  turn on GitHub Sponsors for LConthehub, and set up a BTCPay Server at pay.sworkr.com (Docker; needs a
+  Caddy entry). Then link it from the home page footer and the README.
+- Affiliate links: sign up with Porkbun, Namecheap and Njalla's affiliate programs and swap the codes into
+  the registrar links on the web-address docs page (they're marked rel="sponsored" and disclosed).
+- Nye and Lyon county rules (work card, renewals, extra tests), and performer testing (TTS, PASS): from the
+  owner's notes or friends; the websites couldn't be read.
+
 ## Done 2026-11-19
+- "Wellness log" is now "Daily check-in"; Supplies is a dashboard card of its own.
 - Quick fixes: auto log-out 5 min choice and 15 min default; no sign-in history on the demo; supplies starters.
 - Settings regrouped (Money and Safety groups; tests under Health; backups first).
 - Health tests: clear / not clear results; booking a party during a house stay warns until the test there is

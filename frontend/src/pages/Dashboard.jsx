@@ -9,6 +9,7 @@ import { AskCard } from '../components/Assistant';
 import { WellnessCard } from '../components/Wellness';
 import { ProgressCard, TourWrapUp } from '../components/Progress';
 import Today from '../components/Today';
+import { SuppliesCard } from '../components/Everyday';
 import { useFeatures } from '../features';
 
 // Cards that only fit some kinds of work (see FEATURES in backend/finance.py).
@@ -38,7 +39,7 @@ function greeting(now) {
 // Every card the dashboard can show, in the usual order.
 const CARDS = {
   week: 'This week', deposits: 'Deposits to collect', tests: 'Health tests due', inquiries: 'Inquiries to answer',
-  shoots: 'Shoots coming up', customs: 'Customs to make', ads: 'Ads running out', posts: 'Posts & ads due', tasks: 'Tasks', routines: 'Routines', note: 'Notes', ask: 'Ask your numbers', wellness: "Today's check-in", progress: 'Progress', wrapup: 'Tour wrap-up',
+  shoots: 'Shoots coming up', customs: 'Customs to make', ads: 'Ads running out', posts: 'Posts & ads due', tasks: 'Tasks', routines: 'Routines', note: 'Notes', ask: 'Ask your numbers', wellness: "Today's check-in", supplies: 'Supplies', progress: 'Progress', wrapup: 'Tour wrap-up',
   email: 'Email', cycle: 'Period tracker', goals: 'Wallet',
 };
 
@@ -77,6 +78,7 @@ export default function Dashboard({ user }) {
     note: <QuickNote />,
     ask: <AskCard />,
     wellness: <WellnessCard />,
+    supplies: <SuppliesCard />,
     progress: <ProgressCard />,
     wrapup: <TourWrapUp />,
     email: <EmailPanel />,

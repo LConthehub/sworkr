@@ -259,6 +259,14 @@ PAGES = [
   <li>Then use your own name everywhere below instead of <code>yourname.duckdns.org</code>.</li>
   <li>Buy it with <strong>WHOIS privacy</strong> (most registrars include it now) so your name and address aren't shown on the public record. A registrar that accepts adult sites and doesn't ask why you want it is worth choosing.</li>
 </ul>
+<p>Some registrars with free WHOIS privacy (check each one's terms for your use before you buy):</p>
+<ul class="registrars">
+  <li><a href="https://porkbun.com" rel="sponsored">Porkbun</a>: low prices, privacy included.</li>
+  <li><a href="https://www.namecheap.com" rel="sponsored">Namecheap</a>: privacy included, easy DNS settings.</li>
+  <li><a href="https://njal.la" rel="sponsored">Njalla</a>: holds the domain for you, so your name isn't on it at all.</li>
+  <li><a href="https://www.cloudflare.com/products/registrar/">Cloudflare Registrar</a>: sold at cost.</li>
+</ul>
+<p class="fine">Some of these links may be affiliate links: if you buy through them, Sworkr gets a small share at no cost to you. That helps keep Sworkr free for workers.</p>
 
 <h2>2. Install Caddy</h2>
 <p><a href="https://caddyserver.com/download">Caddy</a> sits in front of Sworkr and handles HTTPS by itself: it gets and renews the certificate for your address, for free.</p>
@@ -406,7 +414,7 @@ PAGES = [
 <p><em>Settings → My work → Licenses &amp; documents</em>: a license, work card, ID, passport, health card, a platform's ID check, insurance. Each gets a reminder before it runs out, and shows on the calendar. Sworkr keeps names and dates only: <strong>there's no field for ID or license numbers, on purpose.</strong></p>
 
 <h2>Supplies</h2>
-<p><em>Settings → Health → Supplies</em> is a short stock list. Tap minus when you use one; what's running low shows on your dashboard.</p>
+<p>The <em>Supplies</em> card on your dashboard is a short stock list. Tap minus when you use one; what's running low shows at the top.</p>
 
 <h2>Safety check-in</h2>
 <p><em>Settings → Safety → Safety check-in</em> sets up a trusted contact. Tick <em>Safety check-in</em> on a booking; if you haven't checked in afterwards (within the grace time you set), your contact is emailed what you chose to share. This needs email set up under <em>Connections</em>, or a <strong>push address</strong>: your contact installs the free ntfy app and subscribes to a long random name you agree on. A push arrives in seconds, where email can take minutes.</p>
@@ -418,8 +426,8 @@ PAGES = [
 <h2>Period tracker, birth control and regular meds</h2>
 <p>Optional, off until you turn them on. Injections can rotate sites and step up doses on a schedule. Dates show on the calendar, and medication marked discreet shows only as "Health".</p>
 
-<h2>Wellness log</h2>
-<p>Also optional (<em>Settings → Health → Wellness log</em>): a daily check-in on the dashboard for sleep, water, how well you ate and your energy. After a few weeks it shows how your earnings compare on better and worse days. Sleep and water can be filled in from an iPhone's Health app export.</p>
+<h2>Daily check-in</h2>
+<p>Also optional (<em>Settings → Health → Daily check-in</em>): a check-in on the dashboard for sleep, water, how well you ate and your energy. After a few weeks it shows how your earnings compare on better and worse days. Sleep and water can be filled in from an iPhone's Health app export.</p>
 
 <h2>Holidays</h2>
 <p><em>Settings → My work → Holidays</em> puts your country's public holidays on the calendar. They're worked out on your own computer: no calendar is downloaded from anyone.</p>

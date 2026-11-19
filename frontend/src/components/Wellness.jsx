@@ -3,7 +3,7 @@ import axios from 'axios';
 import { inputClass, errorMessage } from './Modal';
 import { money, toDateInput } from '../colors';
 
-/** Settings > Health > Wellness log: on or off. */
+/** Settings > Health > Daily check-in: on or off. */
 export function WellnessSettings() {
   const [on, setOn] = useState(null);
   useEffect(() => {
