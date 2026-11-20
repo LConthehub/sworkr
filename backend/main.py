@@ -38,6 +38,7 @@ import healthtests
 import arrangements
 import clubpay
 import tourplan
+import busy_link
 import social
 import receipts
 import profiles
@@ -2304,6 +2305,7 @@ app.include_router(offsite.router)
 app.include_router(arrangements.router)
 app.include_router(clubpay.router)
 app.include_router(tourplan.router)
+app.include_router(busy_link.router)
 app.include_router(social.router)
 app.include_router(receipts.router)
 app.include_router(profiles.router)
@@ -2352,6 +2354,7 @@ signin.setup(get_db)
 arrangements.setup(get_db)
 clubpay.setup(get_db)
 tourplan.setup(get_db)
+busy_link.setup(get_db)
 receipts.setup(get_db)
 profiles.setup(get_db)
 routines.setup(get_db)
