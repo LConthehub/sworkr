@@ -26,6 +26,7 @@ import { AwayFromHome, PasskeySettings, SignedInDevices, TwoStepSettings } from 
 import { WorkTypesPicker } from '../components/WorkTypes';
 import { Field, inputClass, errorMessage, buttonClass, quietButtonClass, Section, Notice } from '../components/Modal';
 import CalendarSync from '../components/CalendarSync';
+import BusyLink from '../components/BusyLink';
 import EmailSettings from '../components/EmailSettings';
 import PhoneAccess from '../components/PhoneAccess';
 import NtfySettings from '../components/NtfySettings';
@@ -197,6 +198,7 @@ const GROUPS = [
       },
       { id: 'email', title: 'Email', words: 'imap smtp mail inbox', render: () => <Section title="Email"><EmailSettings /></Section> },
       { id: 'calendar', title: 'Calendar & task sync', words: 'caldav nextcloud ical', render: () => <Section title="Calendar & task sync"><CalendarSync /></Section> },
+      { id: 'busy-link', title: 'Busy link', words: 'busy link family home calendar ical ics life is times only', render: () => <Section title="Busy link" hint="Show a home or family calendar when you're working, and nothing else."><BusyLink /></Section> },
       { id: 'content', title: 'Content library', words: 'folder photos videos webdav', render: () => <Section title="Content library"><ContentSettings /></Section> },
       {
         id: 'social', title: 'Social accounts', words: 'bluesky mastodon reddit social post posting accounts',
