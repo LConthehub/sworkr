@@ -21,6 +21,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': { target: apiTarget, changeOrigin: true },
+      '/busy': { target: apiTarget, changeOrigin: true },
     },
   },
 });
