@@ -125,6 +125,8 @@ export function HouseRulesForm({ sourceId, onDone }) {
         )}
       </fieldset>
 
+      <BoardRules sourceId={sourceId} />
+
       <Field label="Anything else to remember about this place">
         <textarea rows={3} value={form.other_rules} onChange={(e) => set({ other_rules: e.target.value })} placeholder="e.g. Lineup rules, phones, visitors, when the kitchen closes" className={inputClass} />
       </Field>
@@ -132,6 +134,83 @@ export function HouseRulesForm({ sourceId, onDone }) {
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex justify-end"><button type="submit" className={buttonClass}>Save</button></div>
     </form>
+  );
+}
+
+const NEW_RULE = { counts: 'party', reaches: '', basis: 'price', frees: 'day', starts_on: '', ends_on: '' };
+
+/** A place's deals for free room and board. Each rule is saved as soon as it's added or removed, and your stays
+ * there are worked out again: room & board on a free day shows as $0, with the reason. */
+function BoardRules({ sourceId }) {
+  const [rules, setRules] = useState([]);
+  const [draft, setDraft] = useState(NEW_RULE);
+  const [error, setError] = useState('');
+  const load = useCallback(() => {
+    axios.get(`/api/income-sources/${sourceId}/board-rules`).then(({ data }) => setRules(data)).catch(() => setError("Couldn't load these rules"));
+  }, [sourceId]);
+  useEffect(() => { load(); }, [load]);
+  const set = (patch) => setDraft({ ...draft, ...patch });
+  const add = async () => {
+    setError('');
+    if (!(Number(draft.reaches) > 0)) { setError('Say how much it takes'); return; }
+    try {
+      await axios.post(`/api/income-sources/${sourceId}/board-rules`, {
+        ...draft, reaches: Number(draft.reaches), starts_on: draft.starts_on || null, ends_on: draft.ends_on || null,
+      });
+      setDraft(NEW_RULE);
+      load();
+    } catch (err) {
+      setError(errorMessage(err, "Couldn't add the rule"));
+    }
+  };
+  const remove = async (id) => {
+    try { await axios.delete(`/api/board-rules/${id}`); load(); } catch (err) { setError(errorMessage(err, "Couldn't remove the rule")); }
+  };
+  const small = `${inputClass} !w-auto`;
+  return (
+    <fieldset className="space-y-2">
+      <legend className="text-sm font-semibold text-gray-800">Do you ever get room and board free?</legend>
+      {rules.length > 0 && (
+        <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+          {rules.map((r) => (
+            <li key={r.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+              <span className="flex-1 text-gray-800">{r.words}
+                {(r.starts_on || r.ends_on) && <span className="block text-xs text-gray-500">{[r.starts_on && `From ${r.starts_on}`, r.ends_on && `${r.starts_on ? 'until' : 'Until'} ${r.ends_on}`].filter(Boolean).join(' ')}</span>}
+              </span>
+              <button type="button" onClick={() => remove(r.id)} className="text-xs text-gray-400 hover:text-red-600" aria-label="Remove this rule">✕</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
+        <span>When</span>
+        <select value={draft.counts} onChange={(e) => set({ counts: e.target.value })} aria-label="What counts" className={small}>
+          <option value="party">one party</option>
+          <option value="day">a day's earnings</option>
+          <option value="week">a week's earnings</option>
+        </select>
+        <span>reach $</span>
+        <input type="number" min="1" step="any" inputMode="decimal" value={draft.reaches} onChange={(e) => set({ reaches: e.target.value })} aria-label="Amount" placeholder="1000" className={`${inputClass} !w-24`} />
+        <span>of</span>
+        <select value={draft.basis} onChange={(e) => set({ basis: e.target.value })} aria-label="Measured on" className={small}>
+          <option value="price">what the client paid</option>
+          <option value="her_share">what I keep</option>
+        </select>
+        <select value={draft.frees} onChange={(e) => set({ frees: e.target.value })} aria-label="What's free" className={small}>
+          <option value="day">that day is free</option>
+          <option value="week">that whole week is free</option>
+        </select>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
+        <span>The house's deal from</span>
+        <input type="date" value={draft.starts_on} onChange={(e) => set({ starts_on: e.target.value })} aria-label="From" className={small} />
+        <span>until</span>
+        <input type="date" value={draft.ends_on} onChange={(e) => set({ ends_on: e.target.value })} aria-label="Until" className={small} />
+        <button type="button" onClick={add} className={quietButtonClass}>+ Add this rule</button>
+      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <p className="text-xs text-gray-500">Leave the dates empty if it's always been the deal. Weeks count from the first day of a stay, tips don't count towards what the client paid, and only what you log at this place counts.</p>
+    </fieldset>
   );
 }
 

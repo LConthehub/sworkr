@@ -15,6 +15,8 @@ from typing import Callable, List, Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
+import board
+
 router = APIRouter()
 _get_db: Optional[Callable] = None
 
@@ -103,6 +105,7 @@ def add_log(body: LogIn, request: Request):
                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                          (owner, body.kind, body.source_id, day.isoformat(), body.hours, body.units, income_id,
                           (body.note or "").strip()[:300] or None, _now()))
+        board.income_changed(db, owner, body.source_id)
         db.commit()
         return next(r for r in _rows(db, owner, day.isoformat()) if r["id"] == cur.lastrowid)
     finally:
@@ -115,11 +118,12 @@ def delete_log(log_id: int, request: Request):
     owner = request.state.user["id"]
     db = _get_db()
     try:
-        r = db.execute("SELECT income_id FROM work_logs WHERE id = ? AND owner_id = ?", (log_id, owner)).fetchone()
+        r = db.execute("SELECT income_id, source_id FROM work_logs WHERE id = ? AND owner_id = ?", (log_id, owner)).fetchone()
         if r:
             if r["income_id"]:
                 db.execute("DELETE FROM income WHERE id = ? AND owner_id = ?", (r["income_id"], owner))
             db.execute("DELETE FROM work_logs WHERE id = ?", (log_id,))
+            board.income_changed(db, owner, r["source_id"])
             db.commit()
     finally:
         db.close()

@@ -1944,6 +1944,29 @@ def _m70_bins(conn):
     conn.execute("CREATE INDEX idx_bin_items_bin ON bin_items(bin_id)")
 
 
+def _m71_free_room_and_board(conn):
+    """A place's rules for free room and board (a big party frees the day, a good week frees the week). A stay's
+    room and board on a free day is kept at $0, with the full amount and the reason beside it."""
+    conn.execute("""
+        CREATE TABLE place_board_rules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            source_id INTEGER NOT NULL REFERENCES income_sources(id) ON DELETE CASCADE,
+            counts TEXT NOT NULL CHECK(counts IN ('party', 'day', 'week')),
+            basis TEXT NOT NULL DEFAULT 'price' CHECK(basis IN ('price', 'her_share')),
+            reaches REAL NOT NULL CHECK(reaches > 0),
+            frees TEXT NOT NULL CHECK(frees IN ('day', 'week')),
+            starts_on TEXT,
+            ends_on TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX idx_place_board_rules_source ON place_board_rules(source_id)")
+    conn.execute("ALTER TABLE expenses ADD COLUMN board_full REAL")
+    conn.execute("ALTER TABLE expenses ADD COLUMN board_free TEXT")
+
+
 MIGRATIONS = [
     (1, "baseline tables", _m1_baseline, False),
     (2, "owners, income, screening, safety check-in, client notes", _m2_owners_money_screening_safety, True),
@@ -2015,6 +2038,7 @@ MIGRATIONS = [
     (68, "orders that are posted", _m68_order_shipping, False),
     (69, "house rules, shifts on a stay, outdates", _m69_house_rules, False),
     (70, "storage bins", _m70_bins, False),
+    (71, "free room and board", _m71_free_room_and_board, False),
 ]
 LATEST = MIGRATIONS[-1][0]
 

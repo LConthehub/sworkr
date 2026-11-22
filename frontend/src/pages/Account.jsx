@@ -58,8 +58,8 @@ const GROUPS = [
       },
       { id: 'policy', title: 'Deposits & cancellations', words: 'deposit no-show no show cancellation fee late policy', render: () => <BookingPolicy /> },
       {
-        id: 'house', title: 'House rules', words: 'house rules brothel agency doctor day outdates shifts storage workplace club',
-        render: () => <Section title="House rules" hint="How each place works: the doctor's day, outdates, shifts and storage."><HouseRulesSettings /></Section>,
+        id: 'house', title: 'House rules', words: 'house rules brothel agency doctor day outdates shifts storage workplace club free room board',
+        render: () => <Section title="House rules" hint="How each place works: the doctor's day, outdates, shifts, storage and free room and board."><HouseRulesSettings /></Section>,
       },
       {
         id: 'bins', title: 'Storage bins', words: 'bin bins storage tote locker stored left behind qr label',

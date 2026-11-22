@@ -397,6 +397,7 @@ export default function Money({ view = 'overview', year: shownYear, setYear: set
                 <span className="text-sm text-gray-500 w-16">{shortDate(exp.date)}</span>
                 <div className="flex-1 min-w-40">
                   <p className="font-medium text-sm text-gray-800">{exp.description}</p>
+                  {exp.board_free && <p className="text-xs text-emerald-700">Free ({money(exp.board_full)} saved): {exp.board_free}</p>}
                   {(exp.client_name || exp.tour_name || exp.notes || exp.partner_names) && (
                     <p className="text-xs text-gray-400">{[exp.tour_name && `✈ ${exp.tour_name}`, exp.client_name,
                       exp.partner_names && `split with ${exp.partner_names}, yours ${money(exp.my_amount)}`, exp.notes].filter(Boolean).join(' · ')}</p>

@@ -18,6 +18,7 @@ from typing import Callable, List, Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
+import board
 import clubpay
 import collab
 import currencies
@@ -625,6 +626,7 @@ def create_income(body: IncomeIn, request: Request):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (*_income_values(body), owner, now, now))
         db.execute("UPDATE income SET cuts = ? WHERE id = ?", (_cuts_json(body), cur.lastrowid))
+        board.income_changed(db, owner, body.source_id)
         db.commit()
         return get_income(db, cur.lastrowid, owner)
     finally:
@@ -636,7 +638,8 @@ def update_income(income_id: int, body: IncomeIn, request: Request):
     owner = _owner(request)
     db = _db()
     try:
-        if not get_income(db, income_id, owner):
+        before = get_income(db, income_id, owner)
+        if not before:
             raise HTTPException(status_code=404, detail="Not found")
         _validate_income(db, body, owner)
         db.execute("""
@@ -646,6 +649,7 @@ def update_income(income_id: int, body: IncomeIn, request: Request):
             WHERE id = ? AND owner_id = ?
         """, (*_income_values(body), _now(), income_id, owner))
         db.execute("UPDATE income SET cuts = ? WHERE id = ?", (_cuts_json(body), income_id))
+        board.income_changed(db, owner, before.get("source_id"), body.source_id)
         db.commit()
         return get_income(db, income_id, owner)
     finally:
@@ -673,9 +677,12 @@ def mark_received(income_id: int, request: Request):
 def delete_income(income_id: int, request: Request):
     db = _db()
     try:
-        if get_income(db, income_id, _owner(request)):
+        before = get_income(db, income_id, _owner(request))
+        if before:
             collab.forget(db, "income", income_id)
         db.execute("DELETE FROM income WHERE id = ? AND owner_id = ?", (income_id, _owner(request)))
+        if before:
+            board.income_changed(db, _owner(request), before.get("source_id"))
         db.commit()
     finally:
         db.close()
@@ -1158,6 +1165,7 @@ def log_tip(body: TipIn, request: Request):
                   booking["client_id"] if booking else None, body.appointment_id, (_clean(body.payment_method) or "")[:40] or None,
                   owner, _now(), _now()))
             income_id = cur.lastrowid
+        board.income_changed(db, owner, body.source_id)
         db.commit()
         return {"tip": amount, "house_share": share, "kept": round(amount - share, 2), "income_id": income_id}
     finally:

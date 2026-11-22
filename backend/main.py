@@ -47,6 +47,7 @@ import rides
 import assistant
 import wellness
 import leaks
+import board
 import house
 import payouts
 import decoy
@@ -281,6 +282,8 @@ class Expense(ExpenseIn):
     source: Optional[str] = None          # 'tour_room' when sworkr made it from a tour's room & board
     my_amount: Optional[float] = None     # your part of the cost after partners' shares
     partner_names: Optional[str] = None
+    board_full: Optional[float] = None    # room & board made free by the place's rules: what it would have cost
+    board_free: Optional[str] = None      # and the rule that made it free
 
 
 class Tour(TourIn):
@@ -1400,6 +1403,7 @@ def update_appointment(appointment_id: int, appointment: AppointmentIn, user: Us
           appointment_id, user["id"]))
     _sync_test_expense(db, appointment_id, user["id"], appointment.tour_id)
     _remember_test_cost(db, user["id"], appointment)
+    board.booking_changed(db, user["id"], to_utc_iso(parse_iso(existing["scheduled_date"])), new_start)
     db.commit()
     calendar_sync.queue_appointment(appointment_id)
     return get_appointment_by_id(db, appointment_id, user["id"])
@@ -1431,6 +1435,7 @@ def update_appointment_status(
                "WHERE id = ? AND owner_id = ?",
                (status.value, checked_in_at, reason, fee, now, appointment_id, user["id"]))
     _sync_test_expense(db, appointment_id, user["id"])
+    board.booking_changed(db, user["id"], to_utc_iso(parse_iso(existing["scheduled_date"])))
     db.commit()
     calendar_sync.queue_appointment(appointment_id)
     return get_appointment_by_id(db, appointment_id, user["id"])
@@ -1473,10 +1478,14 @@ def delete_appointment(appointment_id: int, user: UserDep, db: DbDep,
         ids = [r[0] for r in db.execute(
             "SELECT id FROM appointments WHERE owner_id = ? AND series_id = ? AND scheduled_date >= ?",
             (user["id"], existing["series_id"], existing["scheduled_date"]))]
+    marks = ",".join("?" * len(ids))
+    when = [r[0] for r in db.execute(f"SELECT scheduled_date FROM appointments WHERE owner_id = ? AND status = 'completed' "
+                                     f"AND id IN ({marks})", (user["id"], *ids))]
     for one_id in ids:
         collab.forget(db, "appointment", one_id)
         db.execute("DELETE FROM expenses WHERE appointment_id = ? AND owner_id = ?", (one_id, user["id"]))
         db.execute("DELETE FROM appointments WHERE id = ? AND owner_id = ?", (one_id, user["id"]))
+    board.booking_changed(db, user["id"], *(to_utc_iso(parse_iso(w)) for w in when))
     db.commit()
     for one_id in ids:
         calendar_sync.queue_appointment(one_id)
@@ -1793,6 +1802,7 @@ def sync_stay_charges(db, tour_id: int, owner_id: int) -> List[int]:
                 """, (description, charge["amount"], charge["category"], to_utc_iso(when), owner_id, now, tour_id))
                 new_ids.append(cur.lastrowid)
     collab.copy_split(db, owner_id, old_ids, new_ids)
+    board.apply(db, owner_id, tour_id)      # the place's rules for free room and board
     return touched
 
 
@@ -2322,6 +2332,7 @@ app.include_router(meals.router)
 app.include_router(calendar_dates.router)
 app.include_router(leaks.router)
 app.include_router(house.router)
+app.include_router(board.router)
 app.include_router(payouts.router)
 app.include_router(decoy.router)
 app.include_router(marketing.router)
@@ -2370,6 +2381,7 @@ meals.setup(get_db)
 calendar_dates.setup(get_db)
 leaks.setup(get_db)
 house.setup(get_db)
+board.setup(get_db)
 payouts.setup(get_db)
 decoy.setup(get_db, remove_user, lambda: demo.ENABLED)
 marketing.setup(get_db)
