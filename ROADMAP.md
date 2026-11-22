@@ -65,11 +65,23 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
 ## Waiting on the owner (2026-11-19)
 - Donations: site/donate.html is built (tiers $5, $25, $100, any amount) but not linked yet. To go live:
   turn on GitHub Sponsors for LConthehub, and set up a BTCPay Server at pay.sworkr.com (Docker; needs a
-  Caddy entry). Then link it from the home page footer and the README.
+  Caddy entry). Then link it from the home page footer and the README. Upload site/thanks.js (the download
+  thank-you box) only once giving works, since it sends people to that page.
 - Affiliate links: sign up with Porkbun, Namecheap and Njalla's affiliate programs and swap the codes into
   the registrar links on the web-address docs page (they're marked rel="sponsored" and disclosed).
 - Performer testing (TTS, PASS): from the owner's notes or friends; the websites couldn't be read.
   (Nye and Lyon are covered by the Nevada house set: the owner confirmed what's there is fine.)
+
+## Done 2026-11-21
+- Start sworkr (Windows, Mac, Linux) now opens Docker Desktop if it's closed and waits for it, sends people to
+  Docker's download page if it isn't installed, and opens the browser only once Sworkr answers (no more
+  "can't connect" on the first start). Update sworkr runs the same steps after getting the newest version.
+  Mac and Linux checked with a pretend Docker; the Windows file is read through but not yet run on Windows.
+- Site and README install steps match: "install Docker Desktop and open it once", then Start sworkr.
+- Download thank-you box on sworkr.com (site/thanks.js): after a download starts, a "Give what fits" box
+  points to the donate page. Nothing stored or sent; downloads never wait for it.
+- Checked: auto log-out already offers 5 minutes with 15 as the default; Supplies starters already have no
+  test kits, plus Hand sanitizer and Toy cleaner.
 
 ## Done 2026-11-19
 - A contact's handles open on the platform itself (their page or chat) in a new tab. Only a link: sworkr
@@ -156,13 +168,12 @@ Answer here (edit this file on GitHub, even from a phone) or in chat; answered o
   tester before launch.
 
 ### Owner's list, 2026-11-19
-- Easier install for first-time Docker users; streamline install and update on the site and GitHub; better README.
-- Auto log-out: add 5 minutes as a choice, 15 minutes the default.
+- Easier install: Start/Update done 2026-11-21. Still: try Start sworkr.bat on a real Windows PC, and a fuller
+  README pass.
 - Docs: No-IP as a DDNS option; say clearly a domain or subdomain you own works; maybe affiliate links to domain
   providers (discuss). Self-hosting spirit throughout the docs; VPN reminders where they fit.
 - Donations page on sworkr.com, small and large options (discuss).
 - A better word than "wellness" (discuss).
-- Supplies: no test kits in the starters; "Hand sanitizer"; add "Toy cleaner".
 - Demo: don't show sign-ins (invasive).
 - Web app instructions, with a way to set a custom home-screen icon; do it from the Tailscale or own-address URL.
 - Android: what's missing compared with iPhone.

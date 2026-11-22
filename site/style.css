@@ -1,4 +1,4 @@
-/* sworkr.com: one page, no scripts, no web fonts, no trackers. */
+/* sworkr.com: no web fonts, no trackers. Two tiny scripts: the download thank-you box and the setup builder. */
 :root {
   --pink: #fc4c9c;
   --plum: #a73178;
@@ -184,3 +184,18 @@ footer p { margin: .3rem 0; }
 /* Long commands wrap on a phone instead of running off the screen */
 .get .fine code { overflow-wrap: anywhere; word-break: break-word; }
 .get ol.fine { padding-left: 1.2rem; margin: .4rem 0 .8rem; }
+
+/* The "Sworkr is downloading" box (site/thanks.js) */
+#thanks {
+  width: min(30rem, calc(100vw - 2rem)); border: 1px solid var(--line); border-radius: 1.1rem; padding: 1.6rem 1.6rem 1.2rem;
+  background: var(--paper); color: var(--ink); text-align: center; box-shadow: 0 20px 60px rgba(59, 31, 64, .35);
+}
+#thanks::backdrop { background: rgba(27, 20, 30, .6); }
+#thanks h2 { margin: .2rem 0 1rem; font-size: 1.6rem; color: var(--night); }
+#thanks p { margin: 0 0 1rem; }
+#thanks .close {
+  position: absolute; top: .5rem; right: .7rem; border: 0; background: none; color: var(--muted);
+  font-size: 1.8rem; line-height: 1; cursor: pointer;
+}
+#thanks .close:hover { color: var(--plum); }
+@media (prefers-color-scheme: dark) { #thanks h2 { color: #fff; } }

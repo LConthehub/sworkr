@@ -106,9 +106,9 @@
           <h3>Docker: Windows, Mac, Linux</h3>
           <p><strong>Recommended.</strong> Runs on any computer or home server and restarts by itself. Never used Docker? No commands needed.</p>
           <ol class="fine">
-            <li>Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a>, open it, wait for <em>Engine running</em>.</li>
+            <li>Install <a href="https://www.docker.com/products/docker-desktop/">Docker Desktop</a> and open it once.</li>
             <li>Download <a href="/downloads/sworkr-start.zip" download>sworkr-start.zip</a> and unzip it.</li>
-            <li>Double-click <em>Start sworkr</em>. Your browser opens it. (Later: <em>Update sworkr</em>.)</li>
+            <li>Double-click <em>Start sworkr</em>. It opens Docker if it's closed, then Sworkr in your browser. (Later: <em>Update sworkr</em>.)</li>
           </ol>
           <a class="button" href="/downloads/sworkr-start.zip" download>Download sworkr-start.zip</a>
           <p class="fine">Prefer a terminal: save <a href="/downloads/docker-compose.yml" download>docker-compose.yml</a>, run <code>docker compose up -d</code>, open <a href="http://localhost:8008">localhost:8008</a>. Your own options: <a href="/docs/install.html">make my setup file</a>.</p>
@@ -159,5 +159,15 @@
     <p><span class="mark small">SW</span> Sworkr. Software for s workers, kept on your own computer.</p>
     <p class="fine"><a href="/docs/">Documentation</a> · Sworkr is a record-keeping tool. It doesn't advertise, arrange or take part in anyone's work.</p>
   </footer>
+
+  <!-- Shown after a download starts (needs the small script below; without it, downloads just work). -->
+  <dialog id="thanks" aria-labelledby="thanks-title">
+    <form method="dialog"><button class="close" aria-label="Close">×</button></form>
+    <h2 id="thanks-title">Sworkr is downloading…</h2>
+    <p>Sworkr is made by one former s worker, with no company, ads or subscriptions behind it. If it helps your work, you can help keep it going.</p>
+    <p><a class="button" href="/donate.html">Give what fits</a></p>
+    <p class="fine">Not now? That's fine. It's free for workers either way. Nothing about you is recorded here.</p>
+  </dialog>
+  <script src="/thanks.js" defer></script>
 </body>
 </html>

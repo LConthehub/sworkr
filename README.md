@@ -18,10 +18,11 @@ Website and full documentation: **[sworkr.com](https://sworkr.com)** · Try the 
 You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows, Mac) or Docker (Linux,
 a home server or a NAS). Never used it? You won't need to type commands.
 
-1. Install Docker Desktop, open it, and wait until it says **Engine running**.
+1. Install Docker Desktop and open it once.
 2. Download **[sworkr-start.zip](https://sworkr.com/downloads/sworkr-start.zip)** and unzip it somewhere you'll keep it.
-3. Double-click **Start sworkr** (on a Mac the first time: right-click *Start sworkr.command*, choose *Open*).
-4. Your browser opens Sworkr. Make your account: the first one is yours, and it's the admin.
+3. Double-click **Start sworkr** (on a Mac the first time: right-click *Start sworkr.command*, choose *Open*;
+   on Linux: `./start.sh`). If Docker Desktop is closed, it opens it and waits. The first start takes a few minutes.
+4. Your browser opens Sworkr when it's ready. Make your account: the first one is yours, and it's the admin.
 
 Prefer a terminal? Put [`docker-compose.yml`](docker-compose.yml) in a folder and run:
 
@@ -37,7 +38,7 @@ On a phone: [use Tailscale](https://sworkr.com/docs/phone.html) (private, nothin
 
 ## Update
 
-Double-click **Update sworkr**, or in the folder:
+Double-click **Update sworkr** (Linux: `./start.sh update`), or in the folder:
 
 ```bash
 docker compose pull

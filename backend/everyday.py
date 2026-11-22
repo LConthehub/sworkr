@@ -1,7 +1,7 @@
 """
 Small everyday things: supplies that run low, an incident log, and a privacy check-up.
 
-- Supplies: a short stock list (condoms, lube, test kits, wipes, lashes...). Each has how many you have and the
+- Supplies: a short stock list (condoms, lube, wipes, toy cleaner, hand sanitizer...). Each has how many you have and the
   number at which it counts as running low. Tap minus when you use one.
 - Incident log: what happened, when, who, and what evidence you kept, written down the same day. For a lawyer,
   a platform appeal, the police if you choose, or just your own memory. Never sent anywhere.
