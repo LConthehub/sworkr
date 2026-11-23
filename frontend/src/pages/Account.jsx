@@ -34,6 +34,7 @@ import ContentSettings from '../components/ContentSettings';
 import { CycleSettings } from '../components/Cycle';
 import { notificationsSupported, reminderSettings, saveReminderSettings } from '../components/Reminders';
 import { downloadBlob, isDemo } from '../api';
+import { WhatsNew } from '../components/Notices';
 
 const idleLabel = (m) => (m === 0 ? 'Never (stay logged in for 30 days)' : m < 60 ? `${m} minutes` : m === 60 ? '1 hour' : `${m / 60} hours`);
 
@@ -220,6 +221,10 @@ const GROUPS = [
       {
         id: 'homescreen', title: 'Home screen name & icon', words: 'icon home screen app name favicon discreet phone shortcut',
         render: ({ me }) => <Section title="Home screen name & icon" hint="What a phone shows when sworkr is on its home screen."><HomeScreenSettings /></Section>,
+      },
+      {
+        id: 'whats-new', title: "What's new", words: 'updates notes news changes life is',
+        render: () => <Section title="What's new" hint="The last few update notes, including ones you've dismissed."><WhatsNew /></Section>,
       },
       {
         id: 'progress', title: 'Progress', words: 'streaks goals badges bests gamify progress',
